@@ -102,8 +102,11 @@ const record:RecordData={
   ...validateRecord({profile:{xuid:playerId,gamertag:'SondrRope',avatar:''},games,source:'Exophase',warnings}),
   id:crypto.randomUUID(),at:new Date().toISOString()
 };
-const envelope=await encryptVault({records:[record,...previous]},password);
+const payload={records:[record,...previous]};
+const envelope=await encryptVault(payload,password);
+const verified=await readVault(envelope,password,password);
+if(JSON.stringify(verified)!==JSON.stringify(payload))throw Error('重新加密后的记录校验失败；未覆盖历史文件。');
 fs.writeFileSync('public/vault.json',JSON.stringify(envelope));
 fs.writeFileSync('public/status.json',JSON.stringify({initialized:true}));
-if(process.env.NEW_APP_PASSWORD)console.log('密码迁移完成：全部历史快照已使用 NEW_APP_PASSWORD 加密。');
+if(process.env.NEW_APP_PASSWORD)console.log(`密码迁移完成：保留 ${previous.length} 份历史快照，新快照已一并重新加密并校验。`);
 console.log(`Exophase 同步完成：${games.length} 款游戏；正在加密记录。`);
