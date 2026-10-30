@@ -4,7 +4,7 @@
 
 ## 唯一需要的 Secret
 
-仓库 Settings → Secrets and variables → Actions 中保留 `APP_PASSWORD`，至少 16 位，用于加密同步历史。同步程序先用该密码解密旧快照，再把新快照加密保存，因此请使用原先设置的同一个密码。无需新建或填写 `XBOX_CLIENT_ID`、`XBOX_REFRESH_TOKEN`、`XBOX_CLIENT_SECRET` 或 `OPENXBL_API_KEY`。
+仓库 Settings → Secrets and variables → Actions 中保留 `APP_PASSWORD`，至少 8 位，用于加密同步历史。同步程序先用该密码解密旧快照，再把新快照加密保存，因此请使用原先设置的同一个密码。无需新建或填写 `XBOX_CLIENT_ID`、`XBOX_REFRESH_TOKEN`、`XBOX_CLIENT_SECRET` 或 `OPENXBL_API_KEY`。
 
 ## 数据与隐私
 
@@ -20,3 +20,7 @@
 ## 开发
 
 Node 22.13+，运行 `npm install`、`npm test`、`npm run build`。
+
+## 更换应用密码
+
+保留原 APP_PASSWORD，新增 NEW_APP_PASSWORD（至少8个字符）。同步成功后，用新密码确认能打开网站，再把 APP_PASSWORD 更新为新密码并删除 NEW_APP_PASSWORD。迁移期间会兼容新旧密码并将全部历史快照用新密码重新加密。
