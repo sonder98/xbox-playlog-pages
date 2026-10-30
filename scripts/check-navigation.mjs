@@ -71,6 +71,7 @@ try{
       await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
     }
     await unlock();
+    const statsBeforeHiding=await page.locator('.stats').innerText();
     await page.locator('.game-card .game-cover img').first().waitFor();
     await page.waitForFunction(()=>{const img=document.querySelector('.game-card .game-cover img');return img?.complete&&img.naturalWidth>0;});
     const cover=await page.locator('.game-card .game-cover').first().evaluate(el=>{
@@ -162,6 +163,44 @@ try{
     assert.equal(await page.getByRole('combobox',{name:'排序游戏'}).inputValue(),'time');
     await page.waitForFunction(y=>Math.abs(window.scrollY-y)<5,beforeDetail);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
+    // Hiding is a reversible encrypted display preference, independent of fresh sync snapshots.
+    const manageDisplay=()=>page.locator('.toolbar').getByRole('button',{name:'管理展示',exact:true}).click();
+    await manageDisplay();
+    await page.getByRole('checkbox',{name:'显示 Test Game 1',exact:true}).uncheck();
+    await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
+    await page.getByRole('dialog',{name:'游戏库显示管理',exact:true}).waitFor({state:'hidden'});
+    assert.equal(await page.locator('.game-card[data-game-id="101"]').count(),0);
+    await page.getByRole('button',{name:'概览',exact:true}).click();
+    assert.equal(await page.locator('.stats').innerText(),statsBeforeHiding,'Hiding never changes aggregate statistics');
+    assert.equal(await page.locator('.game-card[data-game-id="101"]').count(),0);
+    activeEnvelope=await encryptVault(await decryptVault(envelope,password),password);
+    await unlock('#library');
+    assert.equal(await page.locator('.game-card[data-game-id="101"]').count(),0,'Hidden choice survives a fresh encrypted snapshot');
+    assert.equal(await page.locator('.game-card').count(),11);
+    const storedPreference=await page.evaluate(()=>Object.keys(localStorage).filter(key=>key.startsWith('playlog-display-encrypted-v1:')).map(key=>localStorage.getItem(key)));
+    assert.equal(storedPreference.length,1);assert.ok(!storedPreference[0].includes('hiddenGameIds'));
+    await manageDisplay();
+    await page.getByRole('checkbox',{name:'仅看已隐藏',exact:true}).check();
+    assert.equal(await page.locator('.display-game-choice').count(),1);
+    await page.getByRole('checkbox',{name:'显示 Test Game 1',exact:true}).check();
+    await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
+    await page.getByRole('dialog',{name:'游戏库显示管理',exact:true}).waitFor({state:'hidden'});
+    assert.equal(await page.locator('.game-card').count(),12);
+    await manageDisplay();
+    for(const checkbox of await page.locator('.display-game-choice input').all())await checkbox.uncheck();
+    await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
+    await page.getByRole('dialog',{name:'游戏库显示管理',exact:true}).waitFor({state:'hidden'});
+    await page.getByRole('heading',{name:'所有游戏已隐藏',exact:true}).waitFor();
+    await manageDisplay();
+    await page.getByRole('button',{name:'全部展示',exact:true}).click();
+    await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
+    await page.getByRole('dialog',{name:'游戏库显示管理',exact:true}).waitFor({state:'hidden'});
+    assert.equal(await page.locator('.game-card').count(),12);
+    await manageDisplay();
+    await page.getByRole('checkbox',{name:'显示 Test Game 1',exact:true}).uncheck();
+    await page.getByRole('button',{name:'取消',exact:true}).click();
+    assert.equal(await page.locator('.game-card[data-game-id="101"]').count(),1,'Cancel keeps the saved selection');
+    console.log((mobile?'Mobile':'Desktop')+': PASS encrypted hide/restore preferences, unchanged statistics, new snapshot persistence, hide-all recovery and cancel');
     // Remembered credentials survive a reload and a new snapshot's random salt.
     async function signInRemembered(){
       await page.locator('input[type="password"]').fill(password);

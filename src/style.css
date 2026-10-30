@@ -1484,3 +1484,19 @@ footer .dot {
 .achievement-tools label { display:flex; flex:1 1 130px; min-width:0; flex-direction:column; gap:6px; color:var(--text-muted); font-size:12px; }
 .achievement-tools select { width:100%; min-width:0; min-height:44px; padding:10px 12px; border:1px solid var(--border); border-radius:16px; color:var(--text-primary); background:var(--surface-raised); font:inherit; font-size:13px; cursor:pointer; }
 .achievement-tools + .achievement-groups .achievement-group { margin-top:24px; }
+
+.hidden-count { display:inline-grid; min-width:20px; height:20px; padding:0 5px; place-items:center; border-radius:999px; color:var(--text-secondary); background:var(--surface-hover); font-size:11px; }
+.display-manager { width:min(100%,640px); }
+.display-manager h2 { padding-right:32px; }
+.display-manager .search { width:100%; margin:16px 0 8px; }
+.display-manager-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.display-manager-actions label { display:flex; align-items:center; gap:8px; min-height:44px; color:var(--text-secondary); font-size:13px; cursor:pointer; }
+.display-manager input[type=checkbox] { accent-color:var(--accent); width:18px; height:18px; flex-shrink:0; }
+.display-manager-count { margin:4px 0 12px; color:var(--text-muted); font-size:12px; }
+.display-manager-list { max-height:42dvh; overflow:auto; overscroll-behavior:contain; }
+.display-game-choice { display:flex; align-items:center; gap:12px; min-height:52px; padding:12px; border-radius:12px; cursor:pointer; }
+.display-game-choice:hover { background:var(--surface-raised); }
+.display-game-choice span { flex:1; min-width:0; font-size:14px; overflow-wrap:anywhere; }
+.display-game-choice.is-hidden span,.display-game-choice svg { color:var(--text-muted); }
+.display-game-choice svg { flex-shrink:0; }
+.display-manager-footer { display:flex; gap:12px; justify-content:flex-end; margin-top:20px; }
