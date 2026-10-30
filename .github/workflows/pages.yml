@@ -2,9 +2,13 @@ name: Publish and sync Playlog
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - public/vault.json
-      - public/status.json
+    paths:
+      - '.github/workflows/pages.yml'
+      - 'scripts/**'
+      - 'src/data.ts'
+      - 'src/crypto.ts'
+      - 'package.json'
+      - 'package-lock.json'
   workflow_dispatch:
     inputs:
       sync:
@@ -35,7 +39,7 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npm test
       - name: Sync and encrypt own Xbox records
-        if: (github.event_name == 'workflow_dispatch' && inputs.sync) || github.event_name == 'schedule'
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.sync) || github.event_name == 'schedule'
         env:
           XBOX_CLIENT_ID: ${{ secrets.XBOX_CLIENT_ID }}
           XBOX_REFRESH_TOKEN: ${{ secrets.XBOX_REFRESH_TOKEN }}
@@ -44,7 +48,7 @@ jobs:
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
         run: npm run sync
       - name: Save only encrypted snapshots
-        if: (github.event_name == 'workflow_dispatch' && inputs.sync) || github.event_name == 'schedule'
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.sync) || github.event_name == 'schedule'
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
