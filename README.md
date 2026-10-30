@@ -14,7 +14,7 @@
 
 首次授权助手只依赖本机 Node.js 22.13+，不需要 npm install。微软密码只在微软官方页面输入；不要把任何令牌发到聊天或源码。
 
-随后运行 Actions → Publish and sync Playlog，勾选同步。授权令牌只存在 GitHub Secrets 和任务内存，不写入公开密文文件。当前已完成模拟接口测试，真实微软注册和 Xbox 数据权限仍需用本人的账号验证。
+配置完成后，GitHub Actions 会每天自动同步一次（约北京时间 08:17）。也可以在 Actions → Publish and sync Playlog 页面手动运行。授权令牌只存在 GitHub Secrets 和任务内存，不写入公开密文文件。真实微软注册和 Xbox 数据权限需用本人的账号验证。
 
 OpenXBL 适配保留为可选备用，仅未配置微软凭据时才使用 OPENXBL_API_KEY。应用不会在微软授权失败时切换来源。当前未做后台定时同步。
 
