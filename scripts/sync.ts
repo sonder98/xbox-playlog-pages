@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {cacheRecordImages} from './image-cache.ts';
 import {mergeAchievementPage,type PageData} from './exophase-page.ts';
 import {cachedCatalog,parseCatalogBundle,type CatalogBundle} from './catalog-cache.ts';
 import {publishSnapshot} from './snapshot.ts';
@@ -181,6 +182,7 @@ const record:RecordData={
   ...validateRecord({profile:{xuid:playerId,gamertag:'SondrRope',avatar:profileAvatar},games,source:'Exophase',warnings}),
   id:crypto.randomUUID(),at:new Date().toISOString()
 };
+await cacheRecordImages(record);
 await publishSnapshot(record,previous,password);
 if(process.env.NEW_APP_PASSWORD)console.log(`密码迁移完成：保留 ${previous.length} 份历史快照，新快照已一并重新加密并校验。`);
 console.log(`Exophase 同步完成：${games.length} 款游戏；正在加密记录。`);

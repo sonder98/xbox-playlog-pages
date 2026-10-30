@@ -29,7 +29,7 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -41,6 +41,12 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npm install --no-save --ignore-scripts playwright
       - run: npx playwright install --with-deps chromium
+      - name: Restore public artwork cache
+        uses: actions/cache@v4
+        with:
+          path: public/media
+          key: artwork-webp-v1-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: artwork-webp-v1-${{ runner.os }}-
       - name: Sync and encrypt Exophase records
         id: exophase_sync
         continue-on-error: true

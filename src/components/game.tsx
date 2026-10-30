@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState,useId,type ReactNode} from 'react';
 import {Gamepad2,Trophy,X,Lock,Check,Clock3,Gem} from 'lucide-react';
 import {completion} from '../completion';
+import {sortAchievements,type AchievementSort} from '../achievement-sort';
 import type {Game,Achievement} from '../data';
 
 export const hours=(minutes:number|null)=>minutes===null?'暂无时长':`${(minutes/60).toLocaleString('zh-CN',{maximumFractionDigits:1})} 小时`;
@@ -24,21 +25,21 @@ export function Progress({earned,total,label,complete=false}:{earned:number;tota
   const percent=total?Math.min(100,Math.round(earned/total*100)):0;
   return <span className={'progress'+(complete?' complete':'')} role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}><span style={{width:percent+'%'}}/></span>;
 }
-export function GameCover({game,wide=false}:{game:Game;wide?:boolean}){
-  const candidates=[game.image3x,game.image2x,game.imageWide,game.image].filter((url,index,all):url is string=>!!url&&all.indexOf(url)===index);
+export function GameCover({game,wide=false,priority=false}:{game:Game;wide?:boolean;priority?:boolean}){
+  const candidates=[wide?game.cachedImageLarge:game.cachedImage,wide?game.cachedImage:game.cachedImageLarge,game.image3x,game.image2x,game.imageWide,game.image].filter((url,index,all):url is string=>!!url&&all.indexOf(url)===index);
   const [attempt,setAttempt]=useState(0);
-  useEffect(()=>setAttempt(0),[game.id,game.image3x,game.image]);
+  useEffect(()=>setAttempt(0),[game.id,game.cachedImage,game.cachedImageLarge,game.image3x,game.image]);
   const source=candidates[attempt],completed=completion(game).mythic;
   return <span className={'game-cover'+(wide?' detail-cover':'')+(completed?' completion-frame':'')}>
-    {source?<img src={source} alt="" loading="lazy" decoding="async" width="1920" height="1080" onError={()=>setAttempt(a=>a+1)}/>:<span className="cover-fallback" role="img" aria-label="游戏封面暂不可用"><Gamepad2 size={28}/></span>}
+    {source?<img src={source} alt="" loading={wide||priority?'eager':'lazy'} fetchPriority={wide||priority?'high':'auto'} decoding="async" width="1920" height="1080" onError={()=>setAttempt(a=>a+1)}/>:<span className="cover-fallback" role="img" aria-label="游戏封面暂不可用"><Gamepad2 size={28}/></span>}
     {completed&&<CompletionOrnament/>}
   </span>;
 }
-export function GameCard({game,onOpen}:{game:Game;onOpen:()=>void}){
+export function GameCard({game,onOpen,priority=false}:{game:Game;onOpen:()=>void;priority?:boolean}){
   const state=completion(game);
   const extra=state.base?{earned:game.earned-state.base.earned,total:game.total-state.base.total}:null;
   return <button className="game-card" data-game-id={game.id} onClick={onOpen} aria-label={`查看 ${game.name} 的游戏详情${state.mythic?'，本体全成就':''}`}>
-    <span className="game-art"><GameCover game={game}/></span>
+    <span className="game-art"><GameCover game={game} priority={priority}/></span>
     <span className="game-copy"><span className="game-title">{game.name}</span><span className="game-last">最近游玩 {date(game.lastPlayed)}</span></span>
     <span className="game-progress"><span className="game-achievement"><span className="achievement-metric" aria-label={`${state.base?'本体':'已同步'}成就 ${state.earned}/${state.total}`} title={state.base?'本体成就':'成就总数 · 本体分组待确认'}><Trophy size={14}/><span>{state.earned}/{state.total}</span></span>{extra&&extra.total>0&&<span className="achievement-metric" aria-label={`追加内容成就 ${extra.earned}/${extra.total}`} title="DLC 与更新成就"><span className="dlc-mark">DLC</span><span>{extra.earned}/{extra.total}</span></span>}<span className="achievement-metric game-playtime" aria-label={'游玩时长 '+hours(game.minutes)}><Clock3 size={13}/>{hours(game.minutes)}</span></span><Progress earned={state.earned} total={state.total} complete={state.mythic} label={game.name+' 成就完成度'}/></span>
   </button>;
@@ -64,8 +65,12 @@ export function Modal({title,onClose,children,className=''}:{title:string;onClos
 }
 function AchievementItem({achievement:a}:{achievement:Achievement}){
   const rare=a.rarity!==null&&a.rarity<10;
-  return <article className={'achievement '+(!a.unlocked?'locked':'')}>
-    <span className="achievement-image"><Trophy size={22}/>{a.image&&<img src={a.image} alt="" loading="lazy" onError={e=>{e.currentTarget.style.display='none';}}/>}</span>
+  const [attempt,setAttempt]=useState(0);
+  useEffect(()=>setAttempt(0),[a.id,a.image,a.cachedImage]);
+  const images=[a.cachedImage,a.image].filter((url,index,all):url is string=>!!url&&all.indexOf(url)===index);
+  const image=images[attempt];
+  return <article className={'achievement '+(!a.unlocked?'locked':'')} data-achievement-id={a.id}>
+    <span className="achievement-image"><Trophy size={22}/>{image&&<img src={image} alt="" width="56" height="56" loading="lazy" decoding="async" onError={()=>setAttempt(n=>n+1)}/>}</span>
     <div className="achievement-copy">
       <h4>{a.name}</h4>
       <div className="achievement-description-row">
@@ -81,10 +86,21 @@ function AchievementItem({achievement:a}:{achievement:Achievement}){
 }
 export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
   const groups=game.groupStatus==='verified'&&game.groups?.length?game.groups:[{id:'all',name:'已同步成就',kind:'base',earned:game.earned,total:game.total,achievementIds:game.achievements?.map(a=>a.id)||[]}];
-  const byId=new Map(game.achievements?.map(a=>[a.id,a]));
+  const [order,setOrder]=useState<AchievementSort>('date-desc');
+  const [groupId,setGroupId]=useState('__all');
+  const selected=groups.find(g=>g.id===groupId);
+  const group=selected||{id:'__all',name:groups.length===1?groups[0].name:'全部成就',earned:game.earned,total:game.total};
+  const ids=selected?new Set(selected.achievementIds):null;
+  const achievements=sortAchievements((game.achievements||[]).filter(a=>!ids||ids.has(a.id)),order);
   return <Modal title={game.name+' · 游戏详情'} onClose={onClose} className="game-detail"><GameCover game={game} wide/><div className="detail-heading"><div><span className="eyebrow">GAME DETAILS</span><h2>{game.name}</h2></div></div><div className="detail-summary"><span><Clock3 size={16}/>{hours(game.minutes)}</span><span><Trophy size={16}/>{game.earned}/{game.total} 成就</span><span>{game.score.toLocaleString()} G</span></div>
     {game.groupStatus!=='verified'&&<p className="note">本体与追加内容分组待同步，当前显示已取得的逐项记录。</p>}
-    <div className="achievement-groups">{groups.map(group=><section className="achievement-group" key={group.id}><div className="section-heading"><h3>{group.kind==='base'&&group.id!=='all'?'本体':group.name}</h3><span>{group.earned}/{group.total}</span></div><Progress earned={group.earned} total={group.total} complete={group.earned===group.total&&group.total>0} label={group.name+' 完成度'}/>{group.achievementIds.map(id=>byId.get(id)).filter((a):a is Achievement=>!!a).map(a=><AchievementItem key={a.id} achievement={a}/>)}</section>)}</div>
+    {!!game.achievements?.length&&<>
+      <div className="achievement-tools">
+        {groups.length>1&&<label>成就分组<select aria-label="成就分组" value={groupId} onChange={e=>setGroupId(e.target.value)}><option value="__all">全部成就</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}
+        <label>排序方式<select aria-label="成就排序" value={order} onChange={e=>setOrder(e.target.value as AchievementSort)}><option value="date-desc">解锁时间：新 → 旧</option><option value="date-asc">解锁时间：旧 → 新</option><option value="rarity-asc">稀有度：低 → 高</option><option value="rarity-desc">稀有度：高 → 低</option></select></label>
+      </div>
+      <div className="achievement-groups"><section className="achievement-group"><div className="section-heading"><h3>{group.name}</h3><span>{group.earned}/{group.total}</span></div><Progress earned={group.earned} total={group.total} complete={group.earned===group.total&&group.total>0} label={group.name+' 完成度'}/>{achievements.map(a=><AchievementItem key={a.id} achievement={a}/>)}</section></div>
+    </>}
     {!game.achievements?.length&&<div className="empty"><Trophy/><h3>成就明细尚未同步</h3><p>下一次同步成功后将在这里展示。</p></div>}
   </Modal>;
 }

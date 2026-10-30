@@ -7,7 +7,8 @@ import {chromium} from 'playwright';
 import {encryptVault,decryptVault} from '../src/crypto.ts';
 const password='navigation-test-only';
 const games=Array.from({length:12},(_,i)=>({id:String(100+i),name:'Test Game '+i,image:'https://covers.example.test/square.svg',image2x:'https://covers.example.test/medium.svg',image3x:'https://covers.example.test/original.svg',devices:['Xbox'],lastPlayed:'2026-10-30T00:00:00Z',minutes:60,earned:1,total:10,score:10,maxScore:100}));
-for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:'https://covers.example.test/square.svg',unlocked:i===0,unlockedAt:i===0?'2026-10-28T12:24:00.000Z':null,rarity}));
+for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
+for(const game of games){game.total=4;game.earned=2;game.groupStatus='verified';game.groups=[{id:'base',name:'本体',kind:'base',earned:2,total:2,achievementIds:['1','2']},{id:'dlc',name:'追加故事',kind:'dlc',earned:0,total:2,achievementIds:['3','4']}];}
 const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:''},games,source:'Exophase',warnings:[]}]},password);
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4173'],{stdio:'ignore'});
 let browser;
@@ -86,6 +87,26 @@ try{
     await unlock();
     await page.waitForFunction(()=>document.querySelector('.game-card .game-cover img')?.currentSrc.endsWith('square.svg'));
     await page.unroute('**/medium.svg');await page.unroute('**/original.svg');
+    // Cached display variants avoid original artwork; a missing mirror still has the upstream fallback.
+    await page.route('**/cached-*.svg',route=>{
+      const width=route.request().url().includes('1600')?1600:480;
+      return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${width*9/16}"><rect width="100%" height="100%" fill="#789"/></svg>`});
+    });
+    const cachePayload=await decryptVault(envelope,password);
+    for(const game of cachePayload.records[0].games){game.cachedImage='https://covers.example.test/cached-480.svg';game.cachedImageLarge='https://covers.example.test/cached-1600.svg';for(const a of game.achievements||[])a.cachedImage='https://covers.example.test/cached-award.svg';}
+    activeEnvelope=await encryptVault(cachePayload,password);
+    await unlock();
+    await page.waitForFunction(()=>document.querySelector('.game-card .game-cover img')?.currentSrc.endsWith('cached-480.svg'));
+    await page.locator('.game-card').first().click();
+    await page.waitForFunction(()=>document.querySelector('.detail-cover img')?.currentSrc.endsWith('cached-1600.svg'));
+    await page.locator('.achievement-image img').first().scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>document.querySelector('.achievement-image img')?.currentSrc.endsWith('cached-award.svg'));
+    await page.getByRole('button',{name:'关闭详情',exact:true}).click();
+    await page.route('**/cached-*.svg',route=>route.abort());
+    await unlock();
+    await page.waitForFunction(()=>document.querySelector('.game-card .game-cover img')?.currentSrc.endsWith('original.svg'));
+    activeEnvelope=envelope;await unlock();
+    console.log((mobile?'Mobile':'Desktop')+': PASS cached list/detail artwork sizes and missing-cache fallback');
     const all=page.getByRole('button',{name:'全部游戏',exact:true});
     await all.scrollIntoViewIfNeeded();
     const originalScroll=await page.evaluate(()=>window.scrollY);
@@ -115,6 +136,20 @@ try{
       return {imageWidth:image.getBoundingClientRect().width,titleSize:parseFloat(getComputedStyle(title).fontSize),descriptionSize:parseFloat(getComputedStyle(description).fontSize),sameRow:Math.abs(description.getBoundingClientRect().top-rarity.getBoundingClientRect().top)<1,tier:rarity.getAttribute('data-rarity-tier'),icon:rarity.querySelector('svg')?.getAttribute('class'),fits:row.scrollWidth<=row.clientWidth+1};
     }));
     assert.deepEqual(achievementLayout.map(a=>a.tier),['rare','rare','common',null]);
+    const achievementIds=()=>page.locator('.achievement').evaluateAll(rows=>rows.map(row=>row.getAttribute('data-achievement-id')));
+    assert.deepEqual(await achievementIds(),['2','1','3','4'],'Default is newest unlock first, with locked entries last');
+    for(const [sort,expected] of [['date-asc',['1','2','3','4']],['rarity-asc',['1','2','3','4']],['rarity-desc',['3','2','1','4']],['date-desc',['2','1','3','4']]]){
+      await page.getByRole('combobox',{name:'成就排序',exact:true}).selectOption(sort);
+      assert.deepEqual(await achievementIds(),expected);
+    }
+
+    await page.getByRole('combobox',{name:'成就分组',exact:true}).selectOption('base');
+    assert.deepEqual(await achievementIds(),['2','1']);
+    await page.getByRole('combobox',{name:'成就分组',exact:true}).selectOption('dlc');
+    assert.deepEqual(await achievementIds(),['3','4']);
+    await page.getByRole('combobox',{name:'成就分组',exact:true}).selectOption('__all');
+    assert.deepEqual(await achievementIds(),['2','1','3','4']);
+    console.log((mobile?'Mobile':'Desktop')+': PASS four achievement sort orders, base/DLC filters and default newest-first');
     for(const row of achievementLayout){assert.equal(row.imageWidth,56);assert.ok(row.titleSize>row.descriptionSize);assert.ok(row.sameRow);assert.ok(row.fits);}
     assert.ok(achievementLayout[0].icon.includes('gem'));
     assert.ok(achievementLayout[2].icon.includes('trophy'));

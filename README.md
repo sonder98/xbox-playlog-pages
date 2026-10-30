@@ -52,3 +52,10 @@ Node 22.13+，运行 `npm install`、`npm install --no-save playwright`、`npm t
 收到用户导出的文件后，执行 `node --experimental-strip-types scripts/import-catalogs.ts /absolute/path/export.json` 校验并合并；提交 `data/achievement-catalogs.json` 会触发同步。新增游戏或成就总数变化时，需要补充相应目录，原有解锁状态的更新仍然自动进行。
 
 导出页面由 `node scripts/build-catalog-export.mjs` 生成，使用与同步程序相同的 DOM 解析器。CI 用完全拦截的本地样本响应测试书签、读取弹窗和 JSON 下载，不向 Exophase 发测试请求。
+
+
+### 图片与成就排序
+
+发布任务会把允许来源的公开封面与成就图转换为 WebP，随 GitHub Pages 同站分发。游戏列表使用 480px 封面、详情使用 1600px 封面，成就图上限 168px；保持原始比例且不放大小图。生成文件由 Actions 缓存复用，同一源图只下载一次；图片源失败时保留原地址回退，首次生成设有五分钟预算，后续发布继续补齐。图片文件名包含源地址及转换版本的摘要，避免新图误用旧缓存。
+
+成就详情默认合并本体与追加内容，按解锁时间从新到旧显示；可切换时间升序、稀有度百分比升序或降序，也可单独选择分组。时间排序中无时间的已解锁条目与未解锁条目置后，稀有度缺失也始终置后。

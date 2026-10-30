@@ -36,7 +36,7 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
  <nav className="mobile-nav" aria-label="主导航">{nav.map(([id,label,Icon])=><button key={id} onClick={()=>setTab(id)} aria-current={tab===id?'page':undefined}><Icon size={21}/><span>{label}</span></button>)}</nav>
 
  </div>;
- function renderGames(list:Game[]){return list.length?<div className="game-cards">{list.map(g=><GameCard key={g.id} game={g} onOpen={()=>loadAchievements(g)}/>)}</div>:<Empty title={loading?'正在读取记录…':query||filter!=='all'?'没有匹配的游戏':'游戏故事，从连接开始'} text={query||filter!=='all'?'试试其他名称或筛选条件。':'Exophase 首次同步成功后，你的游戏会出现在这里。'}/>;}
+ function renderGames(list:Game[]){return list.length?<div className="game-cards">{list.map((g,index)=><GameCard key={g.id} game={g} priority={index<2} onOpen={()=>loadAchievements(g)}/>)}</div>:<Empty title={loading?'正在读取记录…':query||filter!=='all'?'没有匹配的游戏':'游戏故事，从连接开始'} text={query||filter!=='all'?'试试其他名称或筛选条件。':'Exophase 首次同步成功后，你的游戏会出现在这里。'}/>;}
 
 }
 function Stat({label,value,unit,icon,note}:{label:string;value:string;unit:string;icon:React.ReactNode;note:string}){return <div className="stat"><div className="stat-label">{label}<span>{icon}</span></div><div className="stat-value">{value}<small>{unit}</small></div><div className="stat-note">{note}</div></div>}
