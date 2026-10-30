@@ -73,6 +73,21 @@ const gamesById=new Map<string,any>();
 for(let page=1;page<=50;page++){
   const result=await getJson(`${api}/games?page=${page}&environment=xbox&sort=1&showHidden=0`);
   if(result.success!==true||!Array.isArray(result.games))throw Error('Exophase 游戏列表响应格式不符合预期；旧记录未覆盖。');
+  if(page===1&&browserContext&&result.games[0]){
+    const session=await browserContext;
+    const sample=result.games[0];
+    const dimensions=await session.page.evaluate(async(candidates:Record<string,string>)=>{
+      return Promise.all(Object.entries(candidates).map(([field,url])=>new Promise(resolve=>{
+        if(!url){resolve({field,available:false});return;}
+        const image=new Image();
+        const timer=setTimeout(()=>resolve({field,loaded:false}),15000);
+        image.onload=()=>{clearTimeout(timer);resolve({field,width:image.naturalWidth,height:image.naturalHeight});};
+        image.onerror=()=>{clearTimeout(timer);resolve({field,loaded:false});};
+        image.src=url;
+      })));
+    },{resource_standard:sample.resource_standard||'',resource_small:sample.resource_small||'',resource_tile:sample.resource_tile||''});
+    console.log('Exophase 封面尺寸校验：'+JSON.stringify(dimensions));
+  }
   for(const item of result.games){
     const meta=item.meta||{};
     const id=String(item.master_id||meta.master_id||'');
@@ -84,7 +99,7 @@ for(let page=1;page<=50;page++){
     const played=Number(item.lastplayed_utc);
     const lastPlayed=Number.isFinite(played)&&played>0?new Date(played*1000).toISOString():typeof item.lastplayed_utc==='string'&&Number.isFinite(Date.parse(item.lastplayed_utc))?new Date(item.lastplayed_utc).toISOString():typeof item.lastplayed==='string'&&Number.isFinite(Date.parse(item.lastplayed))?new Date(item.lastplayed).toISOString():null;
     gamesById.set(id,{
-      id,name,image:safeImage(item.resource_standard||item.resource_small||item.resource_tile||''),
+      id,name,image:safeImage(item.resource_tile||item.resource_standard||item.resource_small||''),
       devices:Array.isArray(meta.platforms)?meta.platforms.map((p:any)=>String(p.name||p.slug||'')).filter(Boolean):[],
       lastPlayed,minutes:totalMinutes,earned:Number(item.earned_awards)||0,total:Number(item.total_awards)||0,
       score:Number(item.earned_points)||0,maxScore:0,endpointAwards:meta.endpoint_awards||''
