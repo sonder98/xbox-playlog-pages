@@ -11,19 +11,22 @@ if(!password||password.length<16)throw Error('请检查 APP_PASSWORD（至少16�
 let browserContext:Promise<any>|null=null;
 async function browserJson(url:string){
   if(!browserContext)browserContext=(async()=>{
-    console.log('普通 HTTP 请求被拒绝，改用标准 Chromium 浏览器读取公开接口。');
+    console.log('正在通过 Exophase 公开个人主页建立正常浏览器会话…');
     const {chromium}=await import('playwright');
     const browser=await chromium.launch({headless:true});
-    return browser.newContext();
+    const context=await browser.newContext();
+    const page=await context.newPage();
+    const response=await page.goto('https://www.exophase.com/xbox/user/SondrRope/',{waitUntil:'networkidle',timeout:60000});
+    console.log(`公开主页 HTTP ${response?.status()}；标题：${await page.title()}`);
+    return {browser,page};
   })();
-  const context=await browserContext;
-  const page=await context.newPage();
-  try{
-    const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
-    const body=await page.locator('body').innerText();
-    if(!response?.ok())throw Error(`Exophase 浏览器请求 HTTP ${response?.status()}：${body.slice(0,180)}`);
-    try{return JSON.parse(body);}catch{throw Error('Exophase 返回了网页而不是 JSON；旧记录未覆盖。');}
-  }finally{await page.close();}
+  const {page}=await browserContext;
+  const result=await page.evaluate(async(endpoint:string)=>{
+    const response=await fetch(endpoint,{headers:{Accept:'application/json'},credentials:'include'});
+    return {status:response.status,ok:response.ok,text:await response.text(),server:response.headers.get('server')};
+  },url);
+  if(!result.ok)throw Error(`Exophase 站内公开接口 HTTP ${result.status} (${result.server})：${result.text.slice(0,180)}`);
+  try{return JSON.parse(result.text);}catch{throw Error('Exophase 返回了网页而不是 JSON；旧记录未覆盖。');}
 }
 async function getJson(url:string):Promise<any>{
   if(browserContext)return browserJson(url);
@@ -86,7 +89,7 @@ async function worker(){
   }
 }
 await Promise.all(Array.from({length:5},()=>worker()));
-if(browserContext){const context=await browserContext;await context.browser()?.close();}
+if(browserContext){const session=await browserContext;await session.browser.close();}
 if(!games.length)throw Error('Exophase 没有返回任何游戏；不发布空快照。');
 const noPlaytime=games.filter(game=>game.minutes===null).length;
 const warnings=[
