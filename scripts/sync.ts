@@ -34,7 +34,7 @@ for(let page=1;page<=50;page++){
     const hours=Number(units.hours),minutes=Number(units.minutes);
     const totalMinutes=Number.isFinite(hours)&&Number.isFinite(minutes)?Math.max(0,Math.round(hours*60+minutes)):null;
     const played=Number(item.lastplayed_utc);
-    const lastPlayed=Number.isFinite(played)&&played>0?new Date(played*1000).toISOString():null;
+    const lastPlayed=Number.isFinite(played)&&played>0?new Date(played*1000).toISOString():typeof item.lastplayed_utc==='string'&&Number.isFinite(Date.parse(item.lastplayed_utc))?new Date(item.lastplayed_utc).toISOString():typeof item.lastplayed==='string'&&Number.isFinite(Date.parse(item.lastplayed))?new Date(item.lastplayed).toISOString():null;
     gamesById.set(id,{
       id,name,image:safeImage(item.resource_standard||item.resource_small||item.resource_tile||''),
       devices:Array.isArray(meta.platforms)?meta.platforms.map((p:any)=>String(p.name||p.slug||'')).filter(Boolean):[],
