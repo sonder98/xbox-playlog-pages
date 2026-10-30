@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       sync:
-        description: 同步 Xbox 数据（需先设置两个 Secrets）
+        description: 同步 Exophase 公开档案（只需 APP_PASSWORD）
         type: boolean
         default: true
   schedule:
@@ -38,13 +38,9 @@ jobs:
           node-version: '22'
       - run: npm install --ignore-scripts
       - run: npm test
-      - name: Sync and encrypt own Xbox records
+      - name: Sync and encrypt Exophase records
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.sync) || github.event_name == 'schedule'
         env:
-          XBOX_CLIENT_ID: ${{ secrets.XBOX_CLIENT_ID }}
-          XBOX_REFRESH_TOKEN: ${{ secrets.XBOX_REFRESH_TOKEN }}
-          XBOX_CLIENT_SECRET: ${{ secrets.XBOX_CLIENT_SECRET }}
-          OPENXBL_API_KEY: ${{ secrets.OPENXBL_API_KEY }}
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
         run: npm run sync
       - name: Save only encrypted snapshots
@@ -54,7 +50,7 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add public/vault.json public/status.json
           if ! git diff --cached --quiet; then
-            git commit -m "Update encrypted Xbox snapshot"
+            git commit -m "Update encrypted Exophase snapshot"
             git push origin HEAD:main
           fi
       - run: npm run build
