@@ -125,6 +125,7 @@ async function resolveArtwork(game:any){
   }
 }
 
+let catalogAccessError='';
 async function achievementCatalog(game:any):Promise<PageData>{
   const old=priorGames.get(game.id);
   if(old?.groups&&old.groupStatus==='verified'&&old.total===game.total&&old.achievements?.length&&Date.now()-Date.parse(old.catalogAt||'')<7*86400000){
@@ -136,9 +137,21 @@ async function achievementCatalog(game:any):Promise<PageData>{
   url.hash='';
   const session=await activeSession();
   if(!session)throw Error('Browser session unavailable');
-  const response=await session.page.context().request.get(url.href,{timeout:30000});
-  if(!response.ok())throw Error(`Exophase catalog HTTP ${response.status()}`);
-  const catalog=await session.page.evaluate(readAchievementPage,await response.text());
+  if(catalogAccessError)throw Error(catalogAccessError);
+  // Use the same browser session as the public profile and earned feed.
+  const response=await session.page.evaluate(async(endpoint:string)=>{
+    const result=await fetch(endpoint,{headers:{Accept:'text/html'},credentials:'same-origin',signal:AbortSignal.timeout(30000)});
+    return {ok:result.ok,status:result.status,text:await result.text()};
+  },url.href);
+  if(!response.ok){
+    const message=`Exophase catalog HTTP ${response.status}`;
+    if(response.status===403||response.status===429)catalogAccessError=message;
+    throw Error(message);
+  }
+  if(/<title[^>]*>\s*(Just a moment|Access denied|Attention Required)/i.test(response.text)){
+    catalogAccessError='Exophase 成就页当前要求浏览器验证。';throw Error(catalogAccessError);
+  }
+  const catalog=await session.page.evaluate(readAchievementPage,response.text);
   game.catalogAt=new Date().toISOString();
   return catalog;
 }
