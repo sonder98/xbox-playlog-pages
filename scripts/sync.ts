@@ -13,10 +13,11 @@ async function browserJson(url:string){
   if(!browserContext)browserContext=(async()=>{
     console.log('正在通过 Exophase 公开个人主页建立正常浏览器会话…');
     const {chromium}=await import('playwright');
-    const browser=await chromium.launch({headless:true});
+    const browser=await chromium.launch({headless:false});
     const context=await browser.newContext();
     const page=await context.newPage();
     const response=await page.goto('https://www.exophase.com/xbox/user/SondrRope/',{waitUntil:'domcontentloaded',timeout:60000});
+    await page.waitForFunction(()=>!document.title.includes('Just a moment'),{},{timeout:30000}).catch(()=>{});
     console.log(`公开主页 HTTP ${response?.status()}；标题：${await page.title()}`);
     return {browser,page};
   })();
