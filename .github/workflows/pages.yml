@@ -5,8 +5,7 @@ on:
     paths:
       - '.github/workflows/pages.yml'
       - 'scripts/**'
-      - 'src/data.ts'
-      - 'src/crypto.ts'
+      - 'src/**'
       - 'package.json'
       - 'package-lock.json'
   workflow_dispatch:
@@ -59,6 +58,8 @@ jobs:
             git push origin HEAD:main
           fi
       - run: npm run build
+      - name: Check mobile and desktop page navigation
+        run: node --experimental-strip-types scripts/check-navigation.mjs
       - uses: actions/configure-pages@v5
         with:
           enablement: true
