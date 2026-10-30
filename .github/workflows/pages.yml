@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/pages.yml'
       - 'scripts/**'
+      - 'data/**'
+      - 'public/catalog-export.html'
       - 'src/**'
       - 'package.json'
       - 'package-lock.json'

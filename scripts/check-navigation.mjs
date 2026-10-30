@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {readAchievementPage} from './exophase-page.ts';
+import {parseCatalogBundle} from './catalog-cache.ts';
 import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
 import {encryptVault,decryptVault} from '../src/crypto.ts';
@@ -21,6 +22,32 @@ try{
   assert.equal(catalog.achievements[0].name,'Ten out of Ten');
   assert.equal(catalog.achievements[0].rarity,15.87);
   await catalogPage.close();
+  // Exercise the exporter against intercepted fixture documents only: no upstream requests.
+  const exportHtml=await readFile(new URL('../public/catalog-export.html',import.meta.url),'utf8');
+  const assignment="document.getElementById('bookmark').href=";
+  const bookmark=JSON.parse(exportHtml.slice(exportHtml.indexOf(assignment)+assignment.length).split(';</script>')[0]);
+  const exportContext=await browser.newContext();
+  const fixture=await readFile(new URL('../tests/fixtures/cyberpunk-catalog.html',import.meta.url),'utf8');
+  await exportContext.route('**/*',route=>{
+    const url=new URL(route.request().url());
+    if(url.hostname==='api.exophase.com')return route.fulfill({headers:{'access-control-allow-origin':'*'},json:{success:true,games:[{total_awards:57,meta:{title:'Cyberpunk 2077',endpoint_awards:'https://www.exophase.com/game/cyberpunk-2077-xbox/achievements/'}}]}});
+    if(url.hostname==='www.exophase.com'&&url.pathname.startsWith('/xbox/user/'))return route.fulfill({contentType:'text/html',body:'<!doctype html><a id="export" href="'+bookmark+'">Export public catalog</a>'});
+    if(url.hostname==='www.exophase.com'&&url.pathname.startsWith('/game/cyberpunk-2077-xbox/'))return route.fulfill({contentType:'text/html',body:fixture});
+    return route.abort();
+  });
+  const exportPage=await exportContext.newPage();
+  await exportPage.goto('https://www.exophase.com/xbox/user/SondrRope/');
+  await exportPage.getByRole('link',{name:'Export public catalog'}).click();
+  await exportPage.getByRole('button',{name:'保存 JSON 文件'}).waitFor();
+  const exportDownload=exportPage.waitForEvent('download');
+  await exportPage.getByRole('button',{name:'保存 JSON 文件'}).click();
+  const file=await (await exportDownload).path();
+  const exported=parseCatalogBundle(JSON.parse(await readFile(file,'utf8')));
+  assert.equal(exported.catalogs.length,1);
+  assert.deepEqual(exported.catalogs[0].data.groups.map(g=>g.total),[44,13]);
+  assert.ok(exported.catalogs[0].data.achievements.every(a=>!a.unlocked&&a.unlockedAt===null));
+  await exportContext.close();
+  console.log('Public catalog exporter: PASS popup, document parsing, JSON download, sanitized metadata');
   for(const mobile of [true,false]){
     const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1000},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:2});
     const page=await context.newPage();

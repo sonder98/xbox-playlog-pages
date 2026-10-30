@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {cachedCatalog,parseCatalogBundle,mergeCatalogBundles} from '../scripts/catalog-cache.ts';
+import {mergeAchievementPage} from '../scripts/exophase-page.ts';
+const raw=JSON.parse(fs.readFileSync(new URL('../data/achievement-catalogs.json',import.meta.url),'utf8'));
+test('captured public catalog validates base/DLC IDs and strips player unlock state',()=>{const bundle=structuredClone(raw);bundle.catalogs[0].data.achievements[0].unlocked=true;bundle.catalogs[0].data.achievements[0].unlockedAt='2026-10-30T00:00:00Z';const clean=parseCatalogBundle(bundle);assert.deepEqual(clean.catalogs[0].data.groups.map(g=>g.total),[44,13]);assert.equal(clean.catalogs[0].data.achievements[0].unlocked,false);assert.equal(clean.catalogs[0].data.achievements[0].unlockedAt,null);});
+test('cache canonicalizes public page fragments and refuses changed totals or untrusted sources',()=>{const bundle=parseCatalogBundle(raw);assert.equal(cachedCatalog(bundle,raw.catalogs[0].source+'#4285437',57)?.achievements.length,57);assert.equal(cachedCatalog(bundle,raw.catalogs[0].source,58),undefined);assert.throws(()=>cachedCatalog(bundle,'https://example.com/game/test/achievements/',57));});
+test('invalid or duplicate groups cannot enter the cache',()=>{const broken=structuredClone(raw);broken.catalogs[0].data.groups[0].achievementIds[0]='99999999';assert.throws(()=>parseCatalogBundle(broken));assert.throws(()=>parseCatalogBundle({...raw,catalogs:[...raw.catalogs,...raw.catalogs]}));});
+test('cached metadata merges fresh unlocks without any HTML request',()=>{const data=parseCatalogBundle(raw).catalogs[0].data;const earned=data.achievements.map(a=>({masterAwardId:a.id,timestamp:1700000000}));const result=mergeAchievementPage({id:'1',name:'Cyberpunk',image:'',devices:[],lastPlayed:null,minutes:1,earned:57,total:57,score:100,maxScore:100},data,earned);assert.equal(result.groupStatus,'verified');assert.deepEqual(result.groups?.map(g=>g.earned),[44,13]);});
+test('merging a new export preserves previous entries and replaces matching sources',()=>{const old=parseCatalogBundle(raw);const newer=parseCatalogBundle({...raw,capturedAt:'2026-10-30T12:00:00Z'});assert.equal(mergeCatalogBundles(old,newer).catalogs.length,1);});

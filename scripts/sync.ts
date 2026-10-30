@@ -1,5 +1,6 @@
 import fs from 'node:fs';
-import {readAchievementPage,mergeAchievementPage,type PageData} from './exophase-page.ts';
+import {mergeAchievementPage,type PageData} from './exophase-page.ts';
+import {cachedCatalog,parseCatalogBundle,type CatalogBundle} from './catalog-cache.ts';
 import {publishSnapshot} from './snapshot.ts';
 import {getPasswords,readVault} from './password.ts';
 import {safeImage,validateRecord,type RecordData} from '../src/data.ts';
@@ -125,45 +126,19 @@ async function resolveArtwork(game:any){
   }
 }
 
-let catalogAccessError='';
-let catalogQueue:Promise<unknown>=Promise.resolve();
-const catalogDeadline=Date.now()+5*60*1000;
+let catalogBundle:CatalogBundle|undefined;
+if(fs.existsSync('data/achievement-catalogs.json'))catalogBundle=parseCatalogBundle(JSON.parse(fs.readFileSync('data/achievement-catalogs.json','utf8')));
 async function achievementCatalog(game:any):Promise<PageData>{
+  const cached=cachedCatalog(catalogBundle,game.endpointAwards,game.total);
+  if(cached){game.catalogAt=catalogBundle!.capturedAt;return cached;}
   const old=priorGames.get(game.id);
-  if(old?.groups&&old.groupStatus==='verified'&&old.total===game.total&&old.achievements?.length&&Date.now()-Date.parse(old.catalogAt||'')<7*86400000){
+  if(old?.groups&&old.groupStatus==='verified'&&old.total===game.total&&old.achievements?.length){
     game.catalogAt=old.catalogAt;
     return {groups:old.groups,achievements:old.achievements};
   }
-  const url=new URL(game.endpointAwards,'https://www.exophase.com');
-  if(url.protocol!=='https:'||url.hostname!=='www.exophase.com'||!url.pathname.startsWith('/game/'))throw Error('Invalid achievement page URL');
-  url.hash='';
-  const session=await activeSession();
-  if(!session)throw Error('Browser session unavailable');
-  if(catalogAccessError)throw Error(catalogAccessError);
-  // Achievement pages are documents, not JSON endpoints. Read their rendered DOM
-  // in a dedicated tab; keep profile/API requests on the original tab.
-  const task=catalogQueue.then(async()=>{
-    if(catalogAccessError)throw Error(catalogAccessError);
-    if(Date.now()>catalogDeadline)throw Error('本次成就目录读取已达到时间预算。');
-    if(!session.catalogPage)session.catalogPage=await session.page.context().newPage();
-    const page=session.catalogPage;
-    const response=await page.goto(url.href,{waitUntil:'domcontentloaded',timeout:30000});
-    try{
-      await page.locator('#awards ul.list-unordered-base li.award').first().waitFor({state:'attached',timeout:15000});
-    }catch{
-      const title=await page.title();
-      const status=response?.status();
-      const snippet=(await page.locator('body').innerText().catch(()=>'' )).replace(/\s+/g,' ').slice(0,180);
-      const message=`成就页文档不可读取：HTTP ${status}；${title}；${snippet}`;
-      if(status===403||status===429||/Just a moment|Access denied|Attention Required|verify|blocked/i.test(title+' '+snippet))catalogAccessError=message;
-      throw Error(message);
-    }
-    return page.evaluate(readAchievementPage);
-  });
-  catalogQueue=task.then(()=>{},()=>{});
-  const catalog=await task;
-  game.catalogAt=new Date().toISOString();
-  return catalog;
+  // The upstream document route has explicitly challenged this cloud runner.
+  // Do not repeatedly request it. Cached metadata is joined to fresh earned IDs.
+  throw Error('公开成就目录未缓存，或源站成就总数已改变，需要补充目录。');
 }
 let cursor=0,detailFailures=0,groupFailures=0;
 async function worker(){
