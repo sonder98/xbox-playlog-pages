@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {normalizeTitles,parseStats,validateRecord,compareRecords,type RecordData} from '../src/data.ts';
+const game={id:'123',name:'测试',image:'',devices:[],lastPlayed:null,minutes:100,earned:2,total:10,score:20,maxScore:100};
+const record=(gs:any[]):RecordData=>({id:'a',at:'2026-10-30T00:00:00Z',profile:{xuid:'2530000000000000',gamertag:'Tester',avatar:''},games:gs,source:'OpenXBL',warnings:[]});
+test('first snapshot is baseline; new games do not inflate delta',()=>{assert.equal(compareRecords(record([game])).minutes,null);assert.equal(compareRecords(record([{...game,minutes:160},{...game,id:'456',minutes:5000}]),record([game])).minutes,60)});
+test('missing values and downward corrections are handled explicitly',()=>{const d=compareRecords(record([{...game,minutes:50}]),record([game]));assert.equal(d.minutes,0);assert.equal(d.corrections,1);assert.equal(compareRecords(record([{...game,minutes:null}]),record([game])).minutes,0)});
+test('hidden titles and apps excluded, missing minutes remain null',()=>{const g=normalizeTitles({titles:[{titleId:'123',name:'Game'},{titleId:'456',type:'App'},{titleId:'789',titleHistory:{visible:false}}]});assert.equal(g.length,1);assert.equal(g[0].minutes,null);assert.throws(()=>normalizeTitles({}))});
+test('stats parse zero, reject invalid values',()=>assert.deepEqual(parseStats({users:[{titles:[{titleId:'123',stats:[{name:'MinutesPlayed',value:'0'}]},{titleId:'456',stats:[{name:'MinutesPlayed',value:'bad'}]}]}]}),{'123':0}));
+test('import rejects duplicate IDs and invalid minutes; filters image URLs',()=>{assert.throws(()=>validateRecord(record([game,game])));assert.throws(()=>validateRecord(record([{...game,minutes:-1}])));assert.equal(validateRecord(record([{...game,image:'javascript:alert(1)'}])).games[0].image,'')});
