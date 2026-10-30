@@ -1,5 +1,6 @@
 import fs from 'node:fs';
-import {encryptVault} from '../src/crypto.ts';
+import {readAchievementPage,mergeAchievementPage,type PageData} from './exophase-page.ts';
+import {publishSnapshot} from './snapshot.ts';
 import {getPasswords,readVault} from './password.ts';
 import {safeImage,validateRecord,type RecordData} from '../src/data.ts';
 
@@ -85,7 +86,7 @@ for(let page=1;page<=50;page++){
     const played=Number(item.lastplayed_utc);
     const lastPlayed=Number.isFinite(played)&&played>0?new Date(played*1000).toISOString():typeof item.lastplayed_utc==='string'&&Number.isFinite(Date.parse(item.lastplayed_utc))?new Date(item.lastplayed_utc).toISOString():typeof item.lastplayed==='string'&&Number.isFinite(Date.parse(item.lastplayed))?new Date(item.lastplayed).toISOString():null;
     gamesById.set(id,{
-      id,name,image:safeImage(item.resource_tile||item.resource_standard||item.resource_small||''),
+      id,name,image:safeImage(item.resource_tile||item.resource_standard||item.resource_small||''),imageWide:safeImage(item.resource_standard||item.resource_small||''),
       devices:Array.isArray(meta.platforms)?meta.platforms.map((p:any)=>String(p.name||p.slug||'')).filter(Boolean):[],
       lastPlayed,minutes:totalMinutes,earned:Number(item.earned_awards)||0,total:Number(item.total_awards)||0,
       score:Number(item.earned_points)||0,maxScore:0,endpointAwards:meta.endpoint_awards||''
@@ -97,7 +98,7 @@ for(let page=1;page<=50;page++){
 const games=[...gamesById.values()];
 
 // Exophase's public earned feed supplies achievement icon and unlock timestamp.
-// Its currently exposed JSON does not return rarity, so do not invent a value.
+// Public game pages add original/add-on membership, formal names and rarity.
 
 const priorGames=new Map((previous[0]?.games||[]).map(game=>[game.id,game]));
 async function resolveArtwork(game:any){
@@ -124,7 +125,24 @@ async function resolveArtwork(game:any){
   }
 }
 
-let cursor=0,detailFailures=0;
+async function achievementCatalog(game:any):Promise<PageData>{
+  const old=priorGames.get(game.id);
+  if(old?.groups&&old.groupStatus==='verified'&&old.total===game.total&&old.achievements?.length&&Date.now()-Date.parse(old.catalogAt||'')<7*86400000){
+    game.catalogAt=old.catalogAt;
+    return {groups:old.groups,achievements:old.achievements};
+  }
+  const url=new URL(game.endpointAwards);
+  if(url.protocol!=='https:'||url.hostname!=='www.exophase.com'||!url.pathname.startsWith('/game/'))throw Error('Invalid achievement page URL');
+  url.hash='';
+  const session=await activeSession();
+  if(!session)throw Error('Browser session unavailable');
+  const response=await session.page.context().request.get(url.href,{timeout:30000});
+  if(!response.ok())throw Error(`Exophase catalog HTTP ${response.status()}`);
+  const catalog=await session.page.evaluate(readAchievementPage,await response.text());
+  game.catalogAt=new Date().toISOString();
+  return catalog;
+}
+let cursor=0,detailFailures=0,groupFailures=0;
 async function worker(){
   while(cursor<games.length){
     const game=games[cursor++];
@@ -132,19 +150,26 @@ async function worker(){
     try{
       const payload=await getJson(`${api}/game/${encodeURIComponent(game.id)}/earned`);
       if(!Array.isArray(payload.list))throw Error('invalid earned list');
+      // Keep earned-only data when the public catalog is temporarily unavailable.
       game.achievements=payload.list.map((award:any)=>({
         id:String(award.masterAwardId||award.awardid||award.slug||''),
         name:String(award.name||award.title||award.slug||'Achievement').replaceAll('-',' '),
         image:safeImage(award.icons?.m?`https://m.exophase.com${award.icons.m}`:''),
         unlockedAt:Number(award.timestamp)>0?new Date(Number(award.timestamp)*1000).toISOString():null,
-        rarity:typeof award.rarity==='number'?award.rarity:null,unlocked:true
+        rarity:null,unlocked:true
       })).filter((award:any)=>award.id);
-    }catch{detailFailures++;}
+      try{
+        const catalog=await achievementCatalog(game);
+        Object.assign(game,mergeAchievementPage(game,catalog,payload.list));
+        if(game.groupStatus!=='verified')groupFailures++;
+      }catch{game.groupStatus='unavailable';groupFailures++;}
+    }catch{detailFailures++;groupFailures++;game.groupStatus='unavailable';}
   }
 }
 if(!await activeSession())await browserJson(`${api}/games?page=1&environment=xbox&sort=1&showHidden=0`);
-await Promise.all(Array.from({length:5},()=>worker()));
+await Promise.all(Array.from({length:3},()=>worker()));
 console.log(`高清封面：${games.filter(g=>g.image2x||g.image3x).length}/${games.length}；3倍屏原图：${games.filter(g=>g.image3x).length}/${games.length}`);
+console.log(`成就分组已核验：${games.filter(g=>g.groupStatus==='verified').length}/${games.length}`);
 const finishedSession=await activeSession();
 if(finishedSession)await finishedSession.browser.close();
 if(!games.length)throw Error('Exophase 没有返回任何游戏；不发布空快照。');
@@ -152,17 +177,12 @@ const noPlaytime=games.filter(game=>game.minutes===null).length;
 const warnings=[
   ...(noPlaytime?[`${noPlaytime} 个游戏在 Exophase 未返回游玩时长。`]:[]),
   ...(detailFailures?[`${detailFailures} 个游戏未能读取 Exophase 成就明细。`]:[]),
-  'Exophase 公开成就接口未提供稀有度字段；稀有度暂不显示。'
+  ...(groupFailures?[`${groupFailures} 个游戏的本体/追加内容分组暂不可确认。`]:[])
 ];
 const record:RecordData={
   ...validateRecord({profile:{xuid:playerId,gamertag:'SondrRope',avatar:profileAvatar},games,source:'Exophase',warnings}),
   id:crypto.randomUUID(),at:new Date().toISOString()
 };
-const payload={records:[record,...previous]};
-const envelope=await encryptVault(payload,password);
-const verified=await readVault(envelope,password,password);
-if(JSON.stringify(verified)!==JSON.stringify(payload))throw Error('重新加密后的记录校验失败；未覆盖历史文件。');
-fs.writeFileSync('public/vault.json',JSON.stringify(envelope));
-fs.writeFileSync('public/status.json',JSON.stringify({initialized:true}));
+await publishSnapshot(record,previous,password);
 if(process.env.NEW_APP_PASSWORD)console.log(`密码迁移完成：保留 ${previous.length} 份历史快照，新快照已一并重新加密并校验。`);
 console.log(`Exophase 同步完成：${games.length} 款游戏；正在加密记录。`);

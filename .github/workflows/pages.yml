@@ -57,6 +57,7 @@ jobs:
             git commit -m "Update encrypted Exophase snapshot"
             git push origin HEAD:main
           fi
+      - run: npm test
       - run: npm run build
       - name: Check mobile and desktop page navigation
         run: node --experimental-strip-types scripts/check-navigation.mjs

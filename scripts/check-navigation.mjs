@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {readAchievementPage} from './exophase-page.ts';
 import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
 import {encryptVault,decryptVault} from '../src/crypto.ts';
@@ -13,8 +15,14 @@ try{
     await new Promise(resolve=>setTimeout(resolve,300));
   }
   browser=await chromium.launch();
+  const catalogPage=await browser.newPage();
+  const catalog=await catalogPage.evaluate(readAchievementPage,await readFile(new URL('../tests/fixtures/cyberpunk-catalog.html',import.meta.url),'utf8'));
+  assert.deepEqual(catalog.groups.map(g=>[g.kind,g.total]),[['base',44],['dlc',13]]);
+  assert.equal(catalog.achievements[0].name,'Ten out of Ten');
+  assert.equal(catalog.achievements[0].rarity,15.87);
+  await catalogPage.close();
   for(const mobile of [true,false]){
-    const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1280,height:800},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:2});
+    const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1000},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:2});
     const page=await context.newPage();
     let activeEnvelope=envelope;
     const errors=[];
@@ -34,21 +42,21 @@ try{
       await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
     }
     await unlock();
-    await page.locator('.game-card .cover img').first().waitFor();
-    await page.waitForFunction(()=>{const img=document.querySelector('.game-card .cover img');return img?.complete&&img.naturalWidth>0;});
-    const cover=await page.locator('.game-card .cover').first().evaluate(el=>{
+    await page.locator('.game-card .game-cover img').first().waitFor();
+    await page.waitForFunction(()=>{const img=document.querySelector('.game-card .game-cover img');return img?.complete&&img.naturalWidth>0;});
+    const cover=await page.locator('.game-card .game-cover').first().evaluate(el=>{
       const rect=el.getBoundingClientRect();
       const image=el.querySelector('img');
-      return {width:rect.width,height:rect.height,fit:getComputedStyle(image).objectFit,source:image.currentSrc,naturalHeight:image.naturalHeight*window.devicePixelRatio};
+      return {width:rect.width,height:rect.height,fit:getComputedStyle(image).objectFit,source:image.currentSrc,naturalHeight:image.naturalHeight};
     });
-    assert.equal(cover.width,cover.height,'Cover container must be square');
-    assert.equal(cover.fit,'cover','High resolution artwork must fill the square without stretching');
-    assert.ok(cover.source.endsWith(mobile?'original.svg':'medium.svg'),'Screen density must select the matching artwork');
+    assert.ok(Math.abs(cover.width/cover.height-1920/1080)<.03,'Artwork keeps its original full-frame ratio');
+    assert.equal(cover.fit,'contain','Artwork must remain uncropped');
+    assert.ok(cover.source.endsWith('original.svg'),'Screen density must select the matching artwork');
     assert.ok(cover.naturalHeight>=cover.height*(mobile?3:2),'Artwork must have enough real pixels');
     await page.route('**/medium.svg',route=>route.abort());
     await page.route('**/original.svg',route=>route.abort());
     await unlock();
-    await page.waitForFunction(()=>document.querySelector('.game-card .cover img')?.currentSrc.endsWith('square.svg'));
+    await page.waitForFunction(()=>document.querySelector('.game-card .game-cover img')?.currentSrc.endsWith('square.svg'));
     await page.unroute('**/medium.svg');await page.unroute('**/original.svg');
     const all=page.getByRole('button',{name:'全部游戏',exact:true});
     await all.scrollIntoViewIfNeeded();
@@ -57,25 +65,37 @@ try{
     await page.waitForURL('**/#library');
     await page.getByRole('heading',{name:'我的游戏库',exact:true}).waitFor();
     await page.goBack();
-    await page.getByRole('heading',{name:'把游戏时光，留在这里。',exact:true}).waitFor();
+    await page.getByRole('heading',{name:'我的游戏档案',exact:true}).waitFor();
     await page.waitForFunction(y=>Math.abs(window.scrollY-y)<5,originalScroll);
     await page.goForward();
     await page.getByRole('heading',{name:'我的游戏库',exact:true}).waitFor();
     await page.getByRole('button',{name:'返回上一页',exact:true}).click();
-    await page.getByRole('heading',{name:'把游戏时光，留在这里。',exact:true}).waitFor();
+    await page.getByRole('heading',{name:'我的游戏档案',exact:true}).waitFor();
     await page.waitForFunction(y=>Math.abs(window.scrollY-y)<5,originalScroll);
     await unlock('#library');
     await page.getByRole('heading',{name:'我的游戏库',exact:true}).waitFor();
     await page.getByRole('button',{name:'返回上一页',exact:true}).click();
-    await page.getByRole('heading',{name:'把游戏时光，留在这里。',exact:true}).waitFor();
+    await page.getByRole('heading',{name:'我的游戏档案',exact:true}).waitFor();
+    await page.getByRole('button',{name:'全部游戏',exact:true}).click();
+    await page.getByRole('textbox',{name:'搜索游戏名称'}).fill('Test Game 1');
+    await page.getByRole('combobox',{name:'排序游戏'}).selectOption('time');
+    const beforeDetail=await page.evaluate(()=>window.scrollY);
+    await page.locator('.game-card').first().click();
+    await page.getByRole('dialog').waitFor();
+    await page.goBack();
+    await page.getByRole('dialog').waitFor({state:'hidden'});
+    assert.equal(await page.getByRole('textbox',{name:'搜索游戏名称'}).inputValue(),'Test Game 1');
+    assert.equal(await page.getByRole('combobox',{name:'排序游戏'}).inputValue(),'time');
+    await page.waitForFunction(y=>Math.abs(window.scrollY-y)<5,beforeDetail);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
     // Remembered credentials survive a reload and a new snapshot's random salt.
     async function signInRemembered(){
       await page.locator('input[type="password"]').fill(password);
       await page.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).check();
       await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
-      await page.getByRole('button',{name:'锁定并忘记',exact:true}).waitFor();
+      await page.getByRole('button',{name:'锁定档案',exact:true}).waitFor();
     }
-    await page.getByRole('button',{name:'锁定并忘记',exact:true}).click();
+    await page.getByRole('button',{name:'锁定档案',exact:true}).click();
     await signInRemembered();
     const savedInfo=await page.evaluate(()=>new Promise((resolve,reject)=>{
       const request=indexedDB.open('playlog-device-v1',1);
@@ -91,9 +111,9 @@ try{
     assert.ok(savedInfo.expires>Date.now()+29*24*60*60*1000);
     activeEnvelope=await encryptVault(await decryptVault(envelope,password),password);
     await page.reload();
-    await page.getByRole('button',{name:'锁定并忘记',exact:true}).waitFor();
+    await page.getByRole('button',{name:'锁定档案',exact:true}).waitFor();
     assert.equal(await page.locator('input[type="password"]').count(),0);
-    await page.getByRole('button',{name:'锁定并忘记',exact:true}).click();
+    await page.getByRole('button',{name:'锁定档案',exact:true}).click();
     await page.locator('input[type="password"]').waitFor();
     await page.reload();
     await page.locator('input[type="password"]').waitFor();
@@ -116,7 +136,7 @@ try{
     await page.locator('input[type="password"]').waitFor();
     await page.getByRole('alert').filter({hasText:'记住的密码已失效'}).waitFor();
     assert.deepEqual(errors,[]);
-    console.log((mobile?'Mobile':'Desktop')+': PASS all games, browser back/forward, back button, scroll restoration, direct link fallback, high density square covers with working image fallback, remembered unlock, fresh encrypted snapshot, lock, expiry, changed password');
+    console.log((mobile?'Mobile':'Desktop')+': PASS all games, browser back/forward, back button, scroll restoration, direct link fallback, full-frame high resolution covers with working image fallback, remembered unlock, fresh encrypted snapshot, lock, expiry, changed password');
     await context.close();
   }
 }finally{await browser?.close();server.kill();}

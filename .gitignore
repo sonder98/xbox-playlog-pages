@@ -7,3 +7,6 @@ dist/
 .DS_Store
 
 !.dev.vars.example
+
+node_modules
+.qa/

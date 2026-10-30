@@ -1,2 +1,25 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';import {pathToFileURL,fileURLToPath} from 'node:url';import {spawnSync} from 'node:child_process';import {decryptVault} from '../src/crypto.ts';
-test('sync publishes only ciphertext, retains history, and wrong password cannot overwrite',async()=>{const dir=mkdtempSync(join(tmpdir(),'playlog-sync-test-'));try{mkdirSync(join(dir,'public'));const mock=join(dir,'mock.mjs');writeFileSync(mock,`globalThis.fetch=async(url)=>{let d;if(url.endsWith('/account'))d={profileUsers:[{id:'2530000000000000',settings:[{id:'Gamertag',value:'PRIVATE-TEST-PLAYER'}]}]};else if(url.includes('titleHistory'))d={titles:[{titleId:'123',name:'PRIVATE-TEST-GAME',achievement:{currentAchievements:2,totalAchievements:5}}]};else if(url.endsWith('/player/stats'))d={users:[{titles:[{titleId:'123',stats:[{name:'MinutesPlayed',value:'60'}]}]}]};else throw Error('Unexpected endpoint');return Response.json(d);};`);const script=fileURLToPath(new URL('../scripts/sync.ts',import.meta.url));const password='test-password-long-enough';const run=(p:string)=>spawnSync(process.execPath,['--experimental-strip-types','--import',pathToFileURL(mock).href,script],{cwd:dir,env:{...process.env,APP_PASSWORD:p,OPENXBL_API_KEY:'test-only-key'},encoding:'utf8'});const a=run(password);assert.equal(a.status,0,a.stderr);const text=readFileSync(join(dir,'public/vault.json'),'utf8');assert.ok(!text.includes('PRIVATE-TEST'));assert.ok(!a.stdout.includes('PRIVATE-TEST'));const data=await decryptVault(JSON.parse(text),password);assert.equal(data.records[0].games[0].minutes,60);assert.equal(run(password).status,0);assert.equal((await decryptVault(JSON.parse(readFileSync(join(dir,'public/vault.json'),'utf8')),password)).records.length,2);const before=readFileSync(join(dir,'public/vault.json'),'utf8');assert.notEqual(run('different-long-password').status,0);assert.equal(readFileSync(join(dir,'public/vault.json'),'utf8'),before);}finally{rmSync(dir,{recursive:true,force:true})}});
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,mkdirSync,readFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {decryptVault} from '../src/crypto.ts';
+import {readVault} from '../scripts/password.ts';
+import {publishSnapshot} from '../scripts/snapshot.ts';
+import type {RecordData} from '../src/data.ts';
+test('snapshot is ciphertext, retains history, wrong password fails before replacement, password rotation retains all records',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'playlog-sync-')),cwd=process.cwd();
+ try{
+  process.chdir(dir);mkdirSync('public');
+  const password='test-password',record:RecordData={id:'1',at:new Date().toISOString(),profile:{xuid:'4285437',gamertag:'PRIVATE-TEST',avatar:''},games:[{id:'123',name:'PRIVATE-GAME',image:'',image2x:undefined,devices:[],lastPlayed:null,minutes:60,earned:1,total:1,score:10,maxScore:10,achievements:[{id:'1',name:'Achievement',image:'',rarity:null,unlocked:true,unlockedAt:null}]}],source:'Exophase',warnings:[]};
+  await publishSnapshot(record,[],password);
+  const before=readFileSync('public/vault.json','utf8');assert.ok(!before.includes('PRIVATE-TEST'));
+  await assert.rejects(readVault(JSON.parse(before),'incorrect','incorrect'));
+  assert.equal(readFileSync('public/vault.json','utf8'),before);
+  const previous=(await readVault(JSON.parse(before),password,password)).records;
+  await publishSnapshot({...record,id:'2'},previous,'new-password');
+  const encrypted=JSON.parse(readFileSync('public/vault.json','utf8'));
+  assert.equal((await decryptVault(encrypted,'new-password')).records.length,2);
+  await assert.rejects(decryptVault(encrypted,password));
+ }finally{process.chdir(cwd);rmSync(dir,{recursive:true,force:true});}
+});
