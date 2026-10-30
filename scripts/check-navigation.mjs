@@ -21,6 +21,7 @@ try{
     await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
     await page.route('**/vault.json',route=>route.fulfill({json:envelope}));
     async function unlock(hash=''){
+      await page.goto('about:blank');
       await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/'+hash);
       await page.locator('input[type="password"]').fill(password);
       await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
