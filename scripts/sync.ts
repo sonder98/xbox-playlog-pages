@@ -16,13 +16,13 @@ async function browserJson(url:string){
     const browser=await chromium.launch({headless:true});
     const context=await browser.newContext();
     const page=await context.newPage();
-    const response=await page.goto('https://www.exophase.com/xbox/user/SondrRope/',{waitUntil:'networkidle',timeout:60000});
+    const response=await page.goto('https://www.exophase.com/xbox/user/SondrRope/',{waitUntil:'domcontentloaded',timeout:60000});
     console.log(`公开主页 HTTP ${response?.status()}；标题：${await page.title()}`);
     return {browser,page};
   })();
   const {page}=await browserContext;
   const result=await page.evaluate(async(endpoint:string)=>{
-    const response=await fetch(endpoint,{headers:{Accept:'application/json'},credentials:'include'});
+    const response=await fetch(endpoint,{headers:{Accept:'application/json'},credentials:'omit',signal:AbortSignal.timeout(30000)});
     return {status:response.status,ok:response.ok,text:await response.text(),server:response.headers.get('server')};
   },url);
   if(!result.ok)throw Error(`Exophase 站内公开接口 HTTP ${result.status} (${result.server})：${result.text.slice(0,180)}`);
