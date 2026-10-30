@@ -2,20 +2,21 @@
 
 这是公开展示仓库，原完整后端源码仓库 `sonder98/xbox-playlog` 保持私有。当前版本全部通过 GitHub Pages 和 GitHub Actions 工作，不再连接 Cloudflare。
 
-## 首次配置
+## 首次配置：微软直连
 
-在本仓库 Settings → Secrets and variables → Actions → New repository secret 添加：
+优先使用微软 OAuth 和 Xbox 接口，不需要 OpenXBL。完整步骤见 [MICROSOFT_SETUP.md](MICROSOFT_SETUP.md)：注册自己的原生公共客户端应用，在本机运行 PKCE 授权助手，然后在本仓库配置：
 
-| Name | Secret |
+| Name | 值 |
 | --- | --- |
-| `APP_PASSWORD` | 自己设置的至少16位强密码，可与原应用访问密码相同；不要使用微软/GitHub登录密码 |
-| `OPENXBL_API_KEY` | 在 https://xbl.io 获取的本人 API Key |
+| `APP_PASSWORD` | 至少16位强密码，用于加密记录 |
+| `XBOX_CLIENT_ID` | 自己注册的微软应用 Client ID |
+| `XBOX_REFRESH_TOKEN` | 本机首次授权取得的刷新令牌 |
 
-两个值分别添加，不是JSON。Secrets 不会从原私有仓库自动继承。不要把密钥发到聊天或提交到文件。
+首次授权助手只依赖本机 Node.js 22.13+，不需要 npm install。微软密码只在微软官方页面输入；不要把任何令牌发到聊天或源码。
 
-然后打开 Actions → Publish and sync Playlog → Run workflow，勾选同步 Xbox 数据并运行。流程会读取自己的账号、游戏列表、累计时长和成就进度，加密快照、提交密文并发布网页。首次代码推送只发布配置引导页，不会生成虚构游戏数据。
+随后运行 Actions → Publish and sync Playlog，勾选同步。授权令牌只存在 GitHub Secrets 和任务内存，不写入公开密文文件。当前已完成模拟接口测试，真实微软注册和 Xbox 数据权限仍需用本人的账号验证。
 
-GitHub Pages 设置应选择 Source: GitHub Actions。正式网址以部署结果为准。
+OpenXBL 适配保留为可选备用，仅未配置微软凭据时才使用 OPENXBL_API_KEY。应用不会在微软授权失败时切换来源。当前未做后台定时同步。
 
 ## 隐私与数据
 
@@ -23,7 +24,7 @@ GitHub Pages 设置应选择 Source: GitHub Actions。正式网址以部署结�
 - 密钥由应用密码通过 PBKDF2-SHA256（600000次）派生。每次同步使用新的盐和IV。浏览器本机解密，密码不发送给网页服务器。
 - 页面和密文公开，数据长度、提交时间、提交次数及流量元信息可见。强密码很重要；加密不代表防止所有攻击。
 - 不要突然更换 APP_PASSWORD：历史密文需要旧密码解密，错密码时同步会停止，不覆盖历史。若要换密码，应先解密备份并安排重新加密；本版本尚未提供一键换密。
-- API Key 只提供给 Actions 同步步骤，不进入前端。同步日志不输出玩家身份或游戏名称。
+- 授权凭据只提供给 Actions 同步步骤，不进入前端。同步日志不输出玩家身份或游戏名称。
 - 导出的 JSON/CSV 是明文，仅供本人备份；本机导入记录以相同密码加密保存到浏览器，不能跨设备自动同步，也不会覆盖远程快照。
 - 协作权限仅授予可信的人。能修改同步工作流的人可能获取运行时 Secrets；不要给陌生人写权限。
 

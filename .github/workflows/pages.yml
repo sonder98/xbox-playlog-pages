@@ -34,6 +34,9 @@ jobs:
       - name: Sync and encrypt own Xbox records
         if: github.event_name == 'workflow_dispatch' && inputs.sync
         env:
+          XBOX_CLIENT_ID: ${{ secrets.XBOX_CLIENT_ID }}
+          XBOX_REFRESH_TOKEN: ${{ secrets.XBOX_REFRESH_TOKEN }}
+          XBOX_CLIENT_SECRET: ${{ secrets.XBOX_CLIENT_SECRET }}
           OPENXBL_API_KEY: ${{ secrets.OPENXBL_API_KEY }}
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
         run: npm run sync

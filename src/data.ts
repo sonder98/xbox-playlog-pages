@@ -21,7 +21,7 @@ export function validateRecord(input:any):{profile:Profile;games:Game[];source:s
  if(g.minutes!=null&&(typeof g.minutes!=='number'||!Number.isFinite(g.minutes)||g.minutes<0))throw new Error('游玩分钟数必须为非负数或 null。');
  return {id:g.id,name:g.name.slice(0,300),image:safeImage(g.image),devices:Array.isArray(g.devices)?g.devices.slice(0,10).map(String):[],lastPlayed:typeof g.lastPlayed==='string'&&Number.isFinite(Date.parse(g.lastPlayed))?new Date(g.lastPlayed).toISOString():null,minutes:g.minutes??null,earned:number(g.earned),total:number(g.total),score:number(g.score),maxScore:number(g.maxScore)};
  });
- return {profile:{xuid:input.profile.xuid,gamertag:String(input.profile.gamertag||'Xbox 玩家').slice(0,100),avatar:safeImage(input.profile.avatar)},games,source:input.source==='OpenXBL'?'OpenXBL':'导入',warnings:Array.isArray(input.warnings)?input.warnings.slice(0,30).map((v:any)=>String(v).slice(0,300)):[]};
+ return {profile:{xuid:input.profile.xuid,gamertag:String(input.profile.gamertag||'Xbox 玩家').slice(0,100),avatar:safeImage(input.profile.avatar)},games,source:input.source==='Xbox'?'Xbox':input.source==='OpenXBL'?'OpenXBL':'导入',warnings:Array.isArray(input.warnings)?input.warnings.slice(0,30).map((v:any)=>String(v).slice(0,300)):[]};
 }
 export function compareRecords(current:RecordData, previous?:RecordData){
  if(!previous||previous.profile.xuid!==current.profile.xuid)return {minutes:null,achievements:null,corrections:0};
