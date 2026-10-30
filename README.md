@@ -1,39 +1,22 @@
 # 游迹 / GitHub Pages 展示版
 
-这是公开展示仓库，原完整后端源码仓库 `sonder98/xbox-playlog` 保持私有。当前版本全部通过 GitHub Pages 和 GitHub Actions 工作，不再连接 Cloudflare。
+静态网站从 Exophase 公开档案 `SondrRope` 读取 Xbox 游戏库和已解锁成就。GitHub Actions 每天自动同步，也会在更新同步脚本后执行一次；不需要 Xbox/Microsoft 应用、Xbox 登录令牌或 OpenXBL API Key。
 
-## 首次配置：微软直连
+## 唯一需要的 Secret
 
-优先使用微软 OAuth 和 Xbox 接口，不需要 OpenXBL。完整步骤见 [MICROSOFT_SETUP.md](MICROSOFT_SETUP.md)：注册自己的原生公共客户端应用，在本机运行 PKCE 授权助手，然后在本仓库配置：
+仓库 Settings → Secrets and variables → Actions 中保留 `APP_PASSWORD`，至少 16 位，用于加密同步历史。同步程序先用该密码解密旧快照，再把新快照加密保存，因此请使用原先设置的同一个密码。无需新建或填写 `XBOX_CLIENT_ID`、`XBOX_REFRESH_TOKEN`、`XBOX_CLIENT_SECRET` 或 `OPENXBL_API_KEY`。
 
-| Name | 值 |
-| --- | --- |
-| `APP_PASSWORD` | 至少16位强密码，用于加密记录 |
-| `XBOX_CLIENT_ID` | 自己注册的微软应用 Client ID |
-| `XBOX_REFRESH_TOKEN` | 本机首次授权取得的刷新令牌 |
+## 数据与隐私
 
-首次授权助手只依赖本机 Node.js 22.13+，不需要 npm install。微软密码只在微软官方页面输入；不要把任何令牌发到聊天或源码。
+- 来源：Exophase 公共页面/API，玩家 ID `4285437`。
+- `public/vault.json` 只存 AES-256-GCM 密文；网页在浏览器本机解密，密码不发送给网站。
+- 公开 Exophase 成就接口目前可返回已解锁成就的图标和解锁时间；接口未返回稀有度，因此稀有度暂时为空。
+- Exophase 若改变公共接口或限制访问，同步会失败并保留此前的加密记录。
 
-配置完成后，GitHub Actions 会每天自动同步一次（约北京时间 08:17）。也可以在 Actions → Publish and sync Playlog 页面手动运行。授权令牌只存在 GitHub Secrets 和任务内存，不写入公开密文文件。真实微软注册和 Xbox 数据权限需用本人的账号验证。
+## 功能
 
-OpenXBL 适配保留为可选备用，仅未配置微软凭据时才使用 OPENXBL_API_KEY。应用不会在微软授权失败时切换来源。当前未做后台定时同步。
+游戏库、游玩时长、成就数量/完成度、逐项已解锁成就、搜索筛选、快照对比、备份导入导出。GitHub Actions → Publish and sync Playlog 可手动重新运行；每日定时任务约在北京时间 08:17 运行。
 
-## 隐私与数据
+## 开发
 
-- `public/vault.json` 只包含 AES-256-GCM 密文、随机盐、随机IV、算法及版本字段。玩家名称、XUID、游戏和历史快照均在密文内部。
-- 密钥由应用密码通过 PBKDF2-SHA256（600000次）派生。每次同步使用新的盐和IV。浏览器本机解密，密码不发送给网页服务器。
-- 页面和密文公开，数据长度、提交时间、提交次数及流量元信息可见。强密码很重要；加密不代表防止所有攻击。
-- 不要突然更换 APP_PASSWORD：历史密文需要旧密码解密，错密码时同步会停止，不覆盖历史。若要换密码，应先解密备份并安排重新加密；本版本尚未提供一键换密。
-- 授权凭据只提供给 Actions 同步步骤，不进入前端。同步日志不输出玩家身份或游戏名称。
-- 导出的 JSON/CSV 是明文，仅供本人备份；本机导入记录以相同密码加密保存到浏览器，不能跨设备自动同步，也不会覆盖远程快照。
-- 协作权限仅授予可信的人。能修改同步工作流的人可能获取运行时 Secrets；不要给陌生人写权限。
-
-## 功能与边界
-
-保留游戏库、累计时长、成就数量与完成度、快照对比、搜索筛选、备份导入导出。点击同步会打开 GitHub Actions；任务完成后刷新本站解锁。当前不做定时任务。
-
-静态版暂不提供逐项成就实时查询。时长仅识别 MinutesPlayed；缺失时长不是零；新游戏首次出现不算区间新增；无法反推过去每天的场次。
-
-## 开发验证
-
-Node 22.13+，`npm install`、`npm test`、`npm run build`。测试涵盖加密往返、随机化、错误密码、篡改密文、异常工作因子、快照基线及整个采集加密流程（使用模拟接口）。真实 Xbox 数据仍需配置本人 API Key 后联调。
+Node 22.13+，运行 `npm install`、`npm test`、`npm run build`。
