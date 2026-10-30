@@ -183,7 +183,8 @@ try{
     await manageDisplay();
     await page.getByRole('checkbox',{name:'仅看已隐藏',exact:true}).check();
     assert.equal(await page.locator('.display-game-choice').count(),1);
-    await page.getByRole('checkbox',{name:'显示 Test Game 1',exact:true}).check();
+    await page.getByRole('checkbox',{name:'显示 Test Game 1',exact:true}).click();
+    await page.locator('.display-game-choice').waitFor({state:'hidden'});
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
     await page.getByRole('dialog',{name:'游戏库显示管理',exact:true}).waitFor({state:'hidden'});
     assert.equal(await page.locator('.game-card').count(),12);
