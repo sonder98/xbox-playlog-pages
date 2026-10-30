@@ -1,12 +1,12 @@
 import fs from 'node:fs';
-import {encryptVault,decryptVault} from '../src/crypto.ts';
+import {encryptVault} from '../src/crypto.ts';
+import {getPasswords,readVault} from './password.ts';
 import {safeImage,validateRecord,type RecordData} from '../src/data.ts';
 
 // Exophase public profile: https://www.exophase.com/xbox/user/SondrRope/
 const playerId='4285437';
 const api=`https://api.exophase.com/public/player/${playerId}`;
-const password=process.env.APP_PASSWORD;
-if(!password||password.length<16)throw Error('请检查 APP_PASSWORD（至少16位），它只用于加密本地记录。');
+const {old:oldPassword,target:password}=getPasswords(process.env);
 
 let browserContext:Promise<any>|null=null;
 async function browserJson(url:string){
@@ -38,7 +38,7 @@ async function getJson(url:string):Promise<any>{
 }
 let previous:RecordData[]=[];
 if(fs.existsSync('public/vault.json')){
-  const payload=await decryptVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),password);
+  const payload=await readVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),oldPassword,password);
   if(!Array.isArray(payload.records))throw Error('历史记录格式无效。');
   previous=payload.records;
 }
@@ -105,4 +105,5 @@ const record:RecordData={
 const envelope=await encryptVault({records:[record,...previous]},password);
 fs.writeFileSync('public/vault.json',JSON.stringify(envelope));
 fs.writeFileSync('public/status.json',JSON.stringify({initialized:true}));
+if(process.env.NEW_APP_PASSWORD)console.log('密码迁移完成：全部历史快照已使用 NEW_APP_PASSWORD 加密。');
 console.log(`Exophase 同步完成：${games.length} 款游戏；正在加密记录。`);

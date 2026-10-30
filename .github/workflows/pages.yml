@@ -46,6 +46,7 @@ jobs:
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.sync) || github.event_name == 'schedule'
         env:
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
         run: xvfb-run --auto-servernum npm run sync
       - name: Save only encrypted snapshots
         if: steps.exophase_sync.outcome == 'success' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.sync) || github.event_name == 'schedule')
