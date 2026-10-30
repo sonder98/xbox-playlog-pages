@@ -9,6 +9,7 @@ const api=`https://api.exophase.com/public/player/${playerId}`;
 const {old:oldPassword,target:password}=getPasswords(process.env);
 
 let browserContext:Promise<any>|null=null;
+let profileAvatar='';
 async function browserJson(url:string){
   if(!browserContext)browserContext=(async()=>{
     console.log('正在通过 Exophase 公开个人主页建立正常浏览器会话…');
@@ -19,6 +20,29 @@ async function browserJson(url:string){
     const response=await page.goto('https://www.exophase.com/xbox/user/SondrRope/',{waitUntil:'domcontentloaded',timeout:60000});
     await page.waitForFunction(()=>!document.title.includes('Just a moment'),{},{timeout:30000}).catch(()=>{});
     console.log(`公开主页 HTTP ${response?.status()}；标题：${await page.title()}`);
+    const avatarResult=await page.evaluate(()=>{
+      const selectors=['.profile-avatar img','img.profile-avatar','.player-avatar img','img.player-avatar','[class*="avatar"] img','img[class*="avatar"]','img[src*="xboxlive.com"]','img[alt*="SondrRope"]'];
+      for(const selector of selectors){
+        const img=document.querySelector<HTMLImageElement>(selector);
+        if(img?.src)return {url:img.currentSrc||img.src,selector};
+      }
+      for(const el of document.querySelectorAll('[class*="avatar"],[class*="gamerpic"]')){
+        const background=getComputedStyle(el).backgroundImage;
+        const match=background.match(/url\(["']?(.*?)["']?\)/);
+        if(match?.[1])return {url:new URL(match[1],location.href).href,selector:'avatar background'};
+      }
+      return {url:'',selector:''};
+    });
+    if(avatarResult.url){
+      const image=await context.request.get(avatarResult.url,{timeout:20000}).catch(()=>null);
+      if(image?.ok()&&image.headers()['content-type']?.startsWith('image/')){
+        profileAvatar=safeImage(avatarResult.url);
+        console.log('头像同步：已从公开资料读取并验证图片。');
+      }
+    }
+    if(!profileAvatar){
+      console.log('头像未找到；图片结构诊断：'+JSON.stringify(await page.locator('img').evaluateAll((imgs:HTMLImageElement[])=>imgs.slice(0,8).map(img=>({src:img.src,alt:img.alt,class:img.className,parent:img.parentElement?.className})))));
+    }
     return {browser,page};
   })();
   const {page}=await browserContext;
@@ -43,6 +67,7 @@ if(fs.existsSync('public/vault.json')){
   previous=payload.records;
 }
 
+profileAvatar=previous[0]?.profile.avatar||'';
 console.log('正在读取 SondrRope 的 Exophase 公开 Xbox 游戏库…');
 const gamesById=new Map<string,any>();
 for(let page=1;page<=50;page++){
@@ -99,7 +124,7 @@ const warnings=[
   'Exophase 公开成就接口未提供稀有度字段；稀有度暂不显示。'
 ];
 const record:RecordData={
-  ...validateRecord({profile:{xuid:playerId,gamertag:'SondrRope',avatar:''},games,source:'Exophase',warnings}),
+  ...validateRecord({profile:{xuid:playerId,gamertag:'SondrRope',avatar:profileAvatar},games,source:'Exophase',warnings}),
   id:crypto.randomUUID(),at:new Date().toISOString()
 };
 const payload={records:[record,...previous]};
