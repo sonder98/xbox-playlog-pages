@@ -175,6 +175,7 @@ try{
     assert.equal(await page.locator('.game-card[data-game-id="101"]').count(),0);
     activeEnvelope=await encryptVault(await decryptVault(envelope,password),password);
     await unlock('#library');
+    await page.locator('.game-card').first().waitFor();
     assert.equal(await page.locator('.game-card[data-game-id="101"]').count(),0,'Hidden choice survives a fresh encrypted snapshot');
     assert.equal(await page.locator('.game-card').count(),11);
     const storedPreference=await page.evaluate(()=>Object.keys(localStorage).filter(key=>key.startsWith('playlog-display-encrypted-v1:')).map(key=>localStorage.getItem(key)));
