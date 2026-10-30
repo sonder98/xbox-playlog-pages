@@ -10,6 +10,7 @@ const {old:oldPassword,target:password}=getPasswords(process.env);
 
 let browserContext:Promise<any>|null=null;
 let profileAvatar='';
+async function activeSession():Promise<any>{return browserContext?await browserContext:null;}
 async function browserJson(url:string){
   if(!browserContext)browserContext=(async()=>{
     console.log('正在通过 Exophase 公开个人主页建立正常浏览器会话…');
@@ -73,8 +74,9 @@ const gamesById=new Map<string,any>();
 for(let page=1;page<=50;page++){
   const result=await getJson(`${api}/games?page=${page}&environment=xbox&sort=1&showHidden=0`);
   if(result.success!==true||!Array.isArray(result.games))throw Error('Exophase 游戏列表响应格式不符合预期；旧记录未覆盖。');
-  if(page===1&&browserContext&&result.games[0]){
-    const session=await browserContext;
+  const sampleSession=page===1?await activeSession():null;
+  if(sampleSession&&result.games[0]){
+    const session=sampleSession;
     const sample=result.games[0];
     const dimensions=await session.page.evaluate(async(candidates:Record<string,string>)=>{
       return Promise.all(Object.entries(candidates).map(([field,url])=>new Promise(resolve=>{
@@ -130,7 +132,8 @@ async function worker(){
   }
 }
 await Promise.all(Array.from({length:5},()=>worker()));
-if(browserContext){const session=await browserContext;await session.browser.close();}
+const finishedSession=await activeSession();
+if(finishedSession)await finishedSession.browser.close();
 if(!games.length)throw Error('Exophase 没有返回任何游戏；不发布空快照。');
 const noPlaytime=games.filter(game=>game.minutes===null).length;
 const warnings=[
