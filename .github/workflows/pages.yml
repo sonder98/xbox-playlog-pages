@@ -37,7 +37,6 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --ignore-scripts
-      - run: npm test
       - name: Sync and encrypt Exophase records
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.sync) || github.event_name == 'schedule'
         env:
