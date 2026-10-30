@@ -131,7 +131,7 @@ async function achievementCatalog(game:any):Promise<PageData>{
     game.catalogAt=old.catalogAt;
     return {groups:old.groups,achievements:old.achievements};
   }
-  const url=new URL(game.endpointAwards);
+  const url=new URL(game.endpointAwards,'https://www.exophase.com');
   if(url.protocol!=='https:'||url.hostname!=='www.exophase.com'||!url.pathname.startsWith('/game/'))throw Error('Invalid achievement page URL');
   url.hash='';
   const session=await activeSession();
@@ -162,7 +162,7 @@ async function worker(){
         const catalog=await achievementCatalog(game);
         Object.assign(game,mergeAchievementPage(game,catalog,payload.list));
         if(game.groupStatus!=='verified')groupFailures++;
-      }catch{game.groupStatus='unavailable';groupFailures++;}
+      }catch(error){game.groupStatus='unavailable';groupFailures++;if(groupFailures<=3)console.log('成就分组诊断：'+JSON.stringify({endpoint:game.endpointAwards,error:(error as Error).message}));}
     }catch{detailFailures++;groupFailures++;game.groupStatus='unavailable';}
   }
 }
