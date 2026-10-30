@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manjari:wght@700&display=swap');
 :root {
+  --rarity-accent: #8CD7FA;
   color-scheme:dark;
   --bg:#0F0F0F;
   --surface:#181818;
@@ -891,36 +892,57 @@ footer .dot {
 }
 .achievement {
   display:flex;
-  align-items:center;
-  gap:16px;
-  margin-top:8px;
-  padding:16px 0;
-  border-bottom:1px solid var(--border)
+  align-items:flex-start;
+  gap:12px;
+  margin-top:10px;
+  padding:12px;
+  border-radius:16px;
+  background:var(--surface-raised)
 }
-.achievement>div {
-  min-width:0;
-  flex:1
-}
+.achievement-copy { min-width:0; flex:1; }
 .achievement h4 {
-  font-size:14px;
+  margin:0 0 6px;
+  color:var(--text-primary);
+  font-size:16px;
+  line-height:1.35;
   font-weight:600;
   overflow-wrap:anywhere
 }
-.achievement p {
+.achievement-description-row { display:flex; align-items:flex-start; gap:12px; }
+.achievement .achievement-description {
+  flex:1;
+  min-width:0;
+  margin:0;
+  color:var(--text-secondary);
+  font-size:13px;
+  line-height:1.5;
+  overflow-wrap:anywhere
+}
+.achievement-rarity {
+  display:inline-flex;
+  align-items:center;
+  flex-shrink:0;
+  gap:4px;
+  margin-left:auto;
+  color:var(--text-secondary);
   font-size:12px;
-  margin:4px 0
+  line-height:19.5px;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums
 }
-.achievement small {
-  display:block;
+.achievement-rarity.rare { color:var(--rarity-accent); }
+.achievement-rarity.unknown { color:var(--text-muted); font-size:11px; }
+.achievement .achievement-unlock {
+  display:flex;
+  align-items:flex-start;
+  gap:5px;
+  margin-top:8px;
   color:var(--text-muted);
-  font-size:12px
+  font-size:12px;
+  line-height:1.5
 }
-.achievement>svg {
-  color:var(--text-muted)
-}
-.achievement.locked h4 {
-  color:var(--text-secondary)
-}
+.achievement-unlock svg { flex-shrink:0; margin-top:2px; }
+.achievement-unlock.unlocked svg { color:var(--accent); }
 .achievement-image {
   width:56px;
   height:56px;
@@ -928,15 +950,12 @@ footer .dot {
   place-items:center;
   flex-shrink:0;
   border-radius:12px;
-  background:var(--surface-raised);
+  background:var(--surface);
   overflow:hidden;
   color:var(--text-muted)
 }
-.achievement-image img {
-  width:100%;
-  height:100%;
-  object-fit:contain
-}
+.achievement.locked .achievement-image { opacity:.6; }
+.achievement-image img { width:100%; height:100%; object-fit:contain; }
 .spin {
   animation:spin 1s linear infinite
 }
@@ -1291,22 +1310,6 @@ footer .dot {
   }
   .detail-summary {
     gap:12px;
-    font-size:12px
-  }
-  .achievement {
-    gap:12px
-  }
-  .achievement-image {
-    width:44px;
-    height:44px
-  }
-  .achievement h4 {
-    font-size:13px
-  }
-  .achievement p {
-    font-size:12px
-  }
-  .achievement small {
     font-size:12px
   }
   .welcome {

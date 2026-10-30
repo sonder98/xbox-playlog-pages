@@ -7,6 +7,7 @@ import {chromium} from 'playwright';
 import {encryptVault,decryptVault} from '../src/crypto.ts';
 const password='navigation-test-only';
 const games=Array.from({length:12},(_,i)=>({id:String(100+i),name:'Test Game '+i,image:'https://covers.example.test/square.svg',image2x:'https://covers.example.test/medium.svg',image3x:'https://covers.example.test/original.svg',devices:['Xbox'],lastPlayed:'2026-10-30T00:00:00Z',minutes:60,earned:1,total:10,score:10,maxScore:100}));
+for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:'https://covers.example.test/square.svg',unlocked:i===0,unlockedAt:i===0?'2026-10-28T12:24:00.000Z':null,rarity}));
 const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:''},games,source:'Exophase',warnings:[]}]},password);
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4173'],{stdio:'ignore'});
 let browser;
@@ -109,6 +110,17 @@ try{
     const beforeDetail=await page.evaluate(()=>window.scrollY);
     await page.locator('.game-card').first().click();
     await page.getByRole('dialog').waitFor();
+    const achievementLayout=await page.locator('.achievement').evaluateAll(rows=>rows.map(row=>{
+      const image=row.querySelector('.achievement-image'),title=row.querySelector('h4'),description=row.querySelector('.achievement-description'),rarity=row.querySelector('.achievement-rarity');
+      return {imageWidth:image.getBoundingClientRect().width,titleSize:parseFloat(getComputedStyle(title).fontSize),descriptionSize:parseFloat(getComputedStyle(description).fontSize),sameRow:Math.abs(description.getBoundingClientRect().top-rarity.getBoundingClientRect().top)<1,tier:rarity.getAttribute('data-rarity-tier'),icon:rarity.querySelector('svg')?.getAttribute('class'),fits:row.scrollWidth<=row.clientWidth+1};
+    }));
+    assert.deepEqual(achievementLayout.map(a=>a.tier),['rare','rare','common',null]);
+    for(const row of achievementLayout){assert.equal(row.imageWidth,56);assert.ok(row.titleSize>row.descriptionSize);assert.ok(row.sameRow);assert.ok(row.fits);}
+    assert.ok(achievementLayout[0].icon.includes('gem'));
+    assert.ok(achievementLayout[2].icon.includes('trophy'));
+    assert.ok(!(await page.getByRole('dialog').innerText()).includes('玩家解锁'));
+    console.log((mobile?'Mobile':'Desktop')+': PASS achievement image size, typography, inline rarity, 0/9.9/10 thresholds, unknown rarity and long wrapping');
+
     await page.goBack();
     await page.getByRole('dialog').waitFor({state:'hidden'});
     assert.equal(await page.getByRole('textbox',{name:'搜索游戏名称'}).inputValue(),'Test Game 1');

@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState,useId,type ReactNode} from 'react';
-import {Gamepad2,Trophy,X,Lock,Check,Clock3} from 'lucide-react';
+import {Gamepad2,Trophy,X,Lock,Check,Clock3,Gem} from 'lucide-react';
 import {completion} from '../completion';
 import type {Game,Achievement} from '../data';
 
@@ -62,12 +62,29 @@ export function Modal({title,onClose,children,className=''}:{title:string;onClos
   },[]);
   return <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)onClose();}}><section ref={panel} className={'dialog '+className} role="dialog" aria-modal="true" aria-label={title}><button className="icon-button close" aria-label="关闭详情" onClick={onClose}><X size={20}/></button>{children}</section></div>;
 }
+function AchievementItem({achievement:a}:{achievement:Achievement}){
+  const rare=a.rarity!==null&&a.rarity<10;
+  return <article className={'achievement '+(!a.unlocked?'locked':'')}>
+    <span className="achievement-image"><Trophy size={22}/>{a.image&&<img src={a.image} alt="" loading="lazy" onError={e=>{e.currentTarget.style.display='none';}}/>}</span>
+    <div className="achievement-copy">
+      <h4>{a.name}</h4>
+      <div className="achievement-description-row">
+        {a.description&&<p className="achievement-description">{a.description}</p>}
+        {a.rarity!==null?<span className={'achievement-rarity'+(rare?' rare':'')} data-rarity-tier={rare?'rare':'common'} aria-label={`${rare?'稀有成就，':''}稀有度 ${a.rarity}%`}>{rare?<Gem size={16} aria-hidden="true"/>:<Trophy size={15} aria-hidden="true"/>}{a.rarity}%</span>:<span className="achievement-rarity unknown">稀有度暂缺</span>}
+      </div>
+      <small className={'achievement-unlock'+(a.unlocked?' unlocked':'')}>
+        {a.unlocked?<Check size={14} aria-hidden="true"/>:<Lock size={14} aria-hidden="true"/>}
+        {a.unlocked?<span>{a.unlockedAt?<><span>已解锁 · </span><time dateTime={a.unlockedAt}>{new Date(a.unlockedAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})}</time></>:'已解锁 · 时间暂缺'}</span>:<span>未解锁</span>}
+      </small>
+    </div>
+  </article>;
+}
 export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
   const groups=game.groupStatus==='verified'&&game.groups?.length?game.groups:[{id:'all',name:'已同步成就',kind:'base',earned:game.earned,total:game.total,achievementIds:game.achievements?.map(a=>a.id)||[]}];
   const byId=new Map(game.achievements?.map(a=>[a.id,a]));
   return <Modal title={game.name+' · 游戏详情'} onClose={onClose} className="game-detail"><GameCover game={game} wide/><div className="detail-heading"><div><span className="eyebrow">GAME DETAILS</span><h2>{game.name}</h2></div></div><div className="detail-summary"><span><Clock3 size={16}/>{hours(game.minutes)}</span><span><Trophy size={16}/>{game.earned}/{game.total} 成就</span><span>{game.score.toLocaleString()} G</span></div>
     {game.groupStatus!=='verified'&&<p className="note">本体与追加内容分组待同步，当前显示已取得的逐项记录。</p>}
-    <div className="achievement-groups">{groups.map(group=><section className="achievement-group" key={group.id}><div className="section-heading"><h3>{group.kind==='base'&&group.id!=='all'?'本体':group.name}</h3><span>{group.earned}/{group.total}</span></div><Progress earned={group.earned} total={group.total} complete={group.earned===group.total&&group.total>0} label={group.name+' 完成度'}/>{group.achievementIds.map(id=>byId.get(id)).filter((a):a is Achievement=>!!a).map(a=><article className={'achievement '+(!a.unlocked?' locked':'')} key={a.id}><span className="achievement-image"><Trophy size={22}/>{a.image&&<img src={a.image} alt="" loading="lazy" onError={e=>{e.currentTarget.style.display='none';}}/>}</span><div><h4>{a.name}</h4>{a.description&&<p>{a.description}</p>}<small>{a.unlocked?(a.unlockedAt?new Date(a.unlockedAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false}):'已解锁 · 时间暂缺'):'未解锁'}{a.rarity!==null?` · 稀有度 ${a.rarity}%`:' · 稀有度暂缺'}</small></div>{a.unlocked?<Check size={16} aria-label="已解锁"/>:<Lock size={16} aria-label="未解锁"/>}</article>)}</section>)}</div>
+    <div className="achievement-groups">{groups.map(group=><section className="achievement-group" key={group.id}><div className="section-heading"><h3>{group.kind==='base'&&group.id!=='all'?'本体':group.name}</h3><span>{group.earned}/{group.total}</span></div><Progress earned={group.earned} total={group.total} complete={group.earned===group.total&&group.total>0} label={group.name+' 完成度'}/>{group.achievementIds.map(id=>byId.get(id)).filter((a):a is Achievement=>!!a).map(a=><AchievementItem key={a.id} achievement={a}/>)}</section>)}</div>
     {!game.achievements?.length&&<div className="empty"><Trophy/><h3>成就明细尚未同步</h3><p>下一次同步成功后将在这里展示。</p></div>}
   </Modal>;
 }
