@@ -1,5 +1,6 @@
 type Remembered={version:1;key:CryptoKey;iv:Uint8Array;ciphertext:ArrayBuffer;expires:number};
 const database='playlog-device-v1',storeName='credentials',recordKey='remembered';
+const disabledKey='playlog-device-disabled-v1';
 async function databaseOperation<T>(mode:IDBTransactionMode,operation:(store:IDBObjectStore)=>IDBRequest<T>):Promise<T>{
   const db=await new Promise<IDBDatabase>((resolve,reject)=>{
     const request=indexedDB.open(database,1);
@@ -16,6 +17,7 @@ async function databaseOperation<T>(mode:IDBTransactionMode,operation:(store:IDB
   });}finally{db.close();}
 }
 export async function forgetDevice(){
+  try{localStorage.setItem(disabledKey,'1');}catch{}
   await databaseOperation('readwrite',store=>store.delete(recordKey));
 }
 export async function rememberDevice(password:string){
@@ -24,8 +26,11 @@ export async function rememberDevice(password:string){
   const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(password));
   const record:Remembered={version:1,key,iv,ciphertext,expires:Date.now()+30*24*60*60*1000};
   await databaseOperation('readwrite',store=>store.put(record,recordKey));
+  try{localStorage.removeItem(disabledKey);}catch{}
 }
 export async function recalledPassword():Promise<string|null>{
+  let disabled=false;try{disabled=localStorage.getItem(disabledKey)==='1';}catch{}
+  if(disabled){await forgetDevice().catch(()=>{});return null;}
   try{
     const record=await databaseOperation<Remembered|undefined>('readonly',store=>store.get(recordKey));
     if(!record)return null;

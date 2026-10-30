@@ -82,6 +82,7 @@ try{
     await page.getByRole('button',{name:'锁定并忘记',exact:true}).waitFor();
     assert.equal(await page.locator('input[type="password"]').count(),0);
     await page.getByRole('button',{name:'锁定并忘记',exact:true}).click();
+    await page.locator('input[type="password"]').waitFor();
     await page.reload();
     await page.locator('input[type="password"]').waitFor();
     await signInRemembered();
