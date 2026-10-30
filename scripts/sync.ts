@@ -89,7 +89,20 @@ for(let page=1;page<=50;page++){
       })));
     },{resource_standard:sample.resource_standard||'',resource_small:sample.resource_small||'',resource_tile:sample.resource_tile||''});
     console.log('Exophase 封面尺寸校验：'+JSON.stringify(dimensions));
-    console.log('游戏资源字段：'+JSON.stringify(Object.keys(sample))+'；元数据：'+JSON.stringify(sample.meta));
+    const candidates:Record<string,string>={};
+    for(const size of ['o','l'])candidates[size]=sample.resource_tile.replace('/games/t/','/games/'+size+'/');
+    const originals=await session.page.evaluate(async(candidates:Record<string,string>)=>Promise.all(Object.entries(candidates).map(([field,url])=>new Promise(resolve=>{
+      const image=new Image();const timer=setTimeout(()=>resolve({field,url,loaded:false}),12000);
+      image.onload=()=>{clearTimeout(timer);resolve({field,url,width:image.naturalWidth,height:image.naturalHeight});};
+      image.onerror=()=>{clearTimeout(timer);resolve({field,url,loaded:false});};image.src=url;
+    }))),candidates);
+    console.log('原图资源尺寸：'+JSON.stringify(originals));
+    const detail=await session.page.context().newPage();
+    try{
+      await detail.goto(sample.meta.endpoint_awards,{waitUntil:'domcontentloaded',timeout:30000});
+      console.log('详情页图片源：'+JSON.stringify(await detail.locator('img').evaluateAll((imgs:HTMLImageElement[])=>imgs.slice(0,10).map(img=>({src:img.src,srcset:img.srcset,alt:img.alt,class:img.className})))));
+    }catch{console.log('详情页图片源暂不可用');}finally{await detail.close();}
+
   }
   for(const item of result.games){
     const meta=item.meta||{};
