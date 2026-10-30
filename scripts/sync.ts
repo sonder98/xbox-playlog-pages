@@ -103,7 +103,7 @@ const priorGames=new Map((previous[0]?.games||[]).map(game=>[game.id,game]));
 async function resolveArtwork(game:any){
   if(!game.image.includes('/games/t/'))return;
   const old=priorGames.get(game.id);
-  if(old?.image===game.image&&(old.image2x||old.image3x)){
+  if(old&&old.image===game.image&&(old.image2x||old.image3x)){
     game.image2x=old.image2x;game.image3x=old.image3x;return;
   }
   const session=await activeSession();

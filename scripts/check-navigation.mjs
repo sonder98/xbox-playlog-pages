@@ -39,7 +39,7 @@ try{
     const cover=await page.locator('.game-card .cover').first().evaluate(el=>{
       const rect=el.getBoundingClientRect();
       const image=el.querySelector('img');
-      return {width:rect.width,height:rect.height,fit:getComputedStyle(image).objectFit,source:image.currentSrc,naturalHeight:image.naturalHeight};
+      return {width:rect.width,height:rect.height,fit:getComputedStyle(image).objectFit,source:image.currentSrc,naturalHeight:image.naturalHeight*window.devicePixelRatio};
     });
     assert.equal(cover.width,cover.height,'Cover container must be square');
     assert.equal(cover.fit,'cover','High resolution artwork must fill the square without stretching');
