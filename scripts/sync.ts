@@ -8,10 +8,29 @@ const api=`https://api.exophase.com/public/player/${playerId}`;
 const password=process.env.APP_PASSWORD;
 if(!password||password.length<16)throw Error('请检查 APP_PASSWORD（至少16位），它只用于加密本地记录。');
 
-async function getJson(url:string){
+let browserContext:Promise<any>|null=null;
+async function browserJson(url:string){
+  if(!browserContext)browserContext=(async()=>{
+    console.log('普通 HTTP 请求被拒绝，改用标准 Chromium 浏览器读取公开接口。');
+    const {chromium}=await import('playwright');
+    const browser=await chromium.launch({headless:true});
+    return browser.newContext();
+  })();
+  const context=await browserContext;
+  const page=await context.newPage();
+  try{
+    const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
+    const body=await page.locator('body').innerText();
+    if(!response?.ok())throw Error(`Exophase 浏览器请求 HTTP ${response?.status()}：${body.slice(0,180)}`);
+    try{return JSON.parse(body);}catch{throw Error('Exophase 返回了网页而不是 JSON；旧记录未覆盖。');}
+  }finally{await page.close();}
+}
+async function getJson(url:string):Promise<any>{
+  if(browserContext)return browserJson(url);
   const response=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(30000)});
+  if(response.status===403)return browserJson(url);
   if(!response.ok)throw Error(`Exophase 返回 HTTP ${response.status}；旧记录未覆盖。`);
-  return response.json() as Promise<any>;
+  return response.json();
 }
 let previous:RecordData[]=[];
 if(fs.existsSync('public/vault.json')){
@@ -67,6 +86,8 @@ async function worker(){
   }
 }
 await Promise.all(Array.from({length:5},()=>worker()));
+if(browserContext){const context=await browserContext;await context.browser()?.close();}
+if(!games.length)throw Error('Exophase 没有返回任何游戏；不发布空快照。');
 const noPlaytime=games.filter(game=>game.minutes===null).length;
 const warnings=[
   ...(noPlaytime?[`${noPlaytime} 个游戏在 Exophase 未返回游玩时长。`]:[]),

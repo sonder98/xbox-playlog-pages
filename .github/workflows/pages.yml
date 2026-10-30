@@ -37,6 +37,8 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --ignore-scripts
+      - run: npm install --no-save --ignore-scripts playwright
+      - run: npx playwright install --with-deps chromium
       - name: Sync and encrypt Exophase records
         id: exophase_sync
         continue-on-error: true
