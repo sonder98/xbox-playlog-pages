@@ -17,8 +17,8 @@ on:
         type: boolean
         default: true
   schedule:
-    # Daily at 08:17 China Standard Time; avoid the busy top of the hour.
-    - cron: '17 0 * * *'
+    # Every hour at :00 and :30 (UTC and China Standard Time share minute boundaries).
+    - cron: '0,30 * * * *'
 permissions:
   contents: write
   pages: write

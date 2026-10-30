@@ -71,7 +71,20 @@ try{
       await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
     }
     await unlock();
+    await page.locator('.game-card').first().waitFor();
     const statsBeforeHiding=await page.locator('.stats').innerText();
+    assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['recent','top','stats']);
+    assert.equal(await page.locator('.top-card').count(),5);
+    assert.equal(await page.locator('.top-card .completion-ornament').count(),5);
+    await page.locator('.top-card').last().click();
+    await page.getByRole('dialog').waitFor();
+    await page.locator('.dialog-body').evaluate(el=>{const spacer=document.createElement('div');spacer.style.height='2000px';el.append(spacer);el.scrollTop=el.scrollHeight;});
+    const closeRect=await page.getByRole('button',{name:'关闭详情',exact:true}).boundingBox();
+    assert.ok(closeRect&&closeRect.y>=0&&closeRect.y+closeRect.height<(mobile?844:1000),'Close remains visible at the bottom of long details');
+    await page.getByRole('button',{name:'关闭详情',exact:true}).click();
+    await page.getByRole('dialog').waitFor({state:'hidden'});
+    console.log((mobile?'Mobile':'Desktop')+': PASS overview order, five illustrated Mythic cards, horizontal rail navigation and persistent close after long scroll');
+
     await page.locator('.game-card .game-cover img').first().waitFor();
     await page.waitForFunction(()=>{const img=document.querySelector('.game-card .game-cover img');return img?.complete&&img.naturalWidth>0;});
     const cover=await page.locator('.game-card .game-cover').first().evaluate(el=>{

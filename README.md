@@ -1,6 +1,6 @@
 # 游迹 / GitHub Pages 展示版
 
-静态网站从 Exophase 公开档案 `SondrRope` 读取 Xbox 游戏库和已解锁成就。GitHub Actions 每天自动同步，也会在更新同步脚本后执行一次；不需要 Xbox/Microsoft 应用、Xbox 登录令牌或 OpenXBL API Key。
+静态网站从 Exophase 公开档案 `SondrRope` 读取 Xbox 游戏库和已解锁成就。GitHub Actions 每半小时自动同步，也会在更新同步脚本后执行一次；不需要 Xbox/Microsoft 应用、Xbox 登录令牌或 OpenXBL API Key。
 
 ## 唯一需要的 Secret
 
@@ -15,7 +15,7 @@
 
 ## 功能
 
-游戏库、游玩时长、成就数量/完成度、逐项成就及本体／追加内容分组、Mythic／Full 筛选、搜索筛选、快照对比、备份导入导出。GitHub Actions → Publish and sync Playlog 可手动重新运行；每日定时任务约在北京时间 08:17 运行。
+游戏库、游玩时长、成就数量/完成度、逐项成就及本体／追加内容分组、Mythic／Full 筛选、搜索筛选、快照对比、备份导入导出。GitHub Actions → Publish and sync Playlog 可手动重新运行；定时任务在每小时 00、30 分触发（GitHub 排队可能延迟）。
 
 ## 开发
 
@@ -64,3 +64,5 @@ Node 22.13+，运行 `npm install`、`npm install --no-save playwright`、`npm t
 ### 游戏展示管理
 
 游戏库的“管理展示”可选择展示或隐藏游戏，支持搜索、仅看已隐藏与全部恢复。隐藏仅影响首页和游戏库列表，不改变累计统计、导出内容或云端同步。选择按账号加密保存在当前浏览器，与每日快照分开保存；跨设备不会自动同步，清除本机网站数据会清除选择。
+
+概览依次展示最近游玩、游玩时长 TOP5、四项汇总和最近同步变化。TOP5 支持横向滚动、游戏封面、Mythic 包框与勋章装饰、大号时长和相对榜首时长条；点击卡片可查看成就。详情弹窗使用独立滚动内容区，关闭按钮始终可见。

@@ -61,7 +61,7 @@ export function Modal({title,onClose,children,className=''}:{title:string;onClos
     document.addEventListener('keydown',key);
     return ()=>{document.body.style.overflow=overflow;document.removeEventListener('keydown',key);original?.focus({preventScroll:true});};
   },[]);
-  return <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)onClose();}}><section ref={panel} className={'dialog '+className} role="dialog" aria-modal="true" aria-label={title}><button className="icon-button close" aria-label="关闭详情" onClick={onClose}><X size={20}/></button>{children}</section></div>;
+  return <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)onClose();}}><section ref={panel} className={'dialog '+className} role="dialog" aria-modal="true" aria-label={title}><div className="dialog-toolbar"><button className="icon-button close" aria-label="关闭详情" onClick={onClose}><X size={20}/></button></div><div className="dialog-body">{children}</div></section></div>;
 }
 function AchievementItem({achievement:a}:{achievement:Achievement}){
   const rare=a.rarity!==null&&a.rarity<10;
