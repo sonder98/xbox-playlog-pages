@@ -126,6 +126,8 @@ async function resolveArtwork(game:any){
 }
 
 let catalogAccessError='';
+let catalogQueue:Promise<unknown>=Promise.resolve();
+const catalogDeadline=Date.now()+5*60*1000;
 async function achievementCatalog(game:any):Promise<PageData>{
   const old=priorGames.get(game.id);
   if(old?.groups&&old.groupStatus==='verified'&&old.total===game.total&&old.achievements?.length&&Date.now()-Date.parse(old.catalogAt||'')<7*86400000){
@@ -138,20 +140,28 @@ async function achievementCatalog(game:any):Promise<PageData>{
   const session=await activeSession();
   if(!session)throw Error('Browser session unavailable');
   if(catalogAccessError)throw Error(catalogAccessError);
-  // Use the same browser session as the public profile and earned feed.
-  const response=await session.page.evaluate(async(endpoint:string)=>{
-    const result=await fetch(endpoint,{headers:{Accept:'text/html'},credentials:'same-origin',signal:AbortSignal.timeout(30000)});
-    return {ok:result.ok,status:result.status,text:await result.text()};
-  },url.href);
-  if(!response.ok){
-    const message=`Exophase catalog HTTP ${response.status}`;
-    if(response.status===403||response.status===429)catalogAccessError=message;
-    throw Error(message);
-  }
-  if(/<title[^>]*>\s*(Just a moment|Access denied|Attention Required)/i.test(response.text)){
-    catalogAccessError='Exophase 成就页当前要求浏览器验证。';throw Error(catalogAccessError);
-  }
-  const catalog=await session.page.evaluate(readAchievementPage,response.text);
+  // Achievement pages are documents, not JSON endpoints. Read their rendered DOM
+  // in a dedicated tab; keep profile/API requests on the original tab.
+  const task=catalogQueue.then(async()=>{
+    if(catalogAccessError)throw Error(catalogAccessError);
+    if(Date.now()>catalogDeadline)throw Error('本次成就目录读取已达到时间预算。');
+    if(!session.catalogPage)session.catalogPage=await session.page.context().newPage();
+    const page=session.catalogPage;
+    const response=await page.goto(url.href,{waitUntil:'domcontentloaded',timeout:30000});
+    try{
+      await page.locator('#awards ul.list-unordered-base li.award').first().waitFor({state:'attached',timeout:15000});
+    }catch{
+      const title=await page.title();
+      const status=response?.status();
+      const snippet=(await page.locator('body').innerText().catch(()=>'' )).replace(/\s+/g,' ').slice(0,180);
+      const message=`成就页文档不可读取：HTTP ${status}；${title}；${snippet}`;
+      if(status===403||status===429||/Just a moment|Access denied|Attention Required|verify|blocked/i.test(title+' '+snippet))catalogAccessError=message;
+      throw Error(message);
+    }
+    return page.evaluate(readAchievementPage);
+  });
+  catalogQueue=task.then(()=>{},()=>{});
+  const catalog=await task;
   game.catalogAt=new Date().toISOString();
   return catalog;
 }
