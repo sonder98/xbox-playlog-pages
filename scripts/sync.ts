@@ -83,12 +83,13 @@ for(let page=1;page<=50;page++){
         if(!url){resolve({field,available:false});return;}
         const image=new Image();
         const timer=setTimeout(()=>resolve({field,loaded:false}),15000);
-        image.onload=()=>{clearTimeout(timer);resolve({field,width:image.naturalWidth,height:image.naturalHeight});};
+        image.onload=()=>{clearTimeout(timer);resolve({field,url,width:image.naturalWidth,height:image.naturalHeight});};
         image.onerror=()=>{clearTimeout(timer);resolve({field,loaded:false});};
         image.src=url;
       })));
     },{resource_standard:sample.resource_standard||'',resource_small:sample.resource_small||'',resource_tile:sample.resource_tile||''});
     console.log('Exophase 封面尺寸校验：'+JSON.stringify(dimensions));
+    console.log('游戏资源字段：'+JSON.stringify(Object.keys(sample))+'；元数据：'+JSON.stringify(sample.meta));
   }
   for(const item of result.games){
     const meta=item.meta||{};
