@@ -3,7 +3,7 @@ import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
 import {encryptVault,decryptVault} from '../src/crypto.ts';
 const password='navigation-test-only';
-const games=Array.from({length:12},(_,i)=>({id:String(100+i),name:'Test Game '+i,image:'https://covers.example.test/square.svg',devices:['Xbox'],lastPlayed:'2026-10-30T00:00:00Z',minutes:60,earned:1,total:10,score:10,maxScore:100}));
+const games=Array.from({length:12},(_,i)=>({id:String(100+i),name:'Test Game '+i,image:'https://covers.example.test/square.svg',image2x:'https://covers.example.test/medium.svg',image3x:'https://covers.example.test/original.svg',devices:['Xbox'],lastPlayed:'2026-10-30T00:00:00Z',minutes:60,earned:1,total:10,score:10,maxScore:100}));
 const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:''},games,source:'Exophase',warnings:[]}]},password);
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4173'],{stdio:'ignore'});
 let browser;
@@ -14,12 +14,16 @@ try{
   }
   browser=await chromium.launch();
   for(const mobile of [true,false]){
-    const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1280,height:800},isMobile:mobile,hasTouch:mobile});
+    const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1280,height:800},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:2});
     const page=await context.newPage();
     let activeEnvelope=envelope;
     const errors=[];
     page.on('pageerror',error=>errors.push(error.message));
-    await page.route('https://covers.example.test/**',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#789"/></svg>'}));
+    await page.route('https://covers.example.test/**',route=>{
+      const original=route.request().url().endsWith('original.svg'),medium=route.request().url().endsWith('medium.svg');
+      const width=original?1920:medium?288:64,height=original?1080:medium?158:64;
+      return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#789"/></svg>`});
+    });
     await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
     await page.route('**/vault.json',route=>route.fulfill({json:activeEnvelope}));
     async function unlock(hash=''){
@@ -31,13 +35,21 @@ try{
     }
     await unlock();
     await page.locator('.game-card .cover img').first().waitFor();
+    await page.waitForFunction(()=>{const img=document.querySelector('.game-card .cover img');return img?.complete&&img.naturalWidth>0;});
     const cover=await page.locator('.game-card .cover').first().evaluate(el=>{
       const rect=el.getBoundingClientRect();
       const image=el.querySelector('img');
-      return {width:rect.width,height:rect.height,fit:getComputedStyle(image).objectFit};
+      return {width:rect.width,height:rect.height,fit:getComputedStyle(image).objectFit,source:image.currentSrc,naturalHeight:image.naturalHeight};
     });
     assert.equal(cover.width,cover.height,'Cover container must be square');
-    assert.equal(cover.fit,'contain','Cover must preserve the full image');
+    assert.equal(cover.fit,'cover','High resolution artwork must fill the square without stretching');
+    assert.ok(cover.source.endsWith(mobile?'original.svg':'medium.svg'),'Screen density must select the matching artwork');
+    assert.ok(cover.naturalHeight>=cover.height*(mobile?3:2),'Artwork must have enough real pixels');
+    await page.route('**/medium.svg',route=>route.abort());
+    await page.route('**/original.svg',route=>route.abort());
+    await unlock();
+    await page.waitForFunction(()=>document.querySelector('.game-card .cover img')?.currentSrc.endsWith('square.svg'));
+    await page.unroute('**/medium.svg');await page.unroute('**/original.svg');
     const all=page.getByRole('button',{name:'全部游戏',exact:true});
     await all.scrollIntoViewIfNeeded();
     const originalScroll=await page.evaluate(()=>window.scrollY);
@@ -104,7 +116,7 @@ try{
     await page.locator('input[type="password"]').waitFor();
     await page.getByRole('alert').filter({hasText:'记住的密码已失效'}).waitFor();
     assert.deepEqual(errors,[]);
-    console.log((mobile?'Mobile':'Desktop')+': PASS all games, browser back/forward, back button, scroll restoration, direct link fallback, square covers without cropping, remembered unlock, fresh encrypted snapshot, lock, expiry, changed password');
+    console.log((mobile?'Mobile':'Desktop')+': PASS all games, browser back/forward, back button, scroll restoration, direct link fallback, high density square covers with working image fallback, remembered unlock, fresh encrypted snapshot, lock, expiry, changed password');
     await context.close();
   }
 }finally{await browser?.close();server.kill();}

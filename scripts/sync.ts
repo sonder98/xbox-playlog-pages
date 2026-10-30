@@ -74,36 +74,6 @@ const gamesById=new Map<string,any>();
 for(let page=1;page<=50;page++){
   const result=await getJson(`${api}/games?page=${page}&environment=xbox&sort=1&showHidden=0`);
   if(result.success!==true||!Array.isArray(result.games))throw Error('Exophase 游戏列表响应格式不符合预期；旧记录未覆盖。');
-  const sampleSession=page===1?await activeSession():null;
-  if(sampleSession&&result.games[0]){
-    const session=sampleSession;
-    const sample=result.games[0];
-    const dimensions=await session.page.evaluate(async(candidates:Record<string,string>)=>{
-      return Promise.all(Object.entries(candidates).map(([field,url])=>new Promise(resolve=>{
-        if(!url){resolve({field,available:false});return;}
-        const image=new Image();
-        const timer=setTimeout(()=>resolve({field,loaded:false}),15000);
-        image.onload=()=>{clearTimeout(timer);resolve({field,url,width:image.naturalWidth,height:image.naturalHeight});};
-        image.onerror=()=>{clearTimeout(timer);resolve({field,loaded:false});};
-        image.src=url;
-      })));
-    },{resource_standard:sample.resource_standard||'',resource_small:sample.resource_small||'',resource_tile:sample.resource_tile||''});
-    console.log('Exophase 封面尺寸校验：'+JSON.stringify(dimensions));
-    const candidates:Record<string,string>={};
-    for(const size of ['o','l'])candidates[size]=sample.resource_tile.replace('/games/t/','/games/'+size+'/');
-    const originals=await session.page.evaluate(async(candidates:Record<string,string>)=>Promise.all(Object.entries(candidates).map(([field,url])=>new Promise(resolve=>{
-      const image=new Image();const timer=setTimeout(()=>resolve({field,url,loaded:false}),12000);
-      image.onload=()=>{clearTimeout(timer);resolve({field,url,width:image.naturalWidth,height:image.naturalHeight});};
-      image.onerror=()=>{clearTimeout(timer);resolve({field,url,loaded:false});};image.src=url;
-    }))),candidates);
-    console.log('原图资源尺寸：'+JSON.stringify(originals));
-    const detail=await session.page.context().newPage();
-    try{
-      await detail.goto(sample.meta.endpoint_awards,{waitUntil:'domcontentloaded',timeout:30000});
-      console.log('详情页图片源：'+JSON.stringify(await detail.locator('img').evaluateAll((imgs:HTMLImageElement[])=>imgs.slice(0,10).map(img=>({src:img.src,srcset:img.srcset,alt:img.alt,class:img.className})))));
-    }catch{console.log('详情页图片源暂不可用');}finally{await detail.close();}
-
-  }
   for(const item of result.games){
     const meta=item.meta||{};
     const id=String(item.master_id||meta.master_id||'');
@@ -128,10 +98,37 @@ const games=[...gamesById.values()];
 
 // Exophase's public earned feed supplies achievement icon and unlock timestamp.
 // Its currently exposed JSON does not return rarity, so do not invent a value.
+
+const priorGames=new Map((previous[0]?.games||[]).map(game=>[game.id,game]));
+async function resolveArtwork(game:any){
+  if(!game.image.includes('/games/t/'))return;
+  const old=priorGames.get(game.id);
+  if(old?.image===game.image&&(old.image2x||old.image3x)){
+    game.image2x=old.image2x;game.image3x=old.image3x;return;
+  }
+  const session=await activeSession();
+  if(!session)return;
+  const candidates=[
+    {key:'image2x',url:game.image.replace('/games/t/','/games/l/')},
+    {key:'image3x',url:game.image.replace('/games/t/','/games/o/')}
+  ];
+  const images=await session.page.evaluate(async(items:Array<{key:string;url:string}>)=>Promise.all(items.map(({key,url})=>new Promise(resolve=>{
+    const image=new Image(),timer=setTimeout(()=>resolve({key,url,width:0,height:0}),8000);
+    image.onload=()=>{clearTimeout(timer);resolve({key,url,width:image.naturalWidth,height:image.naturalHeight});};
+    image.onerror=()=>{clearTimeout(timer);resolve({key,url,width:0,height:0});};
+    image.src=url;
+  }))),candidates);
+  for(const image of images){
+    const minimum=image.key==='image3x'?192:128;
+    if(Math.min(image.width,image.height)>=minimum)game[image.key]=safeImage(image.url);
+  }
+}
+
 let cursor=0,detailFailures=0;
 async function worker(){
   while(cursor<games.length){
     const game=games[cursor++];
+    try{await resolveArtwork(game);}catch{}
     try{
       const payload=await getJson(`${api}/game/${encodeURIComponent(game.id)}/earned`);
       if(!Array.isArray(payload.list))throw Error('invalid earned list');
@@ -145,7 +142,9 @@ async function worker(){
     }catch{detailFailures++;}
   }
 }
+if(!await activeSession())await browserJson(`${api}/games?page=1&environment=xbox&sort=1&showHidden=0`);
 await Promise.all(Array.from({length:5},()=>worker()));
+console.log(`高清封面：${games.filter(g=>g.image2x||g.image3x).length}/${games.length}；3倍屏原图：${games.filter(g=>g.image3x).length}/${games.length}`);
 const finishedSession=await activeSession();
 if(finishedSession)await finishedSession.browser.close();
 if(!games.length)throw Error('Exophase 没有返回任何游戏；不发布空快照。');
