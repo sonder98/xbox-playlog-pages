@@ -1,26 +1,83 @@
 import fs from 'node:fs';
-import {microsoftProvider} from './microsoft.ts';
 import {encryptVault,decryptVault} from '../src/crypto.ts';
-import {normalizeTitles,parseStats,safeImage,validateRecord,type RecordData} from '../src/data.ts';
-const key=process.env.OPENXBL_API_KEY,password=process.env.APP_PASSWORD;
-if(!password||password.length<16)throw Error('请先配置至少16位的 APP_PASSWORD。');
-const direct=!!process.env.XBOX_CLIENT_ID||!!process.env.XBOX_REFRESH_TOKEN;
-if(!direct&&!key)throw Error('请配置微软直连的 XBOX_CLIENT_ID 和 XBOX_REFRESH_TOKEN；OpenXBL 仅为可选备用。');
-const provider=direct?await microsoftProvider({clientId:process.env.XBOX_CLIENT_ID||'',refreshToken:process.env.XBOX_REFRESH_TOKEN||'',clientSecret:process.env.XBOX_CLIENT_SECRET}):null;
-async function call(path:string,body?:unknown){if(provider)return provider.call(path,body);const r=await fetch('https://api.xbl.io/v2'+path,{method:body?'POST':'GET',headers:{'X-Authorization':key!,'Accept':'application/json','Accept-Language':'zh-CN','Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(30000)});if(!r.ok)throw Error(`OpenXBL HTTP ${r.status}；本次未覆盖已发布记录。`);return r.json() as Promise<any>;}
+import {safeImage,validateRecord,type RecordData} from '../src/data.ts';
+
+// Exophase public profile: https://www.exophase.com/xbox/user/SondrRope/
+const playerId='4285437';
+const api=`https://api.exophase.com/public/player/${playerId}`;
+const password=process.env.APP_PASSWORD;
+if(!password||password.length<16)throw Error('请检查 APP_PASSWORD（至少16位），它只用于加密本地记录。');
+
+async function getJson(url:string){
+  const response=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(30000)});
+  if(!response.ok)throw Error(`Exophase 返回 HTTP ${response.status}；旧记录未覆盖。`);
+  return response.json() as Promise<any>;
+}
 let previous:RecordData[]=[];
-if(fs.existsSync('public/vault.json')){const payload=await decryptVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),password);if(!Array.isArray(payload.records))throw Error('历史记录格式无效。');previous=payload.records;}
-console.log('读取自己的 Xbox 账号与游戏历史（不输出账号信息）…');
-const a=await call('/account');const p=a.profileUsers?.[0];if(!p?.id)throw Error('账号接口格式不受支持。');const setting=(id:string)=>p.settings?.find((s:any)=>s.id===id)?.value||'';
-if(previous.length&&previous[0].profile.xuid!==String(p.id))throw Error('接口账号与已有游戏档案不一致。');
-const titles=new Map();let token='',pages=0;const seen=new Set();
-do{const d=await call('/player/titleHistory'+(token?'?continuationToken='+encodeURIComponent(token):''));for(const g of normalizeTitles(d))titles.set(g.id,g);token=d.pagingInfo?.continuationToken||d.continuationToken||'';if(token&&seen.has(token))throw Error('游戏库分页重复，未发布不完整记录。');seen.add(token);if(++pages>=25&&token)throw Error('游戏库分页超过上限。');}while(token);
-const games=[...titles.values()];
-for(let i=0;i<games.length;i+=25){const batch=games.slice(i,i+25);const d=await call('/player/stats',{xuids:[String(p.id)],stats:batch.map(g=>({name:'MinutesPlayed',titleId:g.id})),groups:[]});if(!Array.isArray(d.users))throw Error('时长统计响应格式不受支持。');const minutes=parseStats(d);for(const g of batch)g.minutes=minutes[g.id]??null;}
-const missing=games.filter(g=>g.minutes===null).length;
-const record:RecordData={...validateRecord({profile:{xuid:String(p.id),gamertag:setting('Gamertag'),avatar:safeImage(setting('GameDisplayPicRaw'))},games,source:provider?'Xbox':'OpenXBL',warnings:missing?[`${missing} 个游戏未返回时长。`]:[]}),id:crypto.randomUUID(),at:new Date().toISOString()};
+if(fs.existsSync('public/vault.json')){
+  const payload=await decryptVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),password);
+  if(!Array.isArray(payload.records))throw Error('历史记录格式无效。');
+  previous=payload.records;
+}
+
+console.log('正在读取 SondrRope 的 Exophase 公开 Xbox 游戏库…');
+const gamesById=new Map<string,any>();
+for(let page=1;page<=50;page++){
+  const result=await getJson(`${api}/games?page=${page}&environment=xbox&sort=1&showHidden=0`);
+  if(result.success!==true||!Array.isArray(result.games))throw Error('Exophase 游戏列表响应格式不符合预期；旧记录未覆盖。');
+  for(const item of result.games){
+    const meta=item.meta||{};
+    const id=String(item.master_id||meta.master_id||'');
+    const name=String(meta.title||item.title||'').trim();
+    if(!/^\d{1,20}$/.test(id)||!name)continue;
+    const units=item.playtimeUnits||{};
+    const hours=Number(units.hours),minutes=Number(units.minutes);
+    const totalMinutes=Number.isFinite(hours)&&Number.isFinite(minutes)?Math.max(0,Math.round(hours*60+minutes)):null;
+    const played=Number(item.lastplayed_utc);
+    const lastPlayed=Number.isFinite(played)&&played>0?new Date(played*1000).toISOString():null;
+    gamesById.set(id,{
+      id,name,image:safeImage(item.resource_standard||item.resource_small||item.resource_tile||''),
+      devices:Array.isArray(meta.platforms)?meta.platforms.map((p:any)=>String(p.name||p.slug||'')).filter(Boolean):[],
+      lastPlayed,minutes:totalMinutes,earned:Number(item.earned_awards)||0,total:Number(item.total_awards)||0,
+      score:Number(item.earned_points)||0,maxScore:0,endpointAwards:meta.endpoint_awards||''
+    });
+  }
+  if(result.games.length===0||result.games.length<20)break;
+  if(page===50)throw Error('Exophase 游戏库分页超过上限；旧记录未覆盖。');
+}
+const games=[...gamesById.values()];
+
+// Exophase's public earned feed supplies achievement icon and unlock timestamp.
+// Its currently exposed JSON does not return rarity, so do not invent a value.
+let cursor=0,detailFailures=0;
+async function worker(){
+  while(cursor<games.length){
+    const game=games[cursor++];
+    try{
+      const payload=await getJson(`${api}/game/${encodeURIComponent(game.id)}/earned`);
+      if(!Array.isArray(payload.list))throw Error('invalid earned list');
+      game.achievements=payload.list.map((award:any)=>({
+        id:String(award.masterAwardId||award.awardid||award.slug||''),
+        name:String(award.name||award.title||award.slug||'Achievement').replaceAll('-',' '),
+        image:safeImage(award.icons?.m?`https://m.exophase.com${award.icons.m}`:''),
+        unlockedAt:Number(award.timestamp)>0?new Date(Number(award.timestamp)*1000).toISOString():null,
+        rarity:typeof award.rarity==='number'?award.rarity:null,unlocked:true
+      })).filter((award:any)=>award.id);
+    }catch{detailFailures++;}
+  }
+}
+await Promise.all(Array.from({length:5},()=>worker()));
+const noPlaytime=games.filter(game=>game.minutes===null).length;
+const warnings=[
+  ...(noPlaytime?[`${noPlaytime} 个游戏在 Exophase 未返回游玩时长。`]:[]),
+  ...(detailFailures?[`${detailFailures} 个游戏未能读取 Exophase 成就明细。`]:[]),
+  'Exophase 公开成就接口未提供稀有度字段；稀有度暂不显示。'
+];
+const record:RecordData={
+  ...validateRecord({profile:{xuid:playerId,gamertag:'SondrRope',avatar:''},games,source:'Exophase',warnings}),
+  id:crypto.randomUUID(),at:new Date().toISOString()
+};
 const envelope=await encryptVault({records:[record,...previous]},password);
-// Game names, identity and snapshots exist only inside the ciphertext.
 fs.writeFileSync('public/vault.json',JSON.stringify(envelope));
 fs.writeFileSync('public/status.json',JSON.stringify({initialized:true}));
-console.log('同步与加密完成，准备发布。');
+console.log(`Exophase 同步完成：${games.length} 款游戏；正在加密记录。`);
