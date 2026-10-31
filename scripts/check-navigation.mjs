@@ -247,6 +247,7 @@ try{
     officialPayload.records[0].games.find(g=>g.id==='102').officialHidden=true;
     activeEnvelope=await encryptVault(officialPayload,password);
     await unlock('#library');
+    await page.locator('.game-card').first().waitFor();
     assert.equal(await page.locator('.game-card[data-game-id="102"]').count(),0,'Officially hidden game is not listed');
     assert.equal(await page.locator('.game-card').count(),11,'Only official-visible games appear');
     await manageDisplay();
@@ -262,6 +263,7 @@ try{
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
     activeEnvelope=envelope;
     await unlock('#library');
+    await page.locator('.game-card').first().waitFor();
     assert.equal(await page.locator('.game-card').count(),12,'Officially unhidden game returns when Xbox snapshot updates');
     console.log((mobile?'Mobile':'Desktop')+': PASS official hiding, manual hiding, history totals, unhide restoration and toolbar 50/50 layout');
     // Remembered credentials survive a reload and a new snapshot's random salt.
