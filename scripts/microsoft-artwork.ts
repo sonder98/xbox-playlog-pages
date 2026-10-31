@@ -1,13 +1,13 @@
 import {safeImage,type RecordData} from '../src/data.ts';
-/** Public Microsoft catalog metadata. No Xbox authorization headers are sent. */
+/** Select only first-party Australian Store artwork. Never send Xbox auth headers to this endpoint. */
 export async function australianArtwork(record:RecordData,request:typeof fetch=fetch,previous?:RecordData){
  let resolved=0,landscapes=0;
+ const oldById=new Map(previous?.games.map(game=>[game.id,game])||[]);
  for(const game of record.games){
-  const old=previous?.games.find(item=>item.id===game.id);
-  if(old?.detailImage)game.detailImage=old.detailImage;
-  // A previously verified AU square plus a real landscape can be reused unchanged.
-  if(old?.name===game.name&&old.image.includes('store-images.s-microsoft.com/image/')&&old.detailImage){
-   game.name=old.name;game.image=old.image;game.detailImage=old.detailImage;
+  const old=oldById.get(game.id);
+  // Once the highest-priority Australian hero is verified, reuse it without refetching.
+  if(old?.detailImagePurpose==='SuperHeroArt'&&old.detailImage&&old.image.includes('store-images.s-microsoft.com/image/')){
+   game.name=old.name;game.image=old.image;game.detailImage=old.detailImage;game.detailImagePurpose=old.detailImagePurpose;
    resolved++;landscapes++;continue;
   }
   const url=new URL('https://displaycatalog.mp.microsoft.com/v7.0/products/lookup');
@@ -26,20 +26,24 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
     const squares=images.filter((i:any)=>Math.abs(i.Width/i.Height-1)<.04);
     squares.sort((a:any,b:any)=>(Number(b.ImagePurpose==='BoxArt')-Number(a.ImagePurpose==='BoxArt'))||b.Width-a.Width);
     if(!squares.length)return null;
-    const wides=images.filter((i:any)=>i.Width/i.Height>=1.45&&i.Width/i.Height<=2.45&&i.Width>=640);
-    const purpose=(image:any)=>/superhero|hero|background|featured|promotional/i.test(image.ImagePurpose||'')?2:/screenshot/i.test(image.ImagePurpose||'')?0:1;
-    wides.sort((a:any,b:any)=>purpose(b)-purpose(a)||b.Width-a.Width);
+    const heroes=images.filter((i:any)=>i.Width/i.Height>=1.45&&i.Width/i.Height<=2.45&&i.Width>=640&&(i.ImagePurpose==='SuperHeroArt'||i.ImagePurpose==='TitledHeroArt'));
+    // Purpose outranks resolution: SuperHeroArt -> TitledHeroArt -> no landscape (BoxArt fallback).
+    heroes.sort((a:any,b:any)=>Number(b.ImagePurpose==='SuperHeroArt')-Number(a.ImagePurpose==='SuperHeroArt')||b.Width-a.Width);
     const title=normalize(info.ProductTitle);
     const match=title===wanted?100:title.includes(wanted)||wanted.includes(title)?70:0;
     const kind=product.ProductKind==='Game'?20:product.ProductKind==='GameEdition'?10:0;
-    return {info,square:squares[0],wide:wides[0],score:match+kind};
+    return {info,square:squares[0],hero:heroes[0],score:match+kind};
   }).filter(Boolean).sort((a:any,b:any)=>b.score-a.score);
   const selected=candidates[0];
   if(!selected||selected.score<10)continue;
-  game.name=selected.info.ProductTitle;
-  game.image=safeImage(selected.square.Uri);
-  if(selected.wide)game.detailImage=safeImage(selected.wide.Uri);
-  if(game.detailImage)landscapes++;
+  game.name=selected.info.ProductTitle;game.image=safeImage(selected.square.Uri);
+  if(selected.hero){
+   game.detailImage=safeImage(selected.hero.Uri);
+   game.detailImagePurpose=selected.hero.ImagePurpose;
+   landscapes++;
+  }else{
+   delete game.detailImage;delete game.detailImagePurpose;
+  }
   delete game.imageWide;delete game.image2x;delete game.image3x;
   delete game.cachedImage;delete game.cachedImageLarge;delete game.cachedDetailImage;
   resolved++;

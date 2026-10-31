@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import {getPasswords,readVault} from './password.ts';
+import {australianArtwork} from './microsoft-artwork.ts';
+import {cacheRecordImages} from './image-cache.ts';
+import {publishSnapshot} from './snapshot.ts';
+const {old,target}=getPasswords(process.env);
+const payload=await readVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),old,target);
+const [current,...history]=payload.records;
+if(!current||current.source!=='Xbox'||!current.games?.length)throw Error('No valid encrypted Xbox snapshot; refusing to overwrite.');
+const stats=await australianArtwork(current,fetch,current);
+console.log('澳区商店横版素材回填：'+JSON.stringify(stats));
+const cached=await cacheRecordImages(current);
+console.log('横幅缓存：'+JSON.stringify({available:current.games.filter(g=>!!g.detailImage).length,cached:current.games.filter(g=>!!g.cachedDetailImage).length,downloaded:cached.downloaded,failed:cached.failures}));
+await publishSnapshot(current,history,target);
+console.log('已重新加密最新快照并完整保留历史记录。');

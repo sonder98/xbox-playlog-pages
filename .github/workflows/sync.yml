@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: write
 concurrency:
   group: xbox-record-sync
   cancel-in-progress: false
@@ -73,3 +74,8 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Trigger Pages explicitly (bot pushes do not start push workflows)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main

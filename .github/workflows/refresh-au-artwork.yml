@@ -1,0 +1,64 @@
+name: Refresh Australian Store artwork
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/refresh-au-artwork.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: xbox-record-sync
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Validate artwork priority before updating snapshot
+        run: |
+          npm test
+          npx tsc --noEmit
+      - name: Restore public artwork cache
+        uses: actions/cache/restore@v4
+        with:
+          path: public/media
+          key: artwork-webp-v1-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: artwork-webp-v1-${{ runner.os }}-
+      - name: Backfill official AU hero art into encrypted vault
+        env:
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
+        run: node --experimental-strip-types scripts/refresh-au-artwork.ts
+      - name: Save refreshed public artwork cache
+        uses: actions/cache/save@v4
+        with:
+          path: public/media
+          key: artwork-webp-v1-${{ runner.os }}-${{ github.run_id }}
+      - name: Commit refreshed encrypted snapshot
+        run: |
+          cp public/vault.json "$RUNNER_TEMP/vault.json"
+          cp public/status.json "$RUNNER_TEMP/status.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp "$RUNNER_TEMP/vault.json" public/vault.json
+            cp "$RUNNER_TEMP/status.json" public/status.json
+            git add public/vault.json public/status.json
+            if git diff --cached --quiet; then break; fi
+            git commit -m "Backfill verified AU Store hero artwork"
+            if git push origin HEAD:main; then break; fi
+            if [ "$attempt" -eq 3 ]; then exit 1; fi
+          done
+      - name: Trigger Pages after encrypted snapshot update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
