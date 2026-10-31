@@ -1673,8 +1673,6 @@ footer .dot {
   display:inline-block;
   flex:none;
   vertical-align:middle;
-  width:1em;
-  height:1em;
 }
 .game-detail .detail-summary .detail-gamerscore {
   display:inline-flex;
