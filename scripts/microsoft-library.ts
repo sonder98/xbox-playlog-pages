@@ -130,11 +130,12 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
   try{
    const title=titles.find(t=>String(t.titleId)===game.id),summary=title?.achievement;
    const lastPlayed=title?.titleHistory?.lastTimePlayed||null;
-   const unchanged=!!old?.achievements?.length&&old.groupStatus==='verified'&&!!old.groups&&!!lastPlayed&&old.lastPlayed===lastPlayed&&summary?.totalAchievements>0&&summary.totalAchievements===old.total&&summary.currentAchievements===old.earned&&summary.currentGamerscore===old.score;
+   const oldAchievements=old?.achievements||[],oldGroups=old?.groups||[];
+   const unchanged=oldAchievements.length>0&&old.groupStatus==='verified'&&oldGroups.length>0&&!!lastPlayed&&old.lastPlayed===lastPlayed&&summary?.totalAchievements>0&&summary.totalAchievements===old.total&&summary.currentAchievements===old.earned&&summary.currentGamerscore===old.score;
    if(unchanged){
     const minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id);
-    Object.assign(game,{achievements:old.achievements,groups:old.groups,groupStatus:old.groupStatus,earned:old.earned,total:old.total,score:old.score,maxScore:old.maxScore,minutes:minutes??old.minutes,lastPlayed:old.lastPlayed});
-    audit.complete++;audit.processed++;audit.preserved++;audit.rarityTitles+=old.achievements.some(a=>a.rarity!==null)?1:0;audit.rarityAchievements+=old.achievements.filter(a=>a.rarity!==null).length;audit.images+=old.achievements.filter(a=>!!a.image).length;audit.unlockDates+=old.achievements.filter(a=>!!a.unlockedAt).length;audit.officialBaseGroups++;if(old.groups.some(g=>g.kind==='dlc'))audit.officialAddonGroups++;if(game.minutes!==null)audit.playtimeTitles++;options.progress?.(audit.processed,games.length,audit);continue;
+    Object.assign(game,{achievements:oldAchievements,groups:oldGroups,groupStatus:old.groupStatus,earned:old.earned,total:old.total,score:old.score,maxScore:old.maxScore,minutes:minutes??old.minutes,lastPlayed:old.lastPlayed});
+    audit.complete++;audit.processed++;audit.preserved++;audit.rarityTitles+=oldAchievements.some(a=>a.rarity!==null)?1:0;audit.rarityAchievements+=oldAchievements.filter(a=>a.rarity!==null).length;audit.images+=oldAchievements.filter(a=>!!a.image).length;audit.unlockDates+=oldAchievements.filter(a=>!!a.unlockedAt).length;audit.officialBaseGroups++;if(oldGroups.some(g=>g.kind==='dlc'))audit.officialAddonGroups++;if(game.minutes!==null)audit.playtimeTitles++;options.progress?.(audit.processed,games.length,audit);continue;
    }
    let data:Awaited<ReturnType<typeof pagesFor>>|undefined,version='6';const isLegacy=titles.find(t=>String(t.titleId)===game.id)?.devices?.some((d:any)=>/xbox\s*360/i.test(String(d)))||titles.find(t=>String(t.titleId)===game.id)?.achievement?.sourceVersion===1;
    if(isLegacy){
