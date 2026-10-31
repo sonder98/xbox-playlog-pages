@@ -73,6 +73,14 @@ try{
     }
     await unlock();
     await page.locator('.game-card').first().waitFor();
+    if(mobile){
+      const refresh=await page.locator('.title-row .overview-refresh').evaluate(button=>{
+        const a=button.getBoundingClientRect(),b=button.querySelector('svg').getBoundingClientRect();
+        return {dx:Math.abs((a.left+a.width/2)-(b.left+b.width/2)),dy:Math.abs((a.top+a.height/2)-(b.top+b.height/2)),size:a.width};
+      });
+      assert.equal(refresh.size,44,'Mobile refresh is a 44px square tap target');
+      assert.ok(refresh.dx<1&&refresh.dy<1,'Mobile refresh icon is centered both ways');
+    }
     const statsBeforeHiding=await page.locator('.stats').innerText();
     assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['recent','top','stats']);
     assert.equal(await page.locator('.top-card').count(),5);
@@ -208,7 +216,12 @@ try{
     assert.equal(await page.locator('.achievement-group').count(),1,'One sorted list rather than separate base/DLC section blocks');
     assert.equal(await page.locator('.achievement-group').getAttribute('data-group-id'),'all');
     for(const [sort,expected] of [['date-asc',['1','2','3','4']],['rarity-asc',['1','2','3','4']],['rarity-desc',['3','2','1','4']],['date-desc',['2','1','3','4']]]){
-      await page.getByRole('combobox',{name:'成就排序',exact:true}).selectOption(sort);
+      await page.getByRole('button',{name:'成就排序',exact:true}).click();
+      const popup=page.getByRole('menu',{name:'成就排序方式'});
+      await popup.waitFor();
+      assert.equal(await page.locator('.game-detail .achievement-sort-menu select').count(),0,'Sort popup is custom rather than a browser native select');
+      await popup.getByRole('menuitemradio',{name:({'date-asc':'解锁时间：旧 → 新','date-desc':'解锁时间：新 → 旧','rarity-asc':'稀有度：低 → 高','rarity-desc':'稀有度：高 → 低'})[sort]}).click();
+      await popup.waitFor({state:'hidden'});
       assert.deepEqual(await achievementIds(),expected);
     }
     await tabs.getByRole('tab',{name:'本体成就'}).click();
@@ -232,6 +245,21 @@ try{
     assert.equal(sortRow.sameLine,true);
     assert.equal(sortRow.leftFirst,true);
     assert.equal(sortRow.sortText,'排序');
+    await page.getByRole('button',{name:'成就排序',exact:true}).click();
+    const sortMenu=page.getByRole('menu',{name:'成就排序方式'});
+    const selectedItem=sortMenu.getByRole('menuitemradio',{checked:true});
+    assert.equal(await selectedItem.count(),1);
+    const selectedStyles=await selectedItem.evaluate(el=>({bg:getComputedStyle(el).backgroundColor,outline:getComputedStyle(el).outlineStyle,px:parseFloat(getComputedStyle(el).paddingLeft)}));
+    assert.equal(selectedStyles.bg,'rgb(57, 57, 57)','Selected item uses grey background without a yellow border');
+    assert.equal(selectedStyles.outline,'none');
+    assert.ok(selectedStyles.px>=14,'Hover/select item leaves enough left and right padding');
+    await page.keyboard.press('ArrowDown');
+    assert.ok(await sortMenu.getByRole('menuitemradio').nth(1).evaluate(el=>document.activeElement===el),'Arrow keys navigate sorting choices');
+    await page.keyboard.press('Escape');
+    await sortMenu.waitFor({state:'hidden'});
+    assert.equal(await page.getByRole('button',{name:'成就排序'}).getAttribute('aria-expanded'),'false');
+    const tabPadding=await tabs.getByRole('tab').first().evaluate(el=>parseFloat(getComputedStyle(el).paddingInlineStart));
+    assert.ok(tabPadding>=16,'Tab hover area has comfortable horizontal padding');
     console.log((mobile?'Mobile':'Desktop')+': PASS categorized tabs, aggregate counters, interactive sorting, and unified summary row');
     for(const row of achievementLayout){
       assert.ok(row.imageWidth>=(mobile?93:145),'Thumbnail retains a readable widescreen size');
@@ -341,7 +369,8 @@ try{
     assert.equal(await page.locator('.achievement-sort-row').count(),1,'Sorting is directly under summary when there are no tabs');
     assert.equal(await page.locator('.achievement-filter-count').innerText(),'2/4');
     assert.equal(await page.locator('.achievement-list .achievement').count(),4);
-    await page.getByRole('combobox',{name:'成就排序'}).selectOption('date-asc');
+    await page.getByRole('button',{name:'成就排序'}).click();
+    await page.getByRole('menu',{name:'成就排序方式'}).getByRole('menuitemradio',{name:'解锁时间：旧 → 新'}).click();
     assert.deepEqual(await page.locator('.achievement').evaluateAll(rows=>rows.map(r=>r.dataset.achievementId)),['1','2','3','4']);
     await page.getByRole('button',{name:'关闭详情'}).click();
     activeEnvelope=envelope;
