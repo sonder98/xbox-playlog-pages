@@ -90,7 +90,7 @@ try{
       const button=el.parentElement.getBoundingClientRect(),dot=el.getBoundingClientRect();
       return {ratio:dot.width/dot.height,relative:dot.width/button.width,radius:getComputedStyle(el).borderRadius};
     });
-    assert.ok(Math.abs(previewDot.ratio-1)<.04&&previewDot.relative<.9&&previewDot.relative>.7,'Circular heatmap dots are slightly smaller than tap targets');
+    assert.ok(Math.abs(previewDot.ratio-1)<.04&&previewDot.relative<.69&&previewDot.relative>.6,'Circular heatmap dots are slightly smaller than tap targets');
     assert.equal(previewDot.radius,'50%','Overview heatmap dots are circular');
     const previewSquare=await page.locator('.ah-preview-cell').first().evaluate(el=>{
       const r=el.getBoundingClientRect();return r.width/r.height;
@@ -107,6 +107,19 @@ try{
     });
     assert.ok(placement.gamesBottom<placement.summaryTop,'Per-game summary is above overall totals');
     assert.ok(placement.iconWidth>=50,'Game artwork is visibly larger in day sheet');
+    const headerGeometry=await overviewSheet.evaluate(el=>{
+      const title=el.querySelector('.ah-sheet-title-row'),close=el.querySelector('.ah-sheet-close'),nav=el.querySelector('.ah-sheet-date-nav');
+      const arrows=[...el.querySelectorAll('.ah-sheet-date-arrow')];
+      const date=title.querySelector('strong');
+      const bounds=x=>{const r=x.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom}};
+      return {title:bounds(title),date:bounds(date),close:bounds(close),nav:bounds(nav),arrows:arrows.map(bounds),subtitle:el.textContent.includes('当天解锁记录')};
+    });
+    assert.equal(headerGeometry.subtitle,false,'Redundant daily unlock subtitle is removed');
+    assert.ok(headerGeometry.close.x>headerGeometry.date.right,'Close X stays at the top right of the date');
+    assert.ok(headerGeometry.nav.y>=headerGeometry.title.bottom,'Previous and next navigation appears below the date row');
+    assert.equal(headerGeometry.arrows.length,2);
+    assert.ok(Math.abs(headerGeometry.arrows[0].y-headerGeometry.arrows[1].y)<2,'Date arrows share a single horizontal row');
+    assert.ok(headerGeometry.arrows[0].x<headerGeometry.arrows[1].x,'Previous and next are in chronological order');
     if(mobile){
       const rect=await overviewSheet.boundingBox();
       assert.ok(rect&&rect.y>250&&rect.y<650,'Home preview opens a lower-half mobile sheet');
@@ -127,13 +140,20 @@ try{
     });
     assert.ok(Math.abs(monthDot.ratio-1)<.04&&monthDot.width>=27,'Monthly date tap targets remain touch-friendly');
     assert.equal(monthDot.radius,'50%','Month heatmap points are circular');
-    assert.ok(monthDot.relative<.9&&monthDot.relative>.7,'Monthly circles are slightly inset');
+    assert.ok(monthDot.relative<.69&&monthDot.relative>.6,'Monthly circles are slightly inset');
     assert.equal(await page.locator('.ah-legend').count(),0,'Full heatmap no longer contains a color legend');
     const yearNav=page.getByRole('navigation',{name:'按年份定位热力图'});
     await yearNav.getByRole('button',{name:'2024'}).click();
     await page.waitForFunction(()=>Math.abs(document.getElementById('ah-year-2024')?.getBoundingClientRect().top-85)<45);
     assert.equal(await yearNav.getByRole('button',{name:'2024'}).getAttribute('aria-current'),'location','Year anchor reflects the active year');
-    assert.equal(await yearNav.evaluate(el=>getComputedStyle(el).position),'sticky','Year navigation remains sticky');
+    const yearNavStyle=await yearNav.evaluate(el=>{
+      const style=getComputedStyle(el);
+      return {position:style.position,background:style.backgroundColor,blur:style.backdropFilter||style.webkitBackdropFilter,shadow:style.boxShadow};
+    });
+    assert.equal(yearNavStyle.position,'sticky','Year navigation remains sticky');
+    assert.ok(/blur\(22px\)/.test(yearNavStyle.blur),'Sticky year navigation has a visible frosted-glass blur');
+    assert.ok(/\.58\)/.test(yearNavStyle.background),'Frosted year navigation has a translucent background');
+    assert.notEqual(yearNavStyle.shadow,'none','Year navigation has subtle floating depth');
     await yearNav.getByRole('button',{name:'2026'}).click();
     await page.waitForFunction(()=>Math.abs(document.getElementById('ah-year-2026')?.getBoundingClientRect().top-85)<45);
     await page.getByRole('button',{name:'2026 年 10 月 27 日，解锁 12 个成就',exact:true}).click();

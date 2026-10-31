@@ -79,12 +79,16 @@ function Sheet({day,activity,minDay='2022-01-01',onChangeDay,onClose,onDetail}:{
  return <div className="ah-sheet-backdrop" onClick={onClose}>
   <section ref={handle} className="ah-sheet" role="dialog" aria-modal="true" aria-label={dayLabel(day)+' 成就摘要'} onClick={e=>e.stopPropagation()}>
    <div className="ah-sheet-grab" onTouchStart={e=>{touchY.current=e.touches[0]?.clientY??null;}} onTouchEnd={e=>{if(touchY.current!==null&&(e.changedTouches[0]?.clientY??0)-touchY.current>70)onClose();touchY.current=null;}}><i/></div>
-   <header className="ah-sheet-heading"><div><strong>{dayLabel(day)}</strong><span>当天解锁记录</span></div>
-    <div className="ah-sheet-controls" aria-label="切换日期">
-     <button type="button" className="ah-sheet-date-arrow" aria-label={'前一天 '+dayLabel(prev)} title="前一天" disabled={prev<minDay} onClick={()=>onChangeDay(prev)}><ChevronLeft size={20}/></button>
-     <button type="button" className="ah-sheet-date-arrow" aria-label={'后一天 '+dayLabel(next)} title="后一天" disabled={next>activity.today} onClick={()=>onChangeDay(next)}><ChevronRight size={20}/></button>
+   <header className="ah-sheet-heading">
+    <div className="ah-sheet-title-row">
+     <strong>{dayLabel(day)}</strong>
      <button className="ah-sheet-close" type="button" aria-label="关闭日期摘要" onClick={onClose}><X size={19}/></button>
-    </div></header>
+    </div>
+    <div className="ah-sheet-date-nav" aria-label="切换日期">
+     <button type="button" className="ah-sheet-date-arrow" aria-label={'前一天 '+dayLabel(prev)} disabled={prev<minDay} onClick={()=>onChangeDay(prev)}><ChevronLeft size={18}/><span>前一天</span></button>
+     <button type="button" className="ah-sheet-date-arrow" aria-label={'后一天 '+dayLabel(next)} disabled={next>activity.today} onClick={()=>onChangeDay(next)}><span>后一天</span><ChevronRight size={18}/></button>
+    </div>
+   </header>
    <div className="ah-sheet-games">
     {games.length?games.slice(0,3).map(({game,count:num})=><div className="ah-sheet-game" key={game.id}><Art src={game.cachedImage||game.image} className="ah-mini-art"/><span>{game.name}</span><b>{num} 个</b></div>):<p className="ah-no-activity">这一天没有解锁成就</p>}
     {games.length>3&&<p className="ah-more-games">另有 {games.length-3} 款游戏，共 {games.slice(3).reduce((s,g)=>s+g.count,0)} 个成就</p>}
