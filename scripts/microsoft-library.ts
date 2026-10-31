@@ -200,7 +200,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    if(game.minutes!==null)audit.playtimeTitles++;else if(old?.minutes!=null)game.minutes=old.minutes;
   }catch(error){
    audit.failed++;
-   if(old){games[i]=complete?{...game,minutes:old.minutes}:{...old,...(game.officialHidden!==undefined?{officialHidden:game.officialHidden}:{})};audit.preserved++;}
+   if(old){games[i]=complete?{...game,minutes:old.minutes}:{...old,officialHidden:game.officialHidden};audit.preserved++;}
    if(fatal(error)){audit.interrupted=true;break;}
   }
   audit.processed++;options.progress?.(audit.processed,games.length,audit);
