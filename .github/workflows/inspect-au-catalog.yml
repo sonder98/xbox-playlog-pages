@@ -1,0 +1,49 @@
+name: Inspect Microsoft AU catalog artwork
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/inspect-au-catalog.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve exact Australian Microsoft Store catalog entries
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          const id='9NT1N9ZVHXJK';
+          const base='https://displaycatalog.mp.microsoft.com/v7.0/products';
+          const params='market=AU&languages=en-AU,en,neutral&fieldsTemplate=Details';
+          const endpoints=[
+            base+'?bigIds='+id+'&'+params,
+            base+'/'+id+'?'+params,
+            base+'/lookup?alternateId=ProductId&Value='+id+'&'+params
+          ];
+          let found=false;
+          for(const endpoint of endpoints){
+            try{
+              const response=await fetch(endpoint,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(25000)});
+              console.log('CATALOG_ENDPOINT '+endpoint+' HTTP '+response.status);
+              if(!response.ok)continue;
+              const data=await response.json();
+              const products=data.Products||data.products||[];
+              console.log('CATALOG_PRODUCTS '+products.length);
+              for(const product of products){
+                console.log('CATALOG_PRODUCT '+JSON.stringify({ProductId:product.ProductId,ProductKind:product.ProductKind}));
+                for(const localized of product.LocalizedProperties||[]){
+                  console.log('CATALOG_LOCALE '+JSON.stringify({Language:localized.Language,ProductTitle:localized.ProductTitle,ImageCount:(localized.Images||[]).length}));
+                  const images=(localized.Images||[]).map(image=>({ImagePurpose:image.ImagePurpose,Width:image.Width,Height:image.Height,Uri:image.Uri})).filter(image=>image.Uri);
+                  for(const image of images)console.log('CATALOG_IMAGE '+JSON.stringify(image));
+                  if(images.length)found=true;
+                }
+              }
+              if(found)break;
+            }catch(error){console.log('CATALOG_ERROR '+String(error));}
+          }
+          if(!found){console.error('NO_CATALOG_IMAGES_FOUND');process.exitCode=1;}
+          NODE
