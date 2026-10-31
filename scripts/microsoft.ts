@@ -48,7 +48,7 @@ export async function microsoftProvider(config:DirectConfig,request:typeof fetch
     url='https://userstats.xboxlive.com/batch';method='POST';
    }else throw Error('不支持的 Xbox 只读接口。');
   }
-  const result=await json(url,{method,headers:{Authorization:authorization,'x-xbl-contract-version':contract,'Accept-Language':local.searchParams.get('locale')==='en-US'?'en-US':'zh-CN','Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})},'Xbox 数据读取');
+  const result=await json(url,{method,headers:{Authorization:authorization,'x-xbl-contract-version':contract,'Accept-Language':local.searchParams.get('locale')==='en-AU'?'en-AU':local.searchParams.get('locale')==='en-US'?'en-US':'zh-CN','Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})},'Xbox 数据读取');
   if(local.pathname==='/account'){const id=result.profileUsers?.[0]?.id;if(typeof id!=='string'||!/^\d{5,25}$/.test(id))throw Error('无法确认 Xbox 玩家身份。');xuid=id;}
   return result;
  }};

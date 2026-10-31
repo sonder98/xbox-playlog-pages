@@ -1553,3 +1553,10 @@ footer .dot {
 }
 
 @media (max-width:700px) { .achievement-tools label { flex-basis:100%; } }
+
+/* Native square Xbox artwork: one fitted jewel frame, no cropped poster. */
+.game-cover,.detail-cover { aspect-ratio:1; }
+.game-cover img,.detail-cover img { width:100%;height:100%;object-fit:contain; }
+.game-cover.completion-frame { border:2px solid #a6f3c8;box-shadow:0 0 4px #c5ffe1,0 0 15px rgba(81,236,151,.55),inset 0 0 7px rgba(157,255,201,.5); }
+.completion-ornament { bottom:-5px;width:76%;height:30px;filter:drop-shadow(0 0 4px #65eaa0); }
+@media(max-width:700px){.game-card {grid-template-columns:112px minmax(0,1fr);gap:0 16px}.game-card .game-art {width:112px}.game-card .game-copy {min-width:0}}

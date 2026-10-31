@@ -6,7 +6,7 @@ import type {RecordData} from '../src/data.ts';
 
 const version='webp-v1';
 export function imageSource(value:string):string|null{
-  try{const u=new URL(value);return u.protocol==='https:'&&u.hostname==='m.exophase.com'&&!u.port&&!u.username&&!u.password&&/^\/[^/]+\/(?:games|awards)\//.test(u.pathname)?u.href:null;}catch{return null;}
+  try{const u=new URL(value);return u.protocol==='https:'&&(['store-images.s-microsoft.com','images-eds-ssl.xboxlive.com','images-eds.xboxlive.com','image-ssl.xboxlive.com','image.xboxlive.com','tiles.xbox.com'].includes(u.hostname)||(u.hostname==='m.exophase.com'&&/^\/[^/]+\/(?:games|awards)\//.test(u.pathname)))&&!u.port&&!u.username&&!u.password?u.href:null;}catch{return null;}
 }
 export function imageCacheName(url:string,width:number){return `${createHash('sha256').update(`${version}:${url}:${width}`).digest('hex').slice(0,32)}-${width}.webp`;}
 export async function convertImage(bytes:Uint8Array,width:number){

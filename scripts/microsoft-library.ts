@@ -98,11 +98,11 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  const provider=await microsoftProvider(config,request);const rawProfile=await provider.call('/account');
  if(options.expectedOwner&&options.expectedOwner!==provider.xuid)throw Error('微软续期账号发生变化；停止同步。');
  const settings=rawProfile.profileUsers[0].settings||[],setting=(id:string)=>settings.find((s:any)=>s.id===id)?.value||'';
- const history=await collectPages(t=>provider.call('/player/titleHistory'+(t?'?continuationToken='+encodeURIComponent(t):'')),'titles');
+ const history=await collectPages(t=>provider.call('/player/titleHistory?locale=en-AU'+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');
  let titles=[...new Map(history.values.filter(g=>g.type!=='App'&&/^\d{1,10}$/.test(String(g.titleId))).map(g=>[String(g.titleId),g])).values()];
  let historyFailures=0,achievementPages=0;const extra:any[][]=[];
  for(const version of ['2','1']){
-  try{const list=await collectPages(t=>provider.call('/player/achievementHistory?contractVersion='+version+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');extra.push(list.values);achievementPages+=list.pages;}catch(error){if(error instanceof XboxReadError&&[401,429].includes(error.status))throw error;historyFailures++;extra.push([]);}
+  try{const list=await collectPages(t=>provider.call('/player/achievementHistory?locale=en-AU&contractVersion='+version+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');extra.push(list.values);achievementPages+=list.pages;}catch(error){if(error instanceof XboxReadError&&[401,429].includes(error.status))throw error;historyFailures++;extra.push([]);}
  }
  const hubTitles=titles.length;titles=mergeTitleHistories(titles,extra[0],extra[1]);
  if(!titles.length||titles.length>=5000)throw Error('Xbox 游戏历史为空或超出上限；未覆盖暂存记录。');

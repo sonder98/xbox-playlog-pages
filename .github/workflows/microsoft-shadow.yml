@@ -16,12 +16,10 @@ on:
         description: 重新进行设备授权（首次运行自动授权；正常同步无需勾选）
         type: boolean
         default: false
-  schedule:
-    - cron: '0,30 * * * *'
 permissions:
   contents: read
 concurrency:
-  group: microsoft-private-shadow-sync
+  group: pages
   cancel-in-progress: false
 jobs:
   sync:
