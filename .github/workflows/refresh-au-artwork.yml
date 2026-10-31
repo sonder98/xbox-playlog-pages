@@ -2,7 +2,7 @@ name: Refresh Australian Store artwork
 on:
   push:
     branches: [main]
-    paths: ['.github/workflows/refresh-au-artwork.yml']
+    paths: ['.github/workflows/refresh-au-artwork.yml', 'scripts/microsoft-artwork.ts']
   workflow_dispatch:
 permissions:
   contents: write
