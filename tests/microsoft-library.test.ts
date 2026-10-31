@@ -68,3 +68,10 @@ test('missing title summary total is derived from the complete catalog, never mi
  const {record:r,audit}=await scanMicrosoft(config,{request,pause:async()=>{}});
  assert.equal(r.games[0].total,2);assert.equal(r.games[0].earned,1);assert.equal(r.games[0].achievements?.find(a=>a.id==='2')?.unlocked,false);assert.equal(audit.complete,1);assert.equal(audit.summaryMismatches,0);assert.equal(audit.summaryTotalsDerived,1);assert.equal(audit.rarityAchievements,2);assert.equal(audit.officialBaseGroups,1);assert.ok(!JSON.stringify(audit).includes('PRIVATE'));
 });
+
+test('official title aliases reconcile localized names without confusing duplicate editions',()=>{
+ const current=game(),prior=record([{...game(),name:'English title'}]);current.name='中文名称';
+ assert.equal(compareLibrary([current],prior).unmatched,1);
+ const aliases=new Map([['1',['English title']]]);assert.equal(compareLibrary([current],prior,aliases).matched,1);
+ prior.games.push({...game('2'),name:'English title'});assert.equal(compareLibrary([current],prior,aliases).ambiguous,1);
+});

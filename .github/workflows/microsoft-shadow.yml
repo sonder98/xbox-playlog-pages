@@ -7,6 +7,11 @@ on:
         type: string
         default: 'd7f0e707-af2a-4d50-83d5-ee86c159319e'
         required: false
+      mode:
+        description: full 全库同步；compare 只复核已保存的候选快照
+        type: choice
+        options: [full, compare]
+        default: full
       reauthorize:
         description: 重新进行设备授权（首次运行自动授权；正常同步无需勾选）
         type: boolean
@@ -54,7 +59,7 @@ jobs:
           path: .private/microsoft
           key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-start
       - name: Audit entire Xbox library without changing the website
-        run: node --experimental-strip-types scripts/microsoft-shadow.ts scan
+        run: node --experimental-strip-types scripts/microsoft-shadow.ts ${{ inputs.mode == 'compare' && 'compare' || 'scan' }}
       - name: Preserve encrypted rotated token and candidate snapshot
         if: always() && hashFiles('.private/microsoft/auth.json') != ''
         uses: actions/cache/save@v4

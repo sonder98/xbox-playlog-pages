@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import {appendFileSync} from 'node:fs';
 import {confirmOwner,credentials} from './microsoft-credentials.ts';
 import {readState,writeState} from './microsoft-state.ts';
-import {scanMicrosoft} from './microsoft-library.ts';
+import {scanMicrosoft,compareLibrary,titleAliases} from './microsoft-library.ts';
+import {microsoftProvider} from './microsoft.ts';
 import {readVault,getPasswords} from './password.ts';
 import {parseCatalogBundle} from './catalog-cache.ts';
 import type {RecordData} from '../src/data.ts';
@@ -12,6 +13,14 @@ try{
  if(process.argv[2]==='authorize'){
   await confirmOwner(process.env,process.env.XBOX_DEVICE_LOGIN==='true');
   summary('微软授权已验证并加密保存，等待缓存检查点完成。未修改网站数据。');
+ }else if(process.argv[2]==='compare'){
+  const {old,target}=getPasswords(process.env),session=await credentials(process.env),stateKey=process.env.MICROSOFT_STATE_KEY!;
+  const candidate=readState(root+'/candidate.json',stateKey);if(!candidate?.record?.games)throw Error('微软尚未完成全库候选快照。');
+  const provider=await microsoftProvider(session.config);await provider.call('/account');
+  if(provider.xuid!==session.state.owner||provider.xuid!==candidate.record.profile.xuid)throw Error('微软账号校验未通过；未修改候选记录。');
+  const baseline=(await readVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),old,target)).records?.[0];
+  const aliases=await titleAliases(p=>provider.call(p));candidate.audit.comparison=compareLibrary(candidate.record.games,baseline,aliases);
+  writeState(root+'/candidate.json',candidate,stateKey);session.save();summary('微软候选记录与 Exophase 核对（含同一 Title ID 的官方英文别名；未修改网站）：');summary(JSON.stringify(candidate.audit,null,2));
  }else if(process.argv[2]==='scan'){
   const {old,target}=getPasswords(process.env),session=await credentials(process.env),stateKey=process.env.MICROSOFT_STATE_KEY!;
   const previous=readState(root+'/candidate.json',stateKey)?.record as RecordData|undefined;

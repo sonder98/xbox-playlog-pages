@@ -58,16 +58,20 @@ export function catalogGroups(bundle:CatalogBundle|undefined,game:Game):Achievem
  if(map.size!==game.achievements.length)return;
  return validateGroups(catalog.data.groups.map(g=>({...g,achievementIds:g.achievementIds.map(id=>map.get(id)!)})),game.achievements,game.total,game.earned);
 }
-export type ScanAudit={version:1;at:string;titlePages:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;failed:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number};};
-export function compareLibrary(games:Game[],prior?:RecordData){
- const out={matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0};
- for(const g of games){const matches=(prior?.games||[]).filter(p=>normalizedName(p.name)===normalizedName(g.name));if(matches.length!==1){out[matches.length?'ambiguous':'unmatched']++;continue;}
+export type ScanAudit={version:1;at:string;titlePages:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;failed:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number;matchedAchievementDates:number};};
+export function compareLibrary(games:Game[],prior?:RecordData,aliases=new Map<string,string[]>()){
+ const out={matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0};
+ for(const g of games){const names=new Set([g.name,...(aliases.get(g.id)||[])].map(normalizedName));const matches=(prior?.games||[]).filter(p=>names.has(normalizedName(p.name)));if(matches.length!==1){out[matches.length?'ambiguous':'unmatched']++;continue;}
   out.matched++;const p=matches[0];if(p.earned!==g.earned)out.earnedDifferences++;if(p.total!==g.total)out.totalDifferences++;
   if(g.minutes!==null&&p.minutes!==null&&Math.abs(g.minutes-p.minutes)>6)out.playtimeDifferences++;
   for(const a of g.achievements||[]){const candidates=p.achievements?.filter(b=>normalizedName(b.name)===normalizedName(a.name)&&b.points===a.points)||[];
-   if(candidates.length===1&&a.unlockedAt&&candidates[0].unlockedAt&&Math.abs(Date.parse(a.unlockedAt)-Date.parse(candidates[0].unlockedAt!))>60000)out.achievementDateDifferences++;
+   if(candidates.length===1&&a.unlockedAt&&candidates[0].unlockedAt){out.matchedAchievementDates++;if(Math.abs(Date.parse(a.unlockedAt)-Date.parse(candidates[0].unlockedAt!))>60000)out.achievementDateDifferences++;}
   }
  }return out;
+}
+export async function titleAliases(read:(path:string)=>Promise<any>){
+ const history=await collectPages(t=>read('/player/titleHistory?locale=en-US'+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');
+ return new Map<string,string[]>(history.values.filter(t=>typeof t.name==='string').map(t=>[String(t.titleId),[t.name]]));
 }
 export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
@@ -81,7 +85,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  if(!titles.length||titles.length>=5000)throw Error('Xbox 游戏历史为空或超出上限；未覆盖暂存记录。');
  const games=normalizeTitles({titles:titles.map(t=>({...t,titleHistory:{...t.titleHistory,visible:true}}))});
  const prior=options.previous?.profile.xuid===provider.xuid?new Map(options.previous.games.map(g=>[g.id,g])):new Map<string,Game>();
- const audit:ScanAudit={version:1,at:new Date().toISOString(),titlePages:history.pages,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0}};
+ const audit:ScanAudit={version:1,at:new Date().toISOString(),titlePages:history.pages,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
  const pagesFor=async(id:string,version:string,possible=false,legacy=false,earned=false)=>{
   const pages:any[]=[];const result=await collectPages(async token=>{
    const params=new URLSearchParams(legacy?{earned:String(earned)}:{contractVersion:version,possibleOnly:String(possible)});if(token)params.set('continuationToken',token);
@@ -155,7 +159,8 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  }
  // Keep previous titles missing from this response; a partial response cannot erase history.
  const ids=new Set(games.map(g=>g.id));for(const [id,g]of prior)if(!ids.has(id)){games.push(g);audit.preserved++;}
- audit.comparison=compareLibrary(games,options.baseline);
+ let aliases=new Map<string,string[]>();if(options.baseline)aliases=await titleAliases(p=>provider.call(p));
+ audit.comparison=compareLibrary(games,options.baseline,aliases);
  const record:RecordData={id:crypto.randomUUID(),at:audit.at,source:'Xbox',profile:{xuid:provider.xuid,gamertag:setting('Gamertag')||'Xbox 玩家',avatar:safeImage(setting('GameDisplayPicRaw'))},games,warnings:[...(audit.failed?[`${audit.failed} 个游戏的官方数据尚未完整核对。`]:[]),...(audit.unknownGroups?[`${audit.unknownGroups} 个游戏分组未知。`]:[])]};
  return {record,audit};
 }
