@@ -1,0 +1,38 @@
+name: Verify direct Microsoft Xbox access
+on:
+  workflow_dispatch:
+    inputs:
+      client_id:
+        description: 自己注册的 Microsoft Application (client) ID（非密钥；已有 Secret 时可留空）
+        type: string
+        required: false
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/microsoft-probe.yml'
+      - 'scripts/microsoft.ts'
+      - 'scripts/microsoft-probe.ts'
+      - 'scripts/check-microsoft.ts'
+      - 'scripts/microsoft-device.ts'
+      - 'tests/microsoft*.test.ts'
+permissions:
+  contents: read
+concurrency:
+  group: microsoft-readonly-probe
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify Microsoft authentication and Xbox read APIs
+        env:
+          XBOX_CLIENT_ID: ${{ inputs.client_id || secrets.XBOX_CLIENT_ID }}
+          XBOX_DEVICE_LOGIN: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+          XBOX_REFRESH_TOKEN: ${{ secrets.XBOX_REFRESH_TOKEN }}
+          XBOX_CLIENT_SECRET: ${{ secrets.XBOX_CLIENT_SECRET }}
+        run: node --experimental-strip-types scripts/check-microsoft.ts
