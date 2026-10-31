@@ -4,6 +4,11 @@ on:
     branches: [main]
     paths: ['.github/workflows/inspect-au-catalog.yml']
   workflow_dispatch:
+    inputs:
+      product_id:
+        description: 'Microsoft Store Product ID (e.g. 9NT1N9ZVHXJK)'
+        required: false
+        default: '9NT1N9ZVHXJK'
 permissions:
   contents: read
 jobs:
@@ -14,9 +19,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Retrieve exact Australian Microsoft Store catalog entries
         shell: bash
+        env:
+          PRODUCT_ID: ${{ inputs.product_id || '9NT1N9ZVHXJK' }}
         run: |
           node --input-type=module <<'NODE'
-          const id='9NT1N9ZVHXJK';
+          const id=process.env.PRODUCT_ID;
           const base='https://displaycatalog.mp.microsoft.com/v7.0/products';
           const params='market=AU&languages=en-AU,en,neutral&fieldsTemplate=Details';
           const endpoints=[
@@ -34,7 +41,7 @@ jobs:
               const products=data.Products||data.products||[];
               console.log('CATALOG_PRODUCTS '+products.length);
               for(const product of products){
-                console.log('CATALOG_PRODUCT '+JSON.stringify({ProductId:product.ProductId,ProductKind:product.ProductKind}));
+                console.log('CATALOG_PRODUCT '+JSON.stringify({ProductId:product.ProductId,ProductKind:product.ProductKind,AlternateIds:product.AlternateIds}));
                 for(const localized of product.LocalizedProperties||[]){
                   console.log('CATALOG_LOCALE '+JSON.stringify({Language:localized.Language,ProductTitle:localized.ProductTitle,ImageCount:(localized.Images||[]).length}));
                   const images=(localized.Images||[]).map(image=>({ImagePurpose:image.ImagePurpose,Width:image.Width,Height:image.Height,Uri:image.Uri})).filter(image=>image.Uri);
