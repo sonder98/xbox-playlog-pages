@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "build": "tsc --noEmit && vite build",
-    "sync": "node --experimental-strip-types scripts/sync.ts"
+    "sync": "node --experimental-strip-types scripts/microsoft-sync.ts"
   },
   "dependencies": {
     "lucide-react": "1.31.0",

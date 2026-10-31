@@ -12,6 +12,7 @@ const saved=readState(root+'/candidate.json',key);
 const previous=fs.existsSync('public/vault.json')?(await readVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),old,target)).records:[];
 const fresh=saved?.record?.games?.some((g:any)=>g.cachedImage)&&Date.now()-Date.parse(saved.record.at)<20*60_000?saved.record:previous[0];
 if(fresh?.source==='Xbox'&&Date.now()-Date.parse(fresh.at)<20*60_000){
+ await cacheRecordImages(fresh);
  await publishSnapshot(fresh,previous.filter((r:any)=>r.id!==fresh.id).slice(0,29),target);console.log('复用刚完成的微软快照。');process.exit(0);
 }
 const result=await scanMicrosoft(session.config,{previous:saved?.record,expectedOwner:session.state.owner,progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
