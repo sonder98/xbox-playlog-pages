@@ -49,7 +49,19 @@ jobs:
                   if(images.length)found=true;
                 }
               }
-              if(found)break;
+              if(found){
+              const xboxTitleId=products[0]?.AlternateIds?.find(item=>item.IdType==='XboxTitleId')?.Value;
+              if(xboxTitleId){
+                const lookup=base+'/lookup?alternateId=XboxTitleId&Value='+xboxTitleId+'&'+params;
+                const check=await fetch(lookup,{signal:AbortSignal.timeout(25000)});
+                console.log('PRODUCTION_LOOKUP '+JSON.stringify({XboxTitleId:xboxTitleId,status:check.status}));
+                if(check.ok){
+                  const result=await check.json();
+                  for(const p of result.Products||[])for(const entry of p.LocalizedProperties||[])console.log('PRODUCTION_LOOKUP_ARTWORK '+JSON.stringify({ProductId:p.ProductId,Title:entry.ProductTitle,Images:(entry.Images||[]).map(i=>({ImagePurpose:i.ImagePurpose,Width:i.Width,Height:i.Height}))}));
+                }
+              }
+              break;
+            }
             }catch(error){console.log('CATALOG_ERROR '+String(error));}
           }
           if(!found){console.error('NO_CATALOG_IMAGES_FOUND');process.exitCode=1;}
