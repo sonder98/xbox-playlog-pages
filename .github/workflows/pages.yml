@@ -56,14 +56,14 @@ jobs:
       - name: Sync and encrypt Microsoft records
         id: exophase_sync
         continue-on-error: true
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.sync) || github.event_name == 'schedule'
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.sync)
         env:
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
           NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
           MICROSOFT_STATE_KEY: ${{ secrets.MICROSOFT_STATE_KEY }}
         run: node --experimental-strip-types scripts/microsoft-sync.ts
       - name: Save encrypted Microsoft authorization
-        if: always()
+        if: steps.exophase_sync.outcome == 'success' || steps.exophase_sync.outcome == 'failure'
         uses: actions/cache/save@v4
         with:
           path: .private/microsoft
