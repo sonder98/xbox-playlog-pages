@@ -74,3 +74,27 @@ export function calendarHalf(year:number,half:0|1,today:string){
 export function heatLevel(count:number):number{
  return count===0?0:count===1?1:count<=3?2:count<=7?3:4;
 }
+
+/** Seven-column Monday–Sunday monthly grid, suitable for touch-size calendar cells. */
+export function calendarMonth(year:number,month:number,today:string){
+ const first=Date.UTC(year,month-1,1),end=Date.UTC(year,month,1);
+ const weekday=(new Date(first).getUTCDay()+6)%7;
+ const start=first-weekday*86400000;
+ const length=Math.ceil(((end-start)/86400000)/7)*7;
+ const days=Array.from({length},(_,i)=>{
+  const when=start+i*86400000;
+  const day=new Date(when).toISOString().slice(0,10);
+  return {day:when>=first&&when<end?day:null,future:day>today,weekday:i%7};
+ });
+ return {days,rows:length/7};
+}
+export function recentCalendar(activity:Activity,count=30){
+ const days=recentDays(activity,count);
+ const start=new Date(days[0].day+'T00:00:00Z');
+ const leading=(start.getUTCDay()+6)%7;
+ return [...Array.from({length:leading},()=>({day:null,count:0})),...days];
+}
+export function adjacentDay(day:string,direction:-1|1){
+ const date=Date.parse(day+'T00:00:00Z')+direction*86400000;
+ return new Date(date).toISOString().slice(0,10);
+}

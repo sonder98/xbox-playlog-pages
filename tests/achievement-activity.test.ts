@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildActivity,calendarHalf,dayLabel,heatLevel,recentDays,shanghaiDay} from '../src/achievement-activity.ts';
+import {buildActivity,adjacentDay,calendarHalf,calendarMonth,dayLabel,heatLevel,recentCalendar,recentDays,shanghaiDay} from '../src/achievement-activity.ts';
 import type {Game} from '../src/data.ts';
 
 function fixture(id:string,dates:(string|null)[]):Game{
@@ -57,4 +57,30 @@ test('Half-year grid maps every local calendar date once, aligned Monday to Sund
 });
 test('Five intensities mirror approved heatmap legend',()=>{
  assert.deepEqual([0,1,2,3,4,7,8,30].map(heatLevel),[0,1,2,2,3,3,4,4]);
+});
+
+test('Monthly calendar shows 7 touch-friendly day columns with correct weekday alignment',()=>{
+ const oct=calendarMonth(2026,10,'2026-11-01');
+ assert.equal(oct.rows,5);
+ assert.equal(oct.days[0].day,null);
+ assert.equal(oct.days.find(x=>x.day==='2026-10-29')?.weekday,3);
+ assert.equal(oct.days.filter(x=>x.day).length,31);
+ assert.equal(oct.days.find(x=>x.day==='2026-10-31')?.future,false);
+ const nov=calendarMonth(2026,11,'2026-11-01');
+ assert.equal(nov.rows,6);
+ assert.equal(nov.days.find(x=>x.day==='2026-11-01')?.weekday,6);
+ assert.equal(nov.days.find(x=>x.day==='2026-11-02')?.future,true);
+});
+test('Overview calendar runs oldest to newest left to right within each Monday–Sunday week',()=>{
+ const a=buildActivity([],new Date('2026-11-01T12:00:00Z'));
+ const preview=recentCalendar(a);
+ assert.equal(preview.length,35);
+ assert.equal(preview[0].day,null);
+ assert.equal(preview[5].day,'2026-10-03');
+ assert.equal(preview.at(-1)?.day,'2026-11-01');
+});
+test('Adjacent date navigation spans year and leap-day boundaries',()=>{
+ assert.equal(adjacentDay('2026-01-01',-1),'2025-12-31');
+ assert.equal(adjacentDay('2024-02-28',1),'2024-02-29');
+ assert.equal(adjacentDay('2024-02-29',1),'2024-03-01');
 });
