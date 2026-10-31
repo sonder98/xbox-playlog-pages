@@ -2053,3 +2053,81 @@ footer .dot {
  .ah-day-grid {gap:2px;}
 }
 @media(prefers-reduced-motion:no-preference){.ah-sheet {animation:ah-sheet-enter .18s ease-out both;}@keyframes ah-sheet-enter{from{transform:translateY(24px);opacity:.8;}to{transform:translateY(0);opacity:1;}}}
+
+
+/* Achievement journey V2 — Monday→Sunday aligned squares and full-width MONTHLY calendars. */
+.ah-preview .ah-preview-heading {margin-bottom:15px;}
+.ah-preview .ah-preview-heading>div {display:flex;flex-direction:column;gap:6px;}
+.ah-preview .ah-preview-more {display:inline-flex;align-items:center;gap:4px;min-height:40px;flex-shrink:0;padding:5px 0 5px 6px;}
+.ah-preview-weekdays,.ah-preview-grid {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;}
+.ah-preview-weekdays {margin-bottom:9px;color:var(--text-muted);font-size:11px;text-align:center;}
+.ah-preview-grid {grid-auto-rows:auto;}
+.ah-preview-cell,.ah-preview-placeholder {width:100%;height:auto;aspect-ratio:1;display:block;border-radius:6px;padding:0;border:0;}
+.ah-preview-cell {cursor:pointer;transition:filter .15s,outline-color .15s;}
+.ah-preview-cell:hover {filter:brightness(1.22);}
+.ah-preview-cell:focus-visible {outline:2px solid var(--accent);outline-offset:2px;}
+.ah-preview-placeholder {background:transparent;visibility:hidden;}
+.ah-preview-axis {font-size:11px;line-height:1.6;color:var(--text-muted);margin:12px 0 8px;}
+.ah-preview-footer {width:100%;min-height:40px;padding:4px 0;margin-top:3px;cursor:pointer;}
+.ah-year-jump {display:flex;gap:8px;overflow-x:auto;margin:-4px 0 22px;scrollbar-width:none;padding-bottom:6px;}
+.ah-year-jump::-webkit-scrollbar {display:none;}
+.ah-year-jump button {background:var(--surface-raised);border-radius:12px;min-width:61px;min-height:41px;padding:10px 13px;color:var(--text-secondary);font-weight:500;font-size:13px;}
+.ah-year-jump button:hover,.ah-year-jump button:focus-visible {color:var(--accent);outline:1px solid var(--accent);}
+.ah-month-list {display:flex;flex-direction:column;gap:18px;}
+.ah-month-list>div {scroll-margin-top:20px;}
+.ah-month-card {padding:19px;border-radius:20px;background:var(--surface);width:100%;min-width:0;}
+.ah-month-title {display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:22px;}
+.ah-month-title h2 {font-size:19px;font-weight:600;}
+.ah-month-title span {font-size:12px;color:var(--text-muted);}
+.ah-calendar-weekdays,.ah-month-calendar {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;min-width:0;}
+.ah-calendar-weekdays {text-align:center;font-size:12px;color:var(--text-muted);margin-bottom:10px;}
+.ah-month-calendar .ah-cell,.ah-calendar-placeholder {aspect-ratio:1;width:100%;height:auto;display:grid;place-items:center;border-radius:7px;}
+.ah-month-calendar .ah-cell {font-size:12px;font-weight:500;line-height:1;color:var(--text-primary);font-variant-numeric:tabular-nums;cursor:pointer;touch-action:manipulation;}
+.ah-month-calendar .ah-cell.ah-level-0 {color:var(--text-muted);}
+.ah-month-calendar .ah-cell.ah-level-3,.ah-month-calendar .ah-cell.ah-level-4 {color:#151515;}
+.ah-month-calendar .ah-cell:disabled {color:#444;}
+.ah-calendar-placeholder {visibility:hidden;}
+/* Sheet hierarchy: date → larger per-game rows → overall daily total → primary action. */
+.ah-sheet-games {gap:13px;margin:17px 0 10px;}
+.ah-sheet-game {gap:13px;font-size:15px;min-height:54px;}
+.ah-sheet-game b {font-size:15px;font-weight:600;}
+.ah-sheet-game .ah-mini-art {width:54px;height:54px;border-radius:11px;}
+.ah-sheet-total {margin:6px 0 17px;padding:16px 0;border-top:1px solid var(--border);border-bottom:0;align-items:baseline;gap:9px;}
+.ah-sheet-total strong {font-size:30px;}
+.ah-sheet-total span {font-size:14px;}
+.ah-sheet-action:disabled {opacity:.45;cursor:default;}
+.ah-sheet .ah-sheet-heading strong {font-size:21px;}
+/* Daily detail header with reusable Lucide-style adjacent-day arrows. */
+.ah-day-title {display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.ah-day-title h1 {font-size:clamp(20px,3vw,28px);line-height:1.35;white-space:nowrap;min-width:0;}
+.ah-date-arrows {display:flex;align-items:center;gap:6px;flex:none;}
+.ah-date-arrows button {display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--surface-raised);color:var(--text-secondary);border:1px solid var(--border);}
+.ah-date-arrows button:hover:not(:disabled),.ah-date-arrows button:focus-visible {color:var(--accent);border-color:var(--accent);}
+.ah-date-arrows button:disabled {opacity:.3;cursor:default;}
+.ah-day-detail .ah-day-toolbar {margin-top:19px;position:relative;z-index:5;}
+.ah-day-detail .achievement-sort-control {z-index:7;}
+.ah-day-detail .achievement-sort-toggle {display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:8px 13px;background:var(--surface-raised);border-radius:12px;color:var(--text-secondary);font-size:13px;}
+.ah-day-detail .achievement-sort-toggle:hover,.ah-day-detail .achievement-sort-toggle.is-open {background:var(--surface-hover);color:var(--text-primary);}
+.ah-day-detail .achievement-sort-menu {position:absolute;right:0;left:auto;top:calc(100% + 8px);width:max-content;min-width:234px;max-width:min(270px,calc(100vw - 40px));display:flex;flex-direction:column;gap:3px;padding:7px;border:1px solid var(--border);border-radius:16px;background:var(--surface-raised);box-shadow:0 12px 34px rgba(0,0,0,.48);z-index:40;}
+.ah-day-detail .achievement-sort-option {display:flex;align-items:center;justify-content:space-between;gap:13px;width:100%;min-height:41px;padding:9px 13px;border-radius:10px;color:var(--text-secondary);font-size:13px;}
+.ah-day-detail .achievement-sort-option:hover,.ah-day-detail .achievement-sort-option:focus-visible,.ah-day-detail .achievement-sort-option.selected {background:#393939;color:var(--text-primary);}
+.ah-achievement-art {width:120px;height:auto;aspect-ratio:16/9;flex-shrink:0;border-radius:11px;overflow:hidden;background:var(--surface-hover);}
+.ah-achievement-art img {display:block;width:100%;height:100%;object-fit:contain;object-position:center;}
+@media(max-width:700px){
+ .ah-preview-grid,.ah-preview-weekdays {gap:7px;}
+ .ah-preview-cell {height:auto;}
+ .ah-month-card {padding:15px;border-radius:20px;}
+ .ah-calendar-weekdays,.ah-month-calendar {gap:7px;}
+ .ah-month-calendar .ah-cell {font-size:12px;border-radius:6px;}
+ .ah-day-title h1 {font-size:21px;letter-spacing:-.5px;}
+ .ah-date-arrows button {width:38px;height:38px;}
+ .ah-achievement-art {width:104px;height:auto;aspect-ratio:16/9;}
+}
+@media(max-width:360px){
+ .ah-month-card {padding:11px;}
+ .ah-calendar-weekdays,.ah-month-calendar {gap:6px;}
+ .ah-preview-grid,.ah-preview-weekdays {gap:6px;}
+ .ah-achievement-art {width:85px;aspect-ratio:16/9;}
+ .ah-day-title h1 {font-size:18px;}
+ .ah-date-arrows button {width:34px;height:34px;}
+}
