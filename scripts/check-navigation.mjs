@@ -82,7 +82,37 @@ try{
       assert.ok(refresh.dx<1&&refresh.dy<1,'Mobile refresh icon is centered both ways');
     }
     const statsBeforeHiding=await page.locator('.stats').innerText();
-    assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['recent','top','stats']);
+    assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['heatmap','recent','top','stats']);
+    assert.equal(await page.locator('.ah-preview-grid .ah-preview-cell').count(),30,'Overview shows only 30 days');
+    await page.getByRole('button',{name:'查看全部成就热力图'}).click();
+    await page.locator('.ah-year').first().waitFor();
+    assert.equal(await page.locator('.ah-year').count(),5,'Calendar covers 2022 through 2026');
+    assert.equal(await page.locator('.ah-year').first().getByRole('heading').innerText(),'2026 年');
+    await page.getByRole('button',{name:'2026 年 10 月 27 日，解锁 12 个成就',exact:true}).click();
+    const sheet=page.getByRole('dialog',{name:'2026 年 10 月 27 日 成就摘要'});
+    await sheet.waitFor();
+    assert.ok((await sheet.innerText()).includes('12'));
+    assert.ok((await sheet.innerText()).includes('Test Game 0'));
+    if(mobile){
+      const rect=await sheet.boundingBox();
+      assert.ok(rect&&rect.y>280&&rect.y<650,'Mobile day summary opens as a lower-half bottom sheet');
+    }
+    await sheet.getByRole('button',{name:'查看当天全部成就'}).click();
+    await page.locator('.ah-achievement-card').first().waitFor();
+    assert.equal(await page.locator('.ah-achievement-card').count(),12,'All day unlocks across games appear');
+    assert.ok(page.url().endsWith('#achievements/day/2026-10-27'),'Day detail is deep-linkable');
+    assert.equal(await page.locator('.ah-achievement-card .ah-game-source').count(),12,'Each achievement identifies its original game');
+    assert.ok(await page.locator('.ah-achievement-card time').first().innerText()==='20:24');
+    await page.getByRole('button',{name:'切换解锁时间排序'}).click();
+    await page.locator('.ah-game-source').first().click();
+    await page.getByRole('dialog',{name:/游戏详情/}).waitFor();
+    await page.getByRole('button',{name:'关闭详情'}).click();
+    await page.getByRole('button',{name:/返回热力图/}).click();
+    await page.locator('.ah-day-grid').first().waitFor();
+    assert.equal(await page.locator('.ah-cell.is-selected').count(),1,'Selected calendar date persists after returning');
+    await page.getByRole('button',{name:/返回概览/}).click();
+    await page.locator('.game-card').first().waitFor();
+    console.log((mobile?'Mobile':'Desktop')+': PASS recent heatmap, 2022+ history, day bottom sheet, chronological achievement detail, deep links and game provenance');
     assert.equal(await page.locator('.top-card').count(),5);
     assert.equal(await page.locator('.top-card .completion-ornament').count(),5);
     await page.locator('.top-card').last().click();
