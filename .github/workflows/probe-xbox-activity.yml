@@ -60,6 +60,8 @@ jobs:
             ['played_recent',{numItems:'100',activityTypes:'Played',contentTypes:'Game',includeSelf:'true'}],
             ['mixed_recent',{numItems:'60',contentTypes:'Game',includeSelf:'true'}],
             ['played_backfill',{numItems:'100',activityTypes:'Played',contentTypes:'Game',includeSelf:'true',startDate:'2025-01-01T00:00:00Z'}],
+            ['played_xboxone',{numItems:'100',activityTypes:'Played',contentTypes:'Game',platform:'XboxOne'}],
+            ['played_no_content_filter',{numItems:'100',activityTypes:'Played'}],
           ];
           for(const [name,options]of calls){
             try{
