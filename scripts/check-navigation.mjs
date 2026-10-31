@@ -113,7 +113,10 @@ try{
     await unlock();
     await page.waitForFunction(()=>document.querySelector('.game-card .game-cover img')?.currentSrc.endsWith('cached-480.svg'));
     await page.locator('.game-card').first().click();
-    await page.waitForFunction(()=>document.querySelector('.detail-cover img')?.currentSrc.endsWith('cached-1600.svg'));
+    await page.waitForFunction(()=>document.querySelector('.detail-cover .cover-artwork')?.currentSrc.endsWith('cached-1600.svg'));
+    const hero=await page.locator('.detail-cover').evaluate(el=>{const r=el.getBoundingClientRect();return {ratio:r.width/r.height,fallback:!!el.querySelector('.detail-backdrop'),fit:getComputedStyle(el.querySelector('.cover-artwork')).objectFit};});
+    assert.ok(hero.ratio>1.7&&hero.ratio<1.85,'Detail cover must be widescreen');
+    assert.ok(hero.fallback&&hero.fit==='contain','Square source uses unfitted artwork with a soft landscape backdrop');
     await page.locator('.achievement-image img').first().scrollIntoViewIfNeeded();
     await page.waitForFunction(()=>document.querySelector('.achievement-image img')?.currentSrc.endsWith('cached-award.svg'));
     await page.getByRole('button',{name:'关闭详情',exact:true}).click();
@@ -148,7 +151,8 @@ try{
     await page.getByRole('dialog').waitFor();
     const achievementLayout=await page.locator('.achievement').evaluateAll(rows=>rows.map(row=>{
       const image=row.querySelector('.achievement-image'),title=row.querySelector('h4'),description=row.querySelector('.achievement-description'),rarity=row.querySelector('.achievement-rarity');
-      return {imageWidth:image.getBoundingClientRect().width,titleSize:parseFloat(getComputedStyle(title).fontSize),descriptionSize:parseFloat(getComputedStyle(description).fontSize),sameRow:Math.abs(description.getBoundingClientRect().top-rarity.getBoundingClientRect().top)<1,tier:rarity.getAttribute('data-rarity-tier'),icon:rarity.querySelector('svg')?.getAttribute('class'),fits:row.scrollWidth<=row.clientWidth+1};
+      const rect=image.getBoundingClientRect();
+      return {imageWidth:rect.width,imageRatio:rect.width/rect.height,fit:getComputedStyle(image.querySelector('img')).objectFit,titleSize:parseFloat(getComputedStyle(title).fontSize),descriptionSize:parseFloat(getComputedStyle(description).fontSize),sameRow:Math.abs(description.getBoundingClientRect().top-rarity.getBoundingClientRect().top)<1,tier:rarity.getAttribute('data-rarity-tier'),icon:rarity.querySelector('svg')?.getAttribute('class'),fits:row.scrollWidth<=row.clientWidth+1};
     }));
     assert.deepEqual(achievementLayout.map(a=>a.tier),['rare','rare','common',null]);
     const achievementIds=()=>page.locator('.achievement').evaluateAll(rows=>rows.map(row=>row.getAttribute('data-achievement-id')));
@@ -169,7 +173,14 @@ try{
     await page.getByRole('combobox',{name:'成就分组',exact:true}).selectOption('__all');
     assert.deepEqual(await achievementIds(),['2','1','3','4']);
     console.log((mobile?'Mobile':'Desktop')+': PASS four within-group achievement sort orders, preserved base/DLC headers and membership, filters and default newest-first');
-    for(const row of achievementLayout){assert.equal(row.imageWidth,56);assert.ok(row.titleSize>row.descriptionSize);assert.ok(row.sameRow);assert.ok(row.fits);}
+    for(const row of achievementLayout){
+      assert.ok(row.imageWidth>=(mobile?93:145),'Thumbnail retains a readable widescreen size');
+      assert.ok(Math.abs(row.imageRatio-16/9)<.06,'Achievement thumbnail uses 16:9');
+      assert.equal(row.fit,'contain','Achievement art is never distorted or cropped');
+      assert.ok(row.titleSize>row.descriptionSize);
+      assert.equal(row.sameRow,!mobile,'Inline rarity on desktop, stacked rarity on mobile');
+      assert.ok(row.fits);
+    }
     assert.ok(achievementLayout[0].icon.includes('gem'));
     assert.ok(achievementLayout[2].icon.includes('trophy'));
     assert.ok(!(await page.getByRole('dialog').innerText()).includes('玩家解锁'));

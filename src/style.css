@@ -1560,3 +1560,94 @@ footer .dot {
 .game-cover.completion-frame { border:2px solid #a6f3c8;box-shadow:0 0 4px #c5ffe1,0 0 15px rgba(81,236,151,.55),inset 0 0 7px rgba(157,255,201,.5); }
 .completion-ornament { bottom:-5px;width:76%;height:30px;filter:drop-shadow(0 0 4px #65eaa0); }
 @media(max-width:700px){.game-card {grid-template-columns:112px minmax(0,1fr);gap:0 16px}.game-card .game-art {width:112px}.game-card .game-copy {min-width:0}}
+
+/* Detail-only widescreen artwork: never stretch a square cover into a landscape. */
+.game-detail .detail-cover {
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9;
+  margin-bottom:24px;
+  border-radius:16px;
+  background:linear-gradient(135deg,#243025,#0d1511 55%,#26372a);
+  isolation:isolate;
+}
+.game-detail .detail-cover .cover-artwork {
+  position:relative;
+  z-index:1;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  border-radius:14px;
+}
+.game-detail .detail-cover.has-landscape .cover-artwork { object-fit:cover; }
+.game-detail .detail-cover .detail-backdrop {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  filter:blur(22px) brightness(.42);
+  clip-path:inset(0 round 14px);
+  opacity:.85;
+}
+.game-detail .detail-cover .cover-fallback { height:100%;aspect-ratio:auto; }
+.game-detail .detail-cover .completion-ornament { z-index:2; }
+
+/* Achievement cards: a genuine 16:9 media column, title and points above copy. */
+.game-detail .achievement {
+  display:grid;
+  grid-template-columns:148px minmax(0,1fr);
+  align-items:center;
+  gap:18px;
+  min-width:0;
+  margin-top:12px;
+  padding:16px;
+  min-height:112px;
+  border:1px solid rgba(255,255,255,.04);
+  border-radius:18px;
+}
+.game-detail .achievement-image {
+  position:relative;
+  width:100%;
+  height:auto;
+  aspect-ratio:16/9;
+  border-radius:12px;
+  background:linear-gradient(135deg,#242b32,#14181d);
+  overflow:hidden;
+}
+.game-detail .achievement-image img {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+.game-detail .achievement-title-row { display:flex;align-items:flex-start;justify-content:space-between;gap:10px; }
+.game-detail .achievement-title-row h4 { flex:1;min-width:0;margin:0 0 8px; }
+.game-detail .achievement-points {
+  flex-shrink:0;
+  padding:3px 6px;
+  color:var(--accent);
+  background:rgba(199,255,46,.08);
+  border-radius:6px;
+  font-size:11px;
+  white-space:nowrap;
+}
+.game-detail .achievement-description-row { gap:14px; }
+.game-detail .achievement-unlock { margin-top:10px; }
+@media(max-width:700px) {
+  .game-detail .detail-cover { margin-bottom:20px; }
+  .game-detail .achievement { grid-template-columns:110px minmax(0,1fr);gap:12px;padding:12px;align-items:start;min-height:90px; }
+  .game-detail .achievement-title-row { gap:6px; }
+  .game-detail .achievement-title-row h4 { font-size:14px;line-height:1.35; }
+  .game-detail .achievement-points { font-size:10px;padding:2px 4px; }
+  .game-detail .achievement-description-row { flex-wrap:wrap;gap:5px 8px; }
+  .game-detail .achievement-description { flex-basis:100%; }
+  .game-detail .achievement-rarity { margin-left:0; }
+  .game-detail .achievement .achievement-description { font-size:12px;line-height:1.45; }
+  .game-detail .achievement .achievement-unlock { font-size:11px;margin-top:8px; }
+}
+@media(max-width:370px) {
+  .game-detail .achievement { grid-template-columns:94px minmax(0,1fr);gap:10px;padding:10px; }
+}

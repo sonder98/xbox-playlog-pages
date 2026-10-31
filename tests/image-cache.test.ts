@@ -34,3 +34,23 @@ test('duplicate artwork downloads once, a warm build needs no network, failures 
   assert.equal(failed.covers,0);assert.equal(failed.achievements,0);assert.equal(record.games[0].cachedImage,undefined);assert.ok(record.games[0].image.includes('exophase.com'));
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });
+
+test('wide detail artwork has a separate uncropped WebP cache from the square library cover',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'playlog-detail-'));
+ const cover='https://store-images.s-microsoft.com/image/square';
+ const hero='https://store-images.s-microsoft.com/image/wide';
+ const record:RecordData={id:'a',at:new Date().toISOString(),profile:{xuid:'4285437',gamertag:'test',avatar:''},source:'Xbox',warnings:[],games:[{id:'1',name:'Test',image:cover,detailImage:hero,devices:[],lastPlayed:null,minutes:0,earned:0,total:0,score:0,maxScore:0}]};
+ const square=await sharp({create:{width:1200,height:1200,channels:3,background:'#334455'}}).png().toBuffer();
+ const landscape=await sharp({create:{width:1600,height:900,channels:3,background:'#557799'}}).png().toBuffer();
+ try{
+  const result=await cacheRecordImages(record,{directory,fetchImage:async url=>url===hero?landscape:square});
+  assert.equal(result.covers,1);
+  assert.ok(record.games[0].cachedImageLarge);
+  assert.ok(record.games[0].cachedDetailImage);
+  assert.notEqual(record.games[0].cachedImageLarge,record.games[0].cachedDetailImage);
+  const detailPath=path.join(directory,imageCacheName(hero,1600));
+  const info=await sharp(fs.readFileSync(detailPath)).metadata();
+  assert.equal(info.width,1600);assert.equal(info.height,900);
+  assert.equal(validateRecord(record).games[0].cachedDetailImage,record.games[0].cachedDetailImage);
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});

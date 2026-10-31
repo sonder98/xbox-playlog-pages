@@ -26,12 +26,15 @@ export function Progress({earned,total,label,complete=false}:{earned:number;tota
   return <span className={'progress'+(complete?' complete':'')} role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}><span style={{width:percent+'%'}}/></span>;
 }
 export function GameCover({game,wide=false,priority=false}:{game:Game;wide?:boolean;priority?:boolean}){
-  const candidates=[wide?game.cachedImageLarge:game.cachedImage,wide?game.cachedImage:game.cachedImageLarge,game.image3x,game.image2x,game.imageWide,game.image].filter((url,index,all):url is string=>!!url&&all.indexOf(url)===index);
+  const landscapes=wide?[game.cachedDetailImage,game.detailImage,game.imageWide].filter((url):url is string=>!!url):[];
+  const squares=[wide?game.cachedImageLarge:game.cachedImage,wide?game.cachedImage:game.cachedImageLarge,game.image3x,game.image2x,game.image].filter((url):url is string=>!!url);
+  const candidates=[...new Set([...landscapes,...squares])];
   const [attempt,setAttempt]=useState(0);
-  useEffect(()=>setAttempt(0),[game.id,game.cachedImage,game.cachedImageLarge,game.image3x,game.image]);
-  const source=candidates[attempt],completed=completion(game).mythic;
-  return <span className={'game-cover'+(wide?' detail-cover':'')+(completed?' completion-frame':'')}>
-    {source?<img src={source} alt="" loading={wide||priority?'eager':'lazy'} fetchPriority={wide||priority?'high':'auto'} decoding="async" width="1080" height="1080" onError={()=>setAttempt(a=>a+1)}/>:<span className="cover-fallback" role="img" aria-label="游戏封面暂不可用"><Gamepad2 size={28}/></span>}
+  useEffect(()=>setAttempt(0),[game.id,game.cachedImage,game.cachedImageLarge,game.cachedDetailImage,game.detailImage,game.image3x,game.image]);
+  const source=candidates[attempt],landscape=wide&&landscapes.includes(source),completed=completion(game).mythic;
+  return <span className={'game-cover'+(wide?' detail-cover':'')+(landscape?' has-landscape':'')+(completed?' completion-frame':'')}>
+    {wide&&source&&!landscape&&<img className="detail-backdrop" src={source} alt="" aria-hidden="true" decoding="async"/>}
+    {source?<img className="cover-artwork" src={source} alt="" loading={wide||priority?'eager':'lazy'} fetchPriority={wide||priority?'high':'auto'} decoding="async" width={landscape?1600:1080} height={landscape?900:1080} onError={()=>setAttempt(a=>a+1)}/>:<span className="cover-fallback" role="img" aria-label="游戏封面暂不可用"><Gamepad2 size={28}/></span>}
     {completed&&<CompletionOrnament/>}
   </span>;
 }
@@ -70,9 +73,9 @@ function AchievementItem({achievement:a}:{achievement:Achievement}){
   const images=[a.cachedImage,a.image].filter((url,index,all):url is string=>!!url&&all.indexOf(url)===index);
   const image=images[attempt];
   return <article className={'achievement '+(!a.unlocked?'locked':'')} data-achievement-id={a.id}>
-    <span className="achievement-image"><Trophy size={22}/>{image&&<img src={image} alt="" width="56" height="56" loading="lazy" decoding="async" onError={()=>setAttempt(n=>n+1)}/>}</span>
+    <span className="achievement-image"><Trophy size={24}/>{image&&<img src={image} alt="" width="160" height="90" loading="lazy" decoding="async" onError={()=>setAttempt(n=>n+1)}/>}</span>
     <div className="achievement-copy">
-      <h4>{a.name}</h4>
+      <div className="achievement-title-row"><h4>{a.name}</h4>{(a.points??0)>0&&<span className="achievement-points">{a.points} G</span>}</div>
       <div className="achievement-description-row">
         {a.description&&<p className="achievement-description">{a.description}</p>}
         {a.rarity!==null?<span className={'achievement-rarity'+(rare?' rare':'')} data-rarity-tier={rare?'rare':'common'} aria-label={`${rare?'稀有成就，':''}稀有度 ${a.rarity}%`}>{rare?<Gem size={16} aria-hidden="true"/>:<Trophy size={15} aria-hidden="true"/>}{a.rarity}%</span>:<span className="achievement-rarity unknown">稀有度暂缺</span>}

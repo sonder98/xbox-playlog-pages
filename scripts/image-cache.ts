@@ -33,9 +33,11 @@ export async function cacheRecordImages(record:RecordData,options:Options={}){
     const job=jobs.get(url)||{widths:new Set<number>(),apply:[]};widths.forEach(w=>job.widths.add(w));job.apply.push(apply);jobs.set(url,job);
   }
   for(const game of record.games){
-    delete game.cachedImage;delete game.cachedImageLarge;
-    const source=game.image3x||game.image2x||game.imageWide||game.image;
+    delete game.cachedImage;delete game.cachedImageLarge;delete game.cachedDetailImage;
+    const source=game.image3x||game.image2x||game.image;
     add(source,[480,1600],urls=>{game.cachedImage=urls.get(480);game.cachedImageLarge=urls.get(1600);});
+    const landscape=game.detailImage||game.imageWide;
+    if(landscape)add(landscape,[1600],urls=>{game.cachedDetailImage=urls.get(1600);});
   }
   for(const game of record.games)for(const a of game.achievements||[]){delete a.cachedImage;add(a.image,[168],urls=>{a.cachedImage=urls.get(168);});}
   const tasks=[...jobs];let cursor=0;
