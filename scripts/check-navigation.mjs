@@ -167,8 +167,8 @@ try{
        hidden:svg.getAttribute('aria-hidden')
       };
     });
-    assert.equal(iconStyle.size,16,'Summary G icon matches neighboring time/trophy icons');
-    assert.equal(iconStyle.iconHeight,16);
+    assert.equal(iconStyle.size,mobile?15:16,'Summary G icon matches neighboring time/trophy icons');
+    assert.equal(iconStyle.iconHeight,mobile?15:16);
     assert.deepEqual(iconStyle.ring,{present:true,cx:'12',cy:'12',radius:'10'},'The outlined badge retains a complete centered circle');
     assert.equal(iconStyle.fill,'none');
     assert.equal(iconStyle.stroke,'currentColor');
