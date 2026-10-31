@@ -1551,3 +1551,5 @@ footer .dot {
   :root textarea,
   :root select { font-size:16px; }
 }
+
+@media (max-width:700px) { .achievement-tools label { flex-basis:100%; } }
