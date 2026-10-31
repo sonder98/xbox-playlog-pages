@@ -52,7 +52,7 @@ test('permission failures preserve previous title records; 429 interrupts withou
   reads++;return Response.json({error:'do not print me'},{status:429});
  };
  const result=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old,game('missing')])});
- assert.equal(reads,1);assert.equal(result.audit.interrupted,true);assert.equal(result.audit.failed,1);assert.equal(result.record.games.length,2);assert.deepEqual(result.record.games[0],old);
+ assert.equal(reads,1);assert.equal(result.audit.interrupted,true);assert.equal(result.audit.failed,1);assert.equal(result.record.games.length,2);assert.deepEqual(result.record.games[0],{...old,officialHidden:false});
  assert.equal(compareLibrary([game()],record([game(),game('2')])).ambiguous,1);
 });
 
@@ -87,7 +87,7 @@ test('empty modern responses try legacy catalogs even without legacy flags; targ
   return Response.json({achievements:[]});
  };
  const old=game('2');const result=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old]),onlyIds:new Set(['1'])});
- assert.equal(result.audit.titles,1);assert.equal(result.audit.legacy,1);assert.equal(result.audit.failed,0);assert.equal(result.record.games[0].earned,1);assert.equal(result.record.games[0].total,1);assert.deepEqual(result.record.games.find(g=>g.id==='2'),old);
+ assert.equal(result.audit.titles,1);assert.equal(result.audit.legacy,1);assert.equal(result.audit.failed,0);assert.equal(result.record.games[0].earned,1);assert.equal(result.record.games[0].total,1);assert.deepEqual(result.record.games.find(g=>g.id==='2'),{...old,officialHidden:undefined});
 });
 
 test('a metadata-only PC duplicate cannot be compared against the console record as a second match',()=>{
