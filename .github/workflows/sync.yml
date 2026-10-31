@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '0,30 * * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sync.yml'
+      - 'scripts/microsoft-library.ts'
 permissions:
   contents: write
   actions: write

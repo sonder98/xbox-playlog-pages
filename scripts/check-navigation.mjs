@@ -166,6 +166,11 @@ try{
       ],'Every sort retains base and DLC headers and membership');
     }
 
+    const tools=await page.locator('.game-detail .achievement-tools label').evaluateAll(labels=>labels.map(label=>{const r=label.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width};}));
+    assert.equal(tools.length,2,'Two achievement toolbar controls exist');
+    assert.ok(Math.abs(tools[0].y-tools[1].y)<1,'Group and sort controls share one row');
+    assert.ok(Math.abs(tools[0].width-tools[1].width)<2,'Group and sort controls each use half the row');
+    assert.ok(tools[1].x>tools[0].x,'Sort control appears to the right');
     await page.getByRole('combobox',{name:'成就分组',exact:true}).selectOption('base');
     assert.deepEqual(await achievementIds(),['2','1']);
     await page.getByRole('combobox',{name:'成就分组',exact:true}).selectOption('dlc');
@@ -237,6 +242,28 @@ try{
     await page.getByRole('button',{name:'取消',exact:true}).click();
     assert.equal(await page.locator('.game-card[data-game-id="101"]').count(),1,'Cancel keeps the saved selection');
     console.log((mobile?'Mobile':'Desktop')+': PASS encrypted hide/restore preferences, unchanged statistics, new snapshot persistence, hide-all recovery and cancel');
+    // Official Xbox hiding is independent from reversible local preferences.
+    const officialPayload=await decryptVault(envelope,password);
+    officialPayload.records[0].games.find(g=>g.id==='102').officialHidden=true;
+    activeEnvelope=await encryptVault(officialPayload,password);
+    await unlock('#library');
+    assert.equal(await page.locator('.game-card[data-game-id="102"]').count(),0,'Officially hidden game is not listed');
+    assert.equal(await page.locator('.game-card').count(),11,'Only official-visible games appear');
+    await manageDisplay();
+    assert.equal(await page.getByRole('checkbox',{name:'显示 Test Game 2',exact:true}).count(),0,'Officially hidden game is not manageable');
+    assert.equal(await page.locator('.display-game-choice').count(),11,'Manager only contains official-visible games');
+    await page.getByRole('checkbox',{name:'显示 Test Game 1',exact:true}).uncheck();
+    await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
+    assert.equal(await page.locator('.game-card').count(),10,'Manual hiding applies to remaining official-visible games');
+    await page.getByRole('button',{name:'概览',exact:true}).click();
+    assert.equal(await page.locator('.stats').innerText(),statsBeforeHiding,'Official and local hiding never change totals');
+    await manageDisplay();
+    await page.getByRole('button',{name:'全部展示',exact:true}).click();
+    await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
+    activeEnvelope=envelope;
+    await unlock('#library');
+    assert.equal(await page.locator('.game-card').count(),12,'Officially unhidden game returns when Xbox snapshot updates');
+    console.log((mobile?'Mobile':'Desktop')+': PASS official hiding, manual hiding, history totals, unhide restoration and toolbar 50/50 layout');
     // Remembered credentials survive a reload and a new snapshot's random salt.
     async function signInRemembered(){
       await page.locator('input[type="password"]').fill(password);

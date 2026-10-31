@@ -104,3 +104,57 @@ test('an empty PC catalog is unknown, not proof that the console game lost all a
  const empty={...game('1'),total:0,earned:0,achievements:[]};
  const result=compareLibrary([empty],record([game('exophase')]));assert.equal(result.matched,0);assert.equal(result.ambiguous,1);assert.equal(result.totalDifferences,0);assert.equal(result.earnedDifferences,0);
 });
+
+test('title hub visibility cannot be overwritten by achievement-history merging',()=>{
+ const hub=[{titleId:'1',name:'Official Hidden',titleHistory:{visible:false,lastTimePlayed:null}},{titleId:'2',name:'Official Visible',titleHistory:{visible:true}}];
+ const merged=mergeTitleHistories(hub,[{titleId:1,name:'History Hidden',totalAchievements:3},{titleId:3,name:'History Only',totalAchievements:2}],[]);
+ assert.equal(merged[0].titleHistory.visible,false);
+ assert.equal(merged[1].titleHistory.visible,true);
+ assert.equal(merged[2].titleHistory.visible,undefined);
+});
+
+test('Microsoft hidden games stay archived without detail requests, and unhide overrides old flag',async()=>{
+ const old=record([{...game('1'),officialHidden:false},{...game('2'),officialHidden:true}]);
+ const requests:string[]=[];
+ const request:typeof fetch=async input=>{
+  const u=new URL(String(input));
+  if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});
+  if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
+  if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[
+   {titleId:'1',name:'PRIVATE-GAME',titleHistory:{visible:false},achievement:{totalAchievements:2,currentAchievements:1}},
+   {titleId:'2',name:'PRIVATE-GAME',titleHistory:{visible:true,lastTimePlayed:'2026-10-30T00:00:00Z'},achievement:{totalAchievements:2,currentAchievements:1}}
+  ]});
+  if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});
+  requests.push(u.pathname);
+  if(u.hostname==='userstats.xboxlive.com')return Response.json({stats:[{name:'MinutesPlayed',value:42}]});
+  if(u.hostname==='achievements.xboxlive.com')return Response.json({achievements:[
+   {id:'1',name:'Award 1',progressState:'Achieved',rewards:[{type:'Gamerscore',value:10}]},
+   {id:'2',name:'Award 2',rewards:[{type:'Gamerscore',value:10}]}
+  ],completion:[{titleId:'2',groups:{base:{groupType:'BaseGame',achievementIds:['1'],unlockedAchievementIds:['1']}}}]});
+  throw Error('Unexpected host');
+ };
+ const output=await scanMicrosoft(config,{request,pause:async()=>{},previous:old});
+ assert.equal(output.record.games.find(g=>g.id==='1')?.officialHidden,true);
+ assert.equal(output.record.games.find(g=>g.id==='1')?.minutes,42,'Cached details and playtime are retained while hidden');
+ assert.equal(output.record.games.find(g=>g.id==='2')?.officialHidden,false,'Official unhide overrides the old hidden state');
+ assert.ok(requests.every(x=>!x.includes('titleId=1')),'No detail fetches for official hidden titles');
+ assert.equal(output.audit.failed,0);
+});
+
+test('Missing visibility flag preserves previously verified hidden setting on refreshed titles',async()=>{
+ const previous=record([{...game('1'),officialHidden:true}]);
+ const request:typeof fetch=async input=>{
+  const u=new URL(String(input));
+  if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});
+  if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
+  if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',achievement:{totalAchievements:2,currentAchievements:1}}]});
+  if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});
+  throw Error('Unknown visibility should not trigger hidden title detail fetch');
+ };
+ const result=await scanMicrosoft(config,{request,pause:async()=>{},previous});
+ assert.equal(result.record.games[0].officialHidden,true);
+});

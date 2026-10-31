@@ -13,11 +13,14 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
  const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState(false),[busy,setBusy]=useState(false),[progress]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState('recent'),[filter,setFilter]=useState('all');
  const [hiddenIds,setHiddenIds]=useState<string[]>([]),[manageDisplay,setManageDisplay]=useState(false),[draftHidden,setDraftHidden]=useState<string[]>([]),[displayQuery,setDisplayQuery]=useState(''),[onlyHidden,setOnlyHidden]=useState(false),[savingDisplay,setSavingDisplay]=useState(false),[displayError,setDisplayError]=useState('');
  const {tab,navigate:setTab,back,gameId,openGame}=usePageNavigation();
- const input=useRef<HTMLInputElement>(null);const current=records[0],games=current?.games||[],prev=records[1];const selected=games.find(g=>g.id===gameId);const delta=current?compareRecords(current,prev):null;
+ const input=useRef<HTMLInputElement>(null);const current=records[0],games=current?.games||[],prev=records[1];const selected=games.find(g=>g.id===gameId&&g.officialHidden!==true&&!hiddenIds.includes(g.id));const delta=current?compareRecords(current,prev):null;
  useEffect(()=>{api('/api/records').then(async d=>{try{const preferences=await api('/api/display-preferences');setHiddenIds(preferences.hiddenGameIds);}catch(e){setError((e as Error).message);}setRecords(d.records);}).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
- const hiddenSet=new Set(hiddenIds),displayGames=games.filter(g=>!hiddenSet.has(g.id));
- const hiddenCount=games.length-displayGames.length;
- const managementGames=games.filter(g=>g.name.toLowerCase().includes(displayQuery.trim().toLowerCase())&&(!onlyHidden||draftHidden.includes(g.id)));
+ const hiddenSet=new Set(hiddenIds);
+ const officialAvailableGames=games.filter(g=>g.officialHidden!==true);
+ const officialAvailableIds=new Set(officialAvailableGames.map(g=>g.id));
+ const displayGames=officialAvailableGames.filter(g=>!hiddenSet.has(g.id));
+ const hiddenCount=officialAvailableGames.length-displayGames.length;
+ const managementGames=officialAvailableGames.filter(g=>g.name.toLowerCase().includes(displayQuery.trim().toLowerCase())&&(!onlyHidden||draftHidden.includes(g.id)));
  function openDisplayManager(){setDisplayError('');setDraftHidden([...hiddenIds]);setDisplayQuery('');setOnlyHidden(false);setManageDisplay(true);}
  async function saveDisplay(){setSavingDisplay(true);setDisplayError('');try{const saved=await api('/api/display-preferences',{hiddenGameIds:draftHidden});setHiddenIds(saved.hiddenGameIds);setManageDisplay(false);setNotice('游戏库显示设置已保存。');}catch(e){setDisplayError('显示设置保存失败：'+(e as Error).message);}finally{setSavingDisplay(false);}}
 
@@ -42,10 +45,10 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
  <footer><span><span className="dot green"/>游迹 · 只属于你的游戏旅程</span><span>{current?'最后记录 '+dt(current.at):'连接账号后开始记录'} · 时间显示为北京时间</span></footer></div></main><input ref={input} type="file" accept=".json,application/json" hidden onChange={e=>e.target.files?.[0]&&importFile(e.target.files[0])}/>
  {modal&&<Modal title="自动同步" onClose={()=>setModal(false)}><span className="eyebrow">AUTO SYNC</span><h2>每半小时，自动更新</h2><p>GitHub Actions 计划在每小时 00、30 分触发同步。任务排队或来源暂不可用时可能延迟。</p><a className="primary full" href={workflow} target="_blank" rel="noreferrer">查看同步运行记录 <ArrowUpRight size={16}/></a><p className="note">需要立即更新时，请在 GitHub Actions 登录后运行工作流。</p></Modal>}
  {manageDisplay&&<Modal title="游戏库显示管理" onClose={()=>{if(!savingDisplay)setManageDisplay(false);}} className="display-manager">
-   <h2>管理游戏展示</h2><p className="muted">勾选要展示的游戏。隐藏后也会从首页游戏列表移除，累计统计和原始记录保留。选择加密保存在当前浏览器，换设备不会自动同步。</p>
+   <h2>管理游戏展示</h2><p className="muted">只管理 Xbox 官方未隐藏的游戏。官方已隐藏的游戏会自动从展示中排除；这里的勾选仅影响游迹，不会修改 Xbox 设置。隐藏不影响累计统计和历史，选择加密保存在本机。</p>
    <label className="search"><Search size={17}/><input aria-label="搜索展示管理中的游戏" placeholder="搜索游戏名称…" value={displayQuery} onChange={e=>setDisplayQuery(e.target.value)}/></label>
-   <div className="display-manager-actions"><label><input type="checkbox" checked={onlyHidden} onChange={e=>setOnlyHidden(e.target.checked)}/>仅看已隐藏</label><button className="text-button" disabled={savingDisplay} onClick={()=>setDraftHidden([])}>全部展示</button></div>
-   <p className="display-manager-count" role="status">展示 {games.filter(g=>!draftHidden.includes(g.id)).length} · 隐藏 {games.filter(g=>draftHidden.includes(g.id)).length}</p>
+   <div className="display-manager-actions"><label><input type="checkbox" checked={onlyHidden} onChange={e=>setOnlyHidden(e.target.checked)}/>仅看已隐藏</label><button className="text-button" disabled={savingDisplay} onClick={()=>setDraftHidden(ids=>ids.filter(id=>!officialAvailableIds.has(id)))}>全部展示</button></div>
+   <p className="display-manager-count" role="status">展示 {officialAvailableGames.filter(g=>!draftHidden.includes(g.id)).length} · 隐藏 {officialAvailableGames.filter(g=>draftHidden.includes(g.id)).length}</p>
    <div className="display-manager-list">{managementGames.length?managementGames.map(g=><label key={g.id} className={'display-game-choice'+(draftHidden.includes(g.id)?' is-hidden':'')}><input type="checkbox" aria-label={'显示 '+g.name} checked={!draftHidden.includes(g.id)} disabled={savingDisplay} onChange={e=>setDraftHidden(ids=>e.target.checked?ids.filter(id=>id!==g.id):[...ids,g.id])}/><span>{g.name}</span>{draftHidden.includes(g.id)&&<EyeOff size={16} aria-label="已隐藏"/>}</label>):<p className="small-empty">{onlyHidden?'没有符合条件的已隐藏游戏':'没有匹配的游戏'}</p>}</div>
    {displayError&&<p className="inline-error" role="alert">{displayError}</p>}
    <div className="display-manager-footer"><button className="secondary" disabled={savingDisplay} onClick={()=>setManageDisplay(false)}>取消</button><button className="primary" disabled={savingDisplay} onClick={saveDisplay}>{savingDisplay?'保存中…':'保存展示设置'}</button></div>
