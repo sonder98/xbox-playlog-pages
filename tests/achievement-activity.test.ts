@@ -24,7 +24,7 @@ test('Beijing date grouping handles midnight UTC boundary and chronological unlo
  assert.equal(activity.years.get(2026),4);
 });
 test('Missing timestamps, locked and out-of-range events are excluded without inventing dates',()=>{
- const a=fixture('1',['2021-12-31T23:59:59Z','2022-01-01T00:00:00Z',null,'2027-01-01T00:00:00Z']);
+ const a=fixture('1',['2021-12-31T12:59:59Z','2022-01-01T00:00:00Z',null,'2027-01-01T00:00:00Z']);
  a.achievements![2].unlocked=true;
  a.achievements![1].unlocked=false;
  const result=buildActivity([a],new Date('2026-11-01T00:00:00Z'));

@@ -20,7 +20,7 @@ function Calendar({activity,year,half,selected,onSelect}:{activity:Activity;year
     {calendar.days.map((d,i)=>{
      if(!d.day)return <span className="ah-blank-day" aria-hidden="true" key={'blank-'+i}/>;
      const count=activity.byDay.get(d.day)?.events.length||0;
-     return <button key={d.day} type="button" className={'ah-cell ah-level-'+heatLevel(count)+(selected===d.day?' is-selected':'')} aria-label={dayLabel(d.day)+'，解锁 '+count+' 个成就'} aria-pressed={selected===d.day} disabled={d.future} title={dayLabel(d.day)+' · '+count+' 个成就'} onClick={e=>onSelect(d.day,e.currentTarget)}/>;
+     return <button key={d.day} type="button" className={'ah-cell ah-level-'+heatLevel(count)+(selected===d.day?' is-selected':'')} aria-label={dayLabel(d.day)+'，解锁 '+count+' 个成就'} aria-pressed={selected===d.day} disabled={d.future} title={dayLabel(d.day)+' · '+count+' 个成就'} onClick={e=>onSelect(d.day!,e.currentTarget)}/>;
     })}
    </div>
   </div>
