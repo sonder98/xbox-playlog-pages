@@ -67,6 +67,7 @@ try{
       await page.goto('about:blank');
       await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/'+hash);
       await page.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
+      if(mobile)assert.ok(await page.locator('input[type="password"]').evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=16),'Password text avoids iOS focus zoom');
       await page.locator('input[type="password"]').fill(password);
       await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
     }
@@ -152,9 +153,13 @@ try{
     assert.deepEqual(achievementLayout.map(a=>a.tier),['rare','rare','common',null]);
     const achievementIds=()=>page.locator('.achievement').evaluateAll(rows=>rows.map(row=>row.getAttribute('data-achievement-id')));
     assert.deepEqual(await achievementIds(),['2','1','3','4'],'Default is newest unlock first, with locked entries last');
-    for(const [sort,expected] of [['date-asc',['1','2','3','4']],['rarity-asc',['1','2','3','4']],['rarity-desc',['3','2','1','4']],['date-desc',['2','1','3','4']]]){
+    for(const [sort,expected] of [['date-asc',['1','2','3','4']],['rarity-asc',['1','2','3','4']],['rarity-desc',['2','1','3','4']],['date-desc',['2','1','3','4']]]){
       await page.getByRole('combobox',{name:'成就排序',exact:true}).selectOption(sort);
       assert.deepEqual(await achievementIds(),expected);
+      assert.deepEqual(await page.locator('.achievement-group').evaluateAll(sections=>sections.map(s=>({id:s.dataset.groupId,title:s.querySelector('h3').textContent,ids:[...s.querySelectorAll('.achievement')].map(a=>a.dataset.achievementId)}))),[
+        {id:'base',title:'本体',ids:expected.slice(0,2)},
+        {id:'dlc',title:'追加故事',ids:expected.slice(2)}
+      ],'Every sort retains base and DLC headers and membership');
     }
 
     await page.getByRole('combobox',{name:'成就分组',exact:true}).selectOption('base');
@@ -163,7 +168,7 @@ try{
     assert.deepEqual(await achievementIds(),['3','4']);
     await page.getByRole('combobox',{name:'成就分组',exact:true}).selectOption('__all');
     assert.deepEqual(await achievementIds(),['2','1','3','4']);
-    console.log((mobile?'Mobile':'Desktop')+': PASS four achievement sort orders, base/DLC filters and default newest-first');
+    console.log((mobile?'Mobile':'Desktop')+': PASS four within-group achievement sort orders, preserved base/DLC headers and membership, filters and default newest-first');
     for(const row of achievementLayout){assert.equal(row.imageWidth,56);assert.ok(row.titleSize>row.descriptionSize);assert.ok(row.sameRow);assert.ok(row.fits);}
     assert.ok(achievementLayout[0].icon.includes('gem'));
     assert.ok(achievementLayout[2].icon.includes('trophy'));
@@ -179,6 +184,11 @@ try{
     // Hiding is a reversible encrypted display preference, independent of fresh sync snapshots.
     const manageDisplay=()=>page.locator('.toolbar').getByRole('button',{name:'管理展示',exact:true}).click();
     await manageDisplay();
+    if(mobile){
+      const fonts=await page.locator('input:not([type="checkbox"]):not([type="file"]),select,textarea').evaluateAll(els=>els.filter(el=>el.getClientRects().length).map(el=>({label:el.getAttribute('aria-label'),size:parseFloat(getComputedStyle(el).fontSize)})));
+      assert.ok(fonts.length>=2);assert.ok(fonts.every(f=>f.size>=16),JSON.stringify(fonts));
+      console.log('Mobile: PASS >=16px text for password, library/manager search and selection controls; pinch zoom preserved');
+    }
     await page.getByRole('checkbox',{name:'显示 Test Game 1',exact:true}).uncheck();
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
     await page.getByRole('dialog',{name:'游戏库显示管理',exact:true}).waitFor({state:'hidden'});

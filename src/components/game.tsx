@@ -89,9 +89,11 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
   const [order,setOrder]=useState<AchievementSort>('date-desc');
   const [groupId,setGroupId]=useState('__all');
   const selected=groups.find(g=>g.id===groupId);
-  const group=selected||{id:'__all',name:groups.length===1?groups[0].name:'全部成就',earned:game.earned,total:game.total};
-  const ids=selected?new Set(selected.achievementIds):null;
-  const achievements=sortAchievements((game.achievements||[]).filter(a=>!ids||ids.has(a.id)),order);
+  const visibleGroups=selected?[selected]:[...groups].sort((a,b)=>Number(b.kind==='base')-Number(a.kind==='base'));
+  const sections=visibleGroups.map(group=>{
+    const ids=new Set(group.achievementIds);
+    return {group,achievements:sortAchievements((game.achievements||[]).filter(a=>ids.has(a.id)),order)};
+  });
   return <Modal title={game.name+' · 游戏详情'} onClose={onClose} className="game-detail"><GameCover game={game} wide/><div className="detail-heading"><div><span className="eyebrow">GAME DETAILS</span><h2>{game.name}</h2></div></div><div className="detail-summary"><span><Clock3 size={16}/>{hours(game.minutes)}</span><span><Trophy size={16}/>{game.earned}/{game.total} 成就</span><span>{game.score.toLocaleString()} G</span></div>
     {game.groupStatus!=='verified'&&<p className="note">本体与追加内容分组待同步，当前显示已取得的逐项记录。</p>}
     {!!game.achievements?.length&&<>
@@ -99,7 +101,7 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
         {groups.length>1&&<label>成就分组<select aria-label="成就分组" value={groupId} onChange={e=>setGroupId(e.target.value)}><option value="__all">全部成就</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}
         <label>排序方式<select aria-label="成就排序" value={order} onChange={e=>setOrder(e.target.value as AchievementSort)}><option value="date-desc">解锁时间：新 → 旧</option><option value="date-asc">解锁时间：旧 → 新</option><option value="rarity-asc">稀有度：低 → 高</option><option value="rarity-desc">稀有度：高 → 低</option></select></label>
       </div>
-      <div className="achievement-groups"><section className="achievement-group"><div className="section-heading"><h3>{group.name}</h3><span>{group.earned}/{group.total}</span></div><Progress earned={group.earned} total={group.total} complete={group.earned===group.total&&group.total>0} label={group.name+' 完成度'}/>{achievements.map(a=><AchievementItem key={a.id} achievement={a}/>)}</section></div>
+      <div className="achievement-groups">{sections.map(({group,achievements})=><section className="achievement-group" key={group.id} data-group-id={group.id}><div className="section-heading"><h3>{group.name}</h3><span>{group.earned}/{group.total}</span></div><Progress earned={group.earned} total={group.total} complete={group.earned===group.total&&group.total>0} label={group.name+' 完成度'}/>{achievements.map(a=><AchievementItem key={a.id} achievement={a}/>)}</section>)}</div>
     </>}
     {!game.achievements?.length&&<div className="empty"><Trophy/><h3>成就明细尚未同步</h3><p>下一次同步成功后将在这里展示。</p></div>}
   </Modal>;

@@ -1479,7 +1479,7 @@ footer .dot {
   .game-card .game-progress { grid-column: 1 / -1; grid-row: 2; margin-top: 12px; }
 }
 
-/* Achievement tools keep sorting global while retaining optional base/add-on views. */
+/* Achievement tools sort each base/add-on group independently. */
 .achievement-tools { display:flex; gap:12px; margin:24px 0 0; flex-wrap:wrap; }
 .achievement-tools label { display:flex; flex:1 1 130px; min-width:0; flex-direction:column; gap:6px; color:var(--text-muted); font-size:12px; }
 .achievement-tools select { width:100%; min-width:0; min-height:44px; padding:10px 12px; border:1px solid var(--border); border-radius:16px; color:var(--text-primary); background:var(--surface-raised); font:inherit; font-size:13px; cursor:pointer; }
@@ -1543,3 +1543,11 @@ footer .dot {
   .top-hours strong { font-size:36px; }
 }
 @media(prefers-reduced-motion:reduce) { .top-card { transition:none; } }
+
+/* iOS focuses small form text by zooming the viewport; keep touch form text >=16px.
+   Preserve normal pinch zoom and accessibility zoom instead of disabling scaling. */
+@media (max-width:700px), (pointer:coarse) {
+  :root input:not([type="checkbox"]):not([type="radio"]),
+  :root textarea,
+  :root select { font-size:16px; }
+}
