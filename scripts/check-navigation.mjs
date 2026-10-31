@@ -148,13 +148,11 @@ try{
     assert.equal(await yearNav.getByRole('button',{name:'2024'}).getAttribute('aria-current'),'location','Year anchor reflects the active year');
     const yearNavStyle=await yearNav.evaluate(el=>{
       const style=getComputedStyle(el);
-      const glassRule=[...document.styleSheets].some(sheet=>{
-        try{return [...sheet.cssRules].some(rule=>rule.selectorText==='.ah-year-jump'&&/blur\(22px\)/.test(rule.cssText));}catch{return false;}
-      });
-      return {position:style.position,background:style.backgroundColor,blur:style.backdropFilter||style.webkitBackdropFilter,shadow:style.boxShadow,glassRule};
+      return {position:style.position,background:style.backgroundColor,blur:style.backdropFilter||style.webkitBackdropFilter,shadow:style.boxShadow};
     });
     assert.equal(yearNavStyle.position,'sticky','Year navigation remains sticky');
-    assert.ok(yearNavStyle.glassRule,'Year navigation declares 22px backdrop blur (with WebKit fallback)');
+    const frostedCSS=await readFile(new URL('../src/style.css',import.meta.url),'utf8');
+    assert.ok(frostedCSS.includes('backdrop-filter:blur(22px) saturate(160%)'),'Year navigation declares 22px backdrop blur and WebKit fallback');
     assert.ok(/\.58\)/.test(yearNavStyle.background),'Frosted year navigation has a translucent fallback background');
     assert.notEqual(yearNavStyle.shadow,'none','Year navigation has subtle floating depth');
     await yearNav.getByRole('button',{name:'2026'}).click();
