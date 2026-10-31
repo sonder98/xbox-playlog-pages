@@ -255,12 +255,14 @@ try{
     assert.equal(await page.locator('.display-game-choice').count(),11,'Manager only contains official-visible games');
     await page.getByRole('checkbox',{name:'显示 Test Game 1',exact:true}).uncheck();
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
+    await page.locator('.game-card[data-game-id="101"]').waitFor({state:'detached'});
     assert.equal(await page.locator('.game-card').count(),10,'Manual hiding applies to remaining official-visible games');
     await page.getByRole('button',{name:'概览',exact:true}).click();
     assert.equal(await page.locator('.stats').innerText(),statsBeforeHiding,'Official and local hiding never change totals');
     await manageDisplay();
     await page.getByRole('button',{name:'全部展示',exact:true}).click();
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
+    await page.locator('.game-card[data-game-id="101"]').waitFor();
     activeEnvelope=envelope;
     await unlock('#library');
     await page.locator('.game-card').first().waitFor();
