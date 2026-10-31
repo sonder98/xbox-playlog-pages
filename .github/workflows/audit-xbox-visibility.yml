@@ -1,0 +1,34 @@
+name: Audit Xbox visibility metadata
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/audit-xbox-visibility.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify encrypted snapshot's official visibility flags (counts only)
+        env:
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
+        run: |
+          node --experimental-strip-types --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import {getPasswords,readVault} from './scripts/password.ts';
+          const {old,target}=getPasswords(process.env);
+          const data=await readVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),old,target);
+          const current=data.records[0],games=current.games||[];
+          const hidden=games.filter(g=>g.officialHidden===true).length;
+          const visible=games.filter(g=>g.officialHidden===false).length;
+          const unknown=games.length-hidden-visible;
+          console.log('XBOX_OFFICIAL_VISIBILITY_COUNTS '+JSON.stringify({total:games.length,hidden,visible,unknown,source:current.source}));
+          if(hidden+visible===0){console.error('Microsoft title-history visibility metadata was not returned; check provider contract.');process.exitCode=1;}
+          NODE
