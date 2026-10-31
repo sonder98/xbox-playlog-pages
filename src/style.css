@@ -2136,3 +2136,34 @@ footer .dot {
 .ah-achievement-art.ah-art-square {width:70px;aspect-ratio:1;}
 @media(max-width:700px){.ah-achievement-art.ah-art-square {width:67px;}}
 @media(max-width:360px){.ah-achievement-art.ah-art-square {width:60px;}}
+
+
+/* Achievement heatmap V3: circular marks smaller than their touch targets. */
+.ah-preview-cell,.ah-month-calendar .ah-cell {display:grid;place-items:center;background:transparent!important;border-radius:50%;position:relative;}
+.ah-preview-cell .ah-dot,.ah-month-calendar .ah-cell .ah-dot {display:grid;place-items:center;aspect-ratio:1;border-radius:50%;width:82%;height:auto;max-width:100%;line-height:1;font-variant-numeric:tabular-nums;pointer-events:none;}
+.ah-month-calendar .ah-cell .ah-dot {width:82%;}
+.ah-preview-cell:focus-visible,.ah-month-calendar .ah-cell:focus-visible {outline:2px solid var(--accent);outline-offset:1px;border-radius:50%;}
+.ah-month-calendar .ah-cell.is-selected {outline:none;}
+.ah-month-calendar .ah-cell.is-selected::after {content:"";position:absolute;top:4%;left:4%;height:92%;width:92%;box-sizing:border-box;border-radius:50%;border:2px solid var(--accent);pointer-events:none;}
+.ah-month-calendar .ah-cell.ah-level-0,.ah-month-calendar .ah-cell:disabled {background:transparent!important;}
+.ah-month-calendar .ah-cell:disabled .ah-dot {background:#151515;color:#555;opacity:.65;}
+.ah-month-calendar .ah-cell .ah-dot.ah-level-0 {color:var(--text-muted);}
+.ah-month-calendar .ah-cell .ah-dot.ah-level-1,.ah-month-calendar .ah-cell .ah-dot.ah-level-2 {color:var(--text-primary);}
+.ah-month-calendar .ah-cell .ah-dot.ah-level-3,.ah-month-calendar .ah-cell .ah-dot.ah-level-4 {color:#151515;}
+.ah-preview-axis,.ah-legend {display:none;}
+/* Sticky, scroll-aware year anchors: keep navigation visible as months scroll. */
+.ah-year-jump {position:sticky;top:8px;z-index:14;overflow-x:auto;background:rgba(15,15,15,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:15px;padding:8px;margin:0 0 18px;scrollbar-width:none;}
+.ah-year-jump button {transition:background .15s,color .15s;}
+.ah-year-jump button.is-active,.ah-year-jump button[aria-current="location"] {background:var(--accent);color:var(--on-accent);}
+.ah-month-list>div[id^="ah-year-"] {scroll-margin-top:85px;}
+/* Half-sheet date stepper matches the existing day page's Lucide outline arrows. */
+.ah-sheet-controls {display:flex;align-items:center;gap:7px;flex:none;}
+.ah-sheet-date-arrow {display:grid;place-items:center;width:36px;height:36px;flex:none;border:1px solid var(--border);border-radius:11px;background:var(--surface-hover);color:var(--text-secondary);}
+.ah-sheet-date-arrow:hover:not(:disabled),.ah-sheet-date-arrow:focus-visible {border-color:var(--accent);color:var(--accent);}
+.ah-sheet-date-arrow:disabled {opacity:.3;cursor:default;}
+.ah-sheet .ah-sheet-heading>div:first-child {min-width:0;}
+@media(max-width:360px){
+ .ah-sheet-controls {gap:4px;}
+ .ah-sheet-date-arrow,.ah-sheet-close {width:32px;height:32px;flex-basis:32px;}
+ .ah-sheet .ah-sheet-heading strong {font-size:18px;}
+}

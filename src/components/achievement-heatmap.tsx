@@ -32,16 +32,15 @@ function Calendar({activity,year,month,selected,onSelect}:{activity:Activity;yea
     if(!d.day)return <span key={'pad-'+i} className="ah-calendar-placeholder" aria-hidden="true"/>;
     const count=activity.byDay.get(d.day)?.events.length||0;
     return <button key={d.day} type="button"
-      className={'ah-cell ah-level-'+heatLevel(count)+(selected===d.day?' is-selected':'')}
+      className={'ah-cell'+(selected===d.day?' is-selected':'')}
       data-day={d.day} aria-label={dayLabel(d.day)+'，解锁 '+count+' 个成就'}
       aria-pressed={selected===d.day} disabled={d.future}
       title={dayLabel(d.day)+' · '+count+' 个成就'}
-      onClick={e=>onSelect(d.day!,e.currentTarget)}><span aria-hidden="true">{Number(d.day.slice(-2))}</span></button>;
+      onClick={e=>onSelect(d.day!,e.currentTarget)}><span className={'ah-dot ah-level-'+heatLevel(count)} aria-hidden="true">{Number(d.day.slice(-2))}</span></button>;
    })}
   </div>
  </section>;
 }
-function Legend(){return <div className="ah-legend"><span>每日解锁强度</span><div className="ah-legend-right"><small>少</small>{[0,1,2,3,4].map(x=><i key={x} className={'ah-level-'+x}/>)}<small>多</small></div></div>;}
 export function AchievementPreview({games,onOpen,onOpenDay}:{games:Game[];onOpen:()=>void;onOpenDay:(day:string)=>void}){
  const activity=useMemo(()=>buildActivity(games),[games]);
  const days=recentDays(activity),calendar=recentCalendar(activity);
@@ -57,16 +56,16 @@ export function AchievementPreview({games,onOpen,onOpenDay}:{games:Game[];onOpen
   <div className="ah-preview-grid">
    {calendar.map((d,i)=>d.day?
     <button type="button" key={d.day} data-day={d.day}
-     className={'ah-preview-cell ah-level-'+heatLevel(d.count)}
+     className="ah-preview-cell"
      aria-label={dayLabel(d.day)+'，解锁 '+d.count+' 个成就'}
-     onClick={()=>setSheetDay(d.day!)}/>:<span className="ah-preview-placeholder" key={'pad-'+i} aria-hidden="true"/>)}
+     onClick={()=>setSheetDay(d.day!)}><span aria-hidden="true" className={'ah-dot ah-level-'+heatLevel(d.count)}/></button>:<span className="ah-preview-placeholder" key={'pad-'+i} aria-hidden="true"/>)}
   </div>
-  <p className="ah-preview-axis">日期：左 → 右为周一至周日，按周从上往下</p>
   <button className="ah-preview-footer" type="button" onClick={onOpen}><span>解锁 {fmt(count)} 个 · 活跃 {active} 天</span><ArrowRight size={17}/></button>
-  {sheetDay&&<Sheet day={sheetDay} activity={activity} onClose={()=>setSheetDay(null)} onDetail={()=>{const day=sheetDay;setSheetDay(null);onOpenDay(day);}}/>}
+  {sheetDay&&<Sheet day={sheetDay} activity={activity} minDay={days[0].day} onChangeDay={setSheetDay} onClose={()=>setSheetDay(null)} onDetail={()=>{const day=sheetDay;setSheetDay(null);onOpenDay(day);}}/>}
  </section>;
 }
-function Sheet({day,activity,onClose,onDetail}:{day:string;activity:Activity;onClose:()=>void;onDetail:()=>void}){
+function Sheet({day,activity,minDay='2022-01-01',onChangeDay,onClose,onDetail}:{day:string;activity:Activity;minDay?:string;onChangeDay:(day:string)=>void;onClose:()=>void;onDetail:()=>void}){
+ const prev=adjacentDay(day,-1),next=adjacentDay(day,1);
  const bucket=activity.byDay.get(day),games=bucket?.games||[],count=bucket?.events.length||0;
  const handle=useRef<HTMLElement|null>(null),touchY=useRef<number|null>(null);
  useEffect(()=>{
@@ -80,7 +79,12 @@ function Sheet({day,activity,onClose,onDetail}:{day:string;activity:Activity;onC
  return <div className="ah-sheet-backdrop" onClick={onClose}>
   <section ref={handle} className="ah-sheet" role="dialog" aria-modal="true" aria-label={dayLabel(day)+' 成就摘要'} onClick={e=>e.stopPropagation()}>
    <div className="ah-sheet-grab" onTouchStart={e=>{touchY.current=e.touches[0]?.clientY??null;}} onTouchEnd={e=>{if(touchY.current!==null&&(e.changedTouches[0]?.clientY??0)-touchY.current>70)onClose();touchY.current=null;}}><i/></div>
-   <header className="ah-sheet-heading"><div><strong>{dayLabel(day)}</strong><span>当天解锁记录</span></div><button className="ah-sheet-close" type="button" aria-label="关闭日期摘要" onClick={onClose}><X size={19}/></button></header>
+   <header className="ah-sheet-heading"><div><strong>{dayLabel(day)}</strong><span>当天解锁记录</span></div>
+    <div className="ah-sheet-controls" aria-label="切换日期">
+     <button type="button" className="ah-sheet-date-arrow" aria-label={'前一天 '+dayLabel(prev)} title="前一天" disabled={prev<minDay} onClick={()=>onChangeDay(prev)}><ChevronLeft size={20}/></button>
+     <button type="button" className="ah-sheet-date-arrow" aria-label={'后一天 '+dayLabel(next)} title="后一天" disabled={next>activity.today} onClick={()=>onChangeDay(next)}><ChevronRight size={20}/></button>
+     <button className="ah-sheet-close" type="button" aria-label="关闭日期摘要" onClick={onClose}><X size={19}/></button>
+    </div></header>
    <div className="ah-sheet-games">
     {games.length?games.slice(0,3).map(({game,count:num})=><div className="ah-sheet-game" key={game.id}><Art src={game.cachedImage||game.image} className="ah-mini-art"/><span>{game.name}</span><b>{num} 个</b></div>):<p className="ah-no-activity">这一天没有解锁成就</p>}
     {games.length>3&&<p className="ah-more-games">另有 {games.length-3} 款游戏，共 {games.slice(3).reduce((s,g)=>s+g.count,0)} 个成就</p>}
@@ -115,6 +119,7 @@ export function AchievementJourney({games,dayId,onBack,onOpenDay,onChangeDay,onO
  const [selected,setSelected]=useState<string|null>(null);
  const [sheetDay,setSheetDay]=useState<string|null>(null);
  const [order,setOrder]=useState<AchievementSort>('date-asc');
+ const [activeYear,setActiveYear]=useState<number|null>(null);
  const lastFocus=useRef<HTMLButtonElement|null>(null);
  const closeSheet=()=>{setSheetDay(null);requestAnimationFrame(()=>lastFocus.current?.focus({preventScroll:true}));};
  const selectDay=(date:string,button:HTMLButtonElement)=>{
@@ -123,6 +128,17 @@ export function AchievementJourney({games,dayId,onBack,onOpenDay,onChangeDay,onO
  const nowYear=Number(activity.today.slice(0,4)),nowMonth=Number(activity.today.slice(5,7));
  const years=Array.from({length:Math.max(0,nowYear-2021)},(_,i)=>nowYear-i);
  const months=years.flatMap(y=>Array.from({length:y===nowYear?nowMonth:12},(_,i)=>({year:y,month:(y===nowYear?nowMonth:12)-i})));
+ useEffect(()=>{
+  if(dayId)return;
+  const current=()=>{let active=years[0];for(const year of years){
+   const target=document.getElementById('ah-year-'+year);
+   if(target&&target.getBoundingClientRect().top<135)active=year;
+  }setActiveYear(active);};
+  window.addEventListener('scroll',current,{passive:true});
+  window.addEventListener('resize',current);
+  current();
+  return ()=>{window.removeEventListener('scroll',current);window.removeEventListener('resize',current);};
+ },[dayId,years.join(',')]);
  const bucket=dayId?activity.byDay.get(dayId):undefined;
  if(dayId){
   const entries=bucket?.events||[];
@@ -148,13 +164,14 @@ export function AchievementJourney({games,dayId,onBack,onOpenDay,onChangeDay,onO
    <div><small>最长连续</small><strong>{fmt(activity.longestStreak)} 天</strong></div>
    <div><small>单日最高</small><strong>{fmt(activity.peak)} 个</strong></div>
   </div>
-  <Legend/>
-  <nav className="ah-year-jump" aria-label="快速跳转年份">{years.map(y=><button type="button" key={y} onClick={()=>document.getElementById('ah-year-'+y)?.scrollIntoView({behavior:'smooth',block:'start'})}>{y}</button>)}</nav>
+  <nav className="ah-year-jump" aria-label="按年份定位热力图">{years.map(y=><button type="button" key={y}
+   className={activeYear===y?'is-active':''} aria-current={activeYear===y?'location':undefined} aria-controls={'ah-year-'+y}
+   onClick={()=>{setActiveYear(y);document.getElementById('ah-year-'+y)?.scrollIntoView({behavior:'smooth',block:'start'});}}>{y}</button>)}</nav>
   <div className="ah-month-list">{months.map(({year,month},index)=><div key={year+'-'+month} id={index===0||months[index-1].year!==year?'ah-year-'+year:undefined}>
    <Calendar activity={activity} year={year} month={month} selected={selected} onSelect={selectDay}/>
   </div>)}</div>
   {!activity.total&&<p className="ah-empty-day">尚无带有效解锁时间的成就。完成 Xbox 同步后会自动显示。</p>}
   <p className="ah-footnote">统计来自已展示游戏中带解锁时间的成就；没有解锁时间的记录无法归入具体日期。时间采用北京时间。</p>
-  {sheetDay&&<Sheet day={sheetDay} activity={activity} onClose={closeSheet} onDetail={()=>{setSheetDay(null);onOpenDay(sheetDay);}}/>}
+  {sheetDay&&<Sheet day={sheetDay} activity={activity} onChangeDay={day=>{setSelected(day);setSheetDay(day);}} onClose={closeSheet} onDetail={()=>{setSheetDay(null);onOpenDay(sheetDay);}}/>}
  </section>;
 }
