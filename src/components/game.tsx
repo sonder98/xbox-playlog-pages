@@ -54,7 +54,7 @@ export function Modal({title,onClose,children,className=''}:{title:string;onClos
     const original=document.activeElement as HTMLElement|null,overflow=document.body.style.overflow;
     document.body.style.overflow='hidden';panel.current?.querySelector<HTMLElement>('button')?.focus();
     const key=(event:KeyboardEvent)=>{
-      if(event.key==='Escape'){event.preventDefault();close.current();}
+      if(event.key==='Escape'&&!event.defaultPrevented){event.preventDefault();close.current();}
       if(event.key==='Tab'){
         const controls=[...(panel.current?.querySelectorAll<HTMLElement>('button,a[href],input,select,summary,[tabindex="0"]')||[])].filter(el=>!el.hasAttribute('disabled')&&el.getClientRects().length);
         const first=controls[0],last=controls[controls.length-1];
@@ -171,7 +171,8 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
               aria-label="成就排序方式" ref={sortMenuRef}
               onKeyDown={event=>{
                 if(event.key==='Escape'){
-                  event.preventDefault();setSortOpen(false);sortTriggerRef.current?.focus();return;
+                  event.preventDefault();event.stopPropagation();
+                  setSortOpen(false);sortTriggerRef.current?.focus();return;
                 }
                 if(event.key==='Tab'){setSortOpen(false);return;}
                 if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
