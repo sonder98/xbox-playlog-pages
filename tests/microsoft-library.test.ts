@@ -99,3 +99,8 @@ test('achievement histories add omitted games, identify legacy explicitly, and e
  const result=mergeTitleHistories([{titleId:'1',name:'中文游戏',devices:['XboxOne'],achievement:{currentAchievements:0,totalAchievements:0}}],[{titleId:1,name:'English Game',titleType:'DGame',earnedAchievements:3,currentGamerscore:30,maxGamerscore:100},{titleId:2,name:'Missing modern',titleType:'DGame',earnedAchievements:1,maxGamerscore:1000},{titleId:9,name:'App',titleType:'LiveApp'}],[{titleId:3,name:'Old game',titleType:1,currentAchievements:5,totalAchievements:50,totalGamerscore:1000},{titleId:10,name:'Video app',titleType:5}]);
  assert.deepEqual(result.map(t=>t.titleId),['1','2','3']);assert.equal(result[0].name,'中文游戏');assert.equal(result[0].achievement.currentAchievements,3);assert.equal(result[1].achievement.totalGamerscore,1000);assert.equal(result[2].achievement.sourceVersion,1);assert.equal(result[2].achievement.totalAchievements,50);
 });
+
+test('an empty PC catalog is unknown, not proof that the console game lost all achievements',()=>{
+ const empty={...game('1'),total:0,earned:0,achievements:[]};
+ const result=compareLibrary([empty],record([game('exophase')]));assert.equal(result.matched,0);assert.equal(result.ambiguous,1);assert.equal(result.totalDifferences,0);assert.equal(result.earnedDifferences,0);
+});

@@ -38,7 +38,7 @@ export async function reconcileMicrosoft(config:DirectConfig,candidate:any,basel
  }
  const devices:Record<string,number>={};const empty=games.filter(g=>!g.achievements?.length);
  for(const game of empty){for(const value of game.devices){const known=['Xbox360','XboxOne','XboxSeries','XboxSeriesX','PC','Win32','WindowsOneCore','WindowsPhone','Android','iOS'];const name=known.includes(value)?value:'Other';devices[name]=(devices[name]||0)+1;}}
- candidate.englishAchievements=namesCache;
+ candidate.englishAchievements=namesCache;candidate.audit.at=candidate.record.at;
  candidate.audit.comparison=compareLibrary(games,baseline,aliases,mappedNames);
  candidate.audit.catalogGroups=games.filter(g=>g.groupStatus==='verified'&&g.groups?.find(p=>p.kind==='base')?.id!=='xbox-base').length;
  candidate.audit.unknownGroups=games.filter(g=>g.groupStatus!=='verified').length;

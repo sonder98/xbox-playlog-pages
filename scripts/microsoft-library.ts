@@ -64,7 +64,7 @@ export function compareLibrary(games:Game[],prior?:RecordData,aliases=new Map<st
  const choices=new Map(games.map(g=>{const names=new Set([g.name,...(aliases.get(g.id)||[])].map(normalizedName));return [g.id,(prior?.games||[]).filter(p=>names.has(normalizedName(p.name)))];}));
  const claims=new Map<string,Game[]>();for(const g of games){const m=choices.get(g.id)!;if(m.length===1)claims.set(m[0].id,[...(claims.get(m[0].id)||[]),g]);}
  for(const g of games){const matches=choices.get(g.id)!;if(matches.length!==1){out[matches.length?'ambiguous':'unmatched']++;continue;}
-  const p=matches[0],claimants=claims.get(p.id)||[];if(claimants.length>1){const exact=claimants.filter(c=>c.total>0&&c.total===p.total&&(p.maxScore===0||c.maxScore===p.maxScore));if(exact.length!==1||exact[0].id!==g.id){out.ambiguous++;continue;}}
+  const p=matches[0];if(g.total===0&&!g.achievements?.length&&p.total>0){out.ambiguous++;continue;}const claimants=claims.get(p.id)||[];if(claimants.length>1){const exact=claimants.filter(c=>c.total>0&&c.total===p.total&&(p.maxScore===0||c.maxScore===p.maxScore));if(exact.length!==1||exact[0].id!==g.id){out.ambiguous++;continue;}}
   out.matched++;if(p.earned!==g.earned)out.earnedDifferences++;if(p.total!==g.total)out.totalDifferences++;
   if(g.minutes!==null&&p.minutes!==null&&Math.abs(g.minutes-p.minutes)>6)out.playtimeDifferences++;
   for(const a of g.achievements||[]){const candidates=p.achievements?.filter(b=>[a.name,awardNames.get(g.id)?.get(a.id)||''].filter(Boolean).some(name=>normalizedName(b.name)===normalizedName(name))&&b.points===a.points)||[];
