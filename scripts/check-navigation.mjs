@@ -151,7 +151,7 @@ try{
       return {position:style.position,background:style.backgroundColor,blur:style.backdropFilter||style.webkitBackdropFilter,shadow:style.boxShadow};
     });
     assert.equal(yearNavStyle.position,'sticky','Year navigation remains sticky');
-    assert.ok(/blur\(22px\)/.test(yearNavStyle.blur),'Sticky year navigation has a visible frosted-glass blur');
+    assert.ok(/blur\(22px\)/.test(yearNavStyle.blur),'Sticky year navigation has a visible frosted-glass blur: '+JSON.stringify(yearNavStyle));
     assert.ok(/\.58\)/.test(yearNavStyle.background),'Frosted year navigation has a translucent background');
     assert.notEqual(yearNavStyle.shadow,'none','Year navigation has subtle floating depth');
     await yearNav.getByRole('button',{name:'2026'}).click();
