@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState,useId,type ReactNode} from 'react';
 import {Gamepad2,Trophy,X,Lock,Check,Clock3,Gem} from 'lucide-react';
 import {completion} from '../completion';
+import {GamerscoreIcon} from './gamerscore-icon';
 import {sortAchievements,type AchievementSort} from '../achievement-sort';
 import type {Game,Achievement} from '../data';
 
@@ -75,7 +76,7 @@ function AchievementItem({achievement:a}:{achievement:Achievement}){
   return <article className={'achievement '+(!a.unlocked?'locked':'')} data-achievement-id={a.id}>
     <span className="achievement-image"><Trophy size={24}/>{image&&<img src={image} alt="" width="160" height="90" loading="lazy" decoding="async" onError={()=>setAttempt(n=>n+1)}/>}</span>
     <div className="achievement-copy">
-      <div className="achievement-title-row"><h4>{a.name}</h4>{(a.points??0)>0&&<span className="achievement-points">{a.points} G</span>}</div>
+      <div className="achievement-title-row"><h4>{a.name}</h4>{(a.points??0)>0&&<span className="achievement-points" aria-label={`${a.points} 玩家积分`}><GamerscoreIcon size={14}/><span>{a.points}</span></span>}</div>
       <div className="achievement-description-row">
         {a.description&&<p className="achievement-description">{a.description}</p>}
         {a.rarity!==null?<span className={'achievement-rarity'+(rare?' rare':'')} data-rarity-tier={rare?'rare':'common'} aria-label={`${rare?'稀有成就，':''}稀有度 ${a.rarity}%`}>{rare?<Gem size={16} aria-hidden="true"/>:<Trophy size={15} aria-hidden="true"/>}{a.rarity}%</span>:<span className="achievement-rarity unknown">稀有度暂缺</span>}
@@ -97,7 +98,7 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
     const ids=new Set(group.achievementIds);
     return {group,achievements:sortAchievements((game.achievements||[]).filter(a=>ids.has(a.id)),order)};
   });
-  return <Modal title={game.name+' · 游戏详情'} onClose={onClose} className="game-detail"><GameCover game={game} wide/><div className="detail-heading"><div><span className="eyebrow">GAME DETAILS</span><h2>{game.name}</h2></div></div><div className="detail-summary"><span><Clock3 size={16}/>{hours(game.minutes)}</span><span><Trophy size={16}/>{game.earned}/{game.total} 成就</span><span>{game.score.toLocaleString()} G</span></div>
+  return <Modal title={game.name+' · 游戏详情'} onClose={onClose} className="game-detail"><GameCover game={game} wide/><div className="detail-heading"><div><span className="eyebrow">GAME DETAILS</span><h2>{game.name}</h2></div></div><div className="detail-summary"><span><Clock3 size={16}/>{hours(game.minutes)}</span><span><Trophy size={16}/>{game.earned}/{game.total} 成就</span><span className="detail-gamerscore" aria-label={`已获得 ${game.score.toLocaleString('zh-CN')} 玩家积分`}><GamerscoreIcon size={18}/><span>{game.score.toLocaleString('zh-CN')}</span></span></div>
     {game.groupStatus!=='verified'&&<p className="note">本体与追加内容分组待同步，当前显示已取得的逐项记录。</p>}
     {!!game.achievements?.length&&<>
       <div className="achievement-tools">

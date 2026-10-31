@@ -7,7 +7,7 @@ import {chromium} from 'playwright';
 import {encryptVault,decryptVault} from '../src/crypto.ts';
 const password='navigation-test-only';
 const games=Array.from({length:12},(_,i)=>({id:String(100+i),name:'Test Game '+i,image:'https://covers.example.test/square.svg',image2x:'https://covers.example.test/medium.svg',image3x:'https://covers.example.test/original.svg',devices:['Xbox'],lastPlayed:'2026-10-30T00:00:00Z',minutes:60,earned:1,total:10,score:10,maxScore:100}));
-for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
+for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),points:[10,20,0,15][i],name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
 for(const game of games){game.total=4;game.earned=2;game.groupStatus='verified';game.groups=[{id:'base',name:'本体',kind:'base',earned:2,total:2,achievementIds:['1','2']},{id:'dlc',name:'追加故事',kind:'dlc',earned:0,total:2,achievementIds:['3','4']}];}
 const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:''},games,source:'Exophase',warnings:[]}]},password);
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4173'],{stdio:'ignore'});
@@ -149,6 +149,26 @@ try{
     const beforeDetail=await page.evaluate(()=>window.scrollY);
     await page.locator('.game-card').first().click();
     await page.getByRole('dialog').waitFor();
+    // Both Gamerscore placements use the same white-disc icon, with no duplicated G suffix.
+    const scoreSummary=page.locator('.game-detail .detail-gamerscore');
+    assert.equal(await scoreSummary.count(),1);
+    assert.equal(await scoreSummary.innerText(),'10','Total earned points keep their original value');
+    const iconStyle=await scoreSummary.locator('svg.gamerscore-icon').evaluate(svg=>{
+      const circle=svg.querySelector('circle'),glyph=svg.querySelector('path');
+      const box=svg.getBoundingClientRect();
+      return {size:box.width,fill:circle?.getAttribute('fill'),glyph:!!glyph,hidden:svg.getAttribute('aria-hidden')};
+    });
+    assert.equal(iconStyle.size,18,'Summary icon is compact and aligned with existing metadata');
+    assert.equal(iconStyle.fill,'#fff');
+    assert.ok(iconStyle.glyph,'Crisp vector G is rendered inside the white disc');
+    assert.equal(iconStyle.hidden,'true');
+    const scoreRows=await page.locator('.achievement').evaluateAll(rows=>rows.map(row=>{
+      const badge=row.querySelector('.achievement-points'),svg=badge?.querySelector('svg.gamerscore-icon');
+      return {points:badge?.textContent??null,icon:!!svg,align:badge?Math.abs(badge.getBoundingClientRect().top+badge.getBoundingClientRect().height/2-svg.getBoundingClientRect().top-svg.getBoundingClientRect().height/2):null};
+    }));
+    assert.deepEqual(scoreRows.map(x=>x.points),['20','10',null,'15'],'Only positive point values display, without G text');
+    assert.deepEqual(scoreRows.map(x=>x.icon),[true,true,false,true]);
+    assert.ok(scoreRows.filter(x=>x.icon).every(x=>x.align<2),'G badges are vertically centered next to point values');
     const achievementLayout=await page.locator('.achievement').evaluateAll(rows=>rows.map(row=>{
       const image=row.querySelector('.achievement-image'),title=row.querySelector('h4'),description=row.querySelector('.achievement-description'),rarity=row.querySelector('.achievement-rarity');
       const rect=image.getBoundingClientRect();

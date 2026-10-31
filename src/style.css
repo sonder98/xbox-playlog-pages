@@ -1666,3 +1666,33 @@ footer .dot {
 }
 .game-detail .achievement-tools label:only-child { grid-column:1 / -1; }
 .game-detail .achievement-tools select { max-width:100%; }
+
+
+/* Screenshot-matched Gamerscore emblem, shared by total earned and each achievement. */
+.gamerscore-icon {
+  display:inline-block;
+  flex:none;
+  vertical-align:middle;
+  width:1em;
+  height:1em;
+}
+.game-detail .detail-summary .detail-gamerscore {
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  color:var(--text-primary);
+  white-space:nowrap;
+}
+.game-detail .achievement-points {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  font-variant-numeric:tabular-nums;
+  color:var(--text-primary);
+}
+.game-detail .achievement-points .gamerscore-icon {
+  flex-shrink:0;
+}
