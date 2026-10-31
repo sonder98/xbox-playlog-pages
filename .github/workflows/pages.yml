@@ -1,35 +1,30 @@
-name: Publish and sync Playlog
+name: Deploy Playlog
 on:
   push:
     branches: [main]
     paths:
       - '.github/workflows/pages.yml'
+      - '.github/workflows/sync.yml'
+      - 'src/**'
       - 'scripts/**'
       - 'data/**'
+      - 'public/vault.json'
+      - 'public/status.json'
       - 'public/catalog-export.html'
-      - 'src/**'
       - 'package.json'
       - 'package-lock.json'
   workflow_dispatch:
-    inputs:
-      sync:
-        description: 同步微软游戏档案
-        type: boolean
-        default: true
-  schedule:
-    # Every hour at :00 and :30 (UTC and China Standard Time share minute boundaries).
-    - cron: '0,30 * * * *'
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: playlog-pages
+  cancel-in-progress: true
 jobs:
-  publish:
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 20
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -38,47 +33,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install --ignore-scripts
+          cache: npm
+      - run: npm ci --ignore-scripts
       - run: npm install --no-save --ignore-scripts playwright
       - run: npx playwright install --with-deps chromium
       - name: Restore public artwork cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: public/media
           key: artwork-webp-v1-${{ runner.os }}-${{ github.run_id }}
           restore-keys: artwork-webp-v1-${{ runner.os }}-
-      - name: Restore encrypted Microsoft authorization
-        uses: actions/cache/restore@v4
-        with:
-          path: .private/microsoft
-          key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-pages-start
-          restore-keys: microsoft-private-v1-main-
-      - name: Sync and encrypt Microsoft records
-        id: exophase_sync
-        continue-on-error: true
-        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.sync)
-        env:
-          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
-          NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
-          MICROSOFT_STATE_KEY: ${{ secrets.MICROSOFT_STATE_KEY }}
-        run: node --experimental-strip-types scripts/microsoft-sync.ts
-      - name: Save encrypted Microsoft authorization
-        if: steps.exophase_sync.outcome == 'success' || steps.exophase_sync.outcome == 'failure'
-        uses: actions/cache/save@v4
-        with:
-          path: .private/microsoft
-          key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-pages-end
-      - name: Save only encrypted snapshots
-        if: steps.exophase_sync.outcome == 'success' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.sync) || github.event_name == 'schedule')
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add public/vault.json public/status.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Update encrypted Microsoft snapshot"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
       - run: npm test
       - run: npm run build
       - name: Check mobile and desktop page navigation
@@ -92,8 +56,3 @@ jobs:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-      - name: Report unsuccessful sync after publishing
-        if: steps.exophase_sync.outcome == 'failure'
-        run: |
-          echo "Microsoft sync failed; the site was published with the last successful snapshot." >> "$GITHUB_STEP_SUMMARY"
-          exit 1
