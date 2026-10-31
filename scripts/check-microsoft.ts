@@ -6,7 +6,7 @@ const clientId=process.env.XBOX_CLIENT_ID||'';let refreshToken=process.env.XBOX_
 if(clientId&&!refreshToken&&process.env.XBOX_DEVICE_LOGIN==='true'){
  try{refreshToken=await deviceAuthorization(clientId,info=>{
   console.log('请在自己的浏览器打开 '+info.verificationUri+'，输入代码：'+info.userCode+'，确认应用是你自己注册的 Playlog 应用后，使用目标 Xbox 账号授权。代码最多有效 10 分钟。');
- });}catch{summary('微软设备授权未完成。未输出上游响应或凭据，未修改现有网站。');process.exitCode=2;}
+ });}catch(error){summary(error instanceof Error?error.message:'微软设备授权未完成。');process.exitCode=2;}
 }
 if(!clientId||!refreshToken){
  summary('微软直连验证：BLOCKED。需要自己的 Client ID 和微软账号授权。可使用 Run workflow 填入 Client ID 完成设备登录，或配置 XBOX_CLIENT_ID / XBOX_REFRESH_TOKEN。当前 Exophase 同步未受影响。');

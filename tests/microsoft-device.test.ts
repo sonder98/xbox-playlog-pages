@@ -14,3 +14,8 @@ test('device cancellation never repeats upstream error descriptions or private c
  const request:typeof fetch=async(input)=>String(input).endsWith('/devicecode')?Response.json({user_code:'ABCDEFGH',device_code:'PRIVATE-DEVICE',expires_in:600}):Response.json({error:'authorization_declined',error_description:'PRIVATE-ACCESS'},{status:400});
  await assert.rejects(deviceAuthorization(client,()=>{},request,async()=>{}),error=>error instanceof Error&&error.message.includes('取消')&&!error.message.includes('PRIVATE'));
 });
+
+test('initial rejection exposes only allowlisted OAuth error and numeric codes',async()=>{
+ const request:typeof fetch=async()=>Response.json({error:'invalid_scope',error_codes:[70011,'PRIVATE-SECRET'],error_description:'PRIVATE-ACCESS'},{status:400});
+ await assert.rejects(deviceAuthorization(client,()=>{},request,async()=>{}),error=>error instanceof Error&&error.message.includes('HTTP 400 invalid_scope codes=70011')&&!error.message.includes('PRIVATE'));
+});
