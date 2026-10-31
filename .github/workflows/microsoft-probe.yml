@@ -6,15 +6,6 @@ on:
         description: 自己注册的 Microsoft Application (client) ID（非密钥；已有 Secret 时可留空）
         type: string
         required: false
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/microsoft-probe.yml'
-      - 'scripts/microsoft.ts'
-      - 'scripts/microsoft-probe.ts'
-      - 'scripts/check-microsoft.ts'
-      - 'scripts/microsoft-device.ts'
-      - 'tests/microsoft*.test.ts'
 permissions:
   contents: read
 concurrency:

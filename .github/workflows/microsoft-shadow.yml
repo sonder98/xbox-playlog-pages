@@ -1,0 +1,63 @@
+name: Microsoft shadow sync
+on:
+  workflow_dispatch:
+    inputs:
+      client_id:
+        description: 自己的 Microsoft Client ID（已有授权缓存时可以留空）
+        type: string
+        default: 'd7f0e707-af2a-4d50-83d5-ee86c159319e'
+        required: false
+      reauthorize:
+        description: 重新进行设备授权（首次运行自动授权；正常同步无需勾选）
+        type: boolean
+        default: false
+  schedule:
+    - cron: '0,30 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: microsoft-private-shadow-sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    env:
+      MICROSOFT_STATE_DIR: .private/microsoft
+      MICROSOFT_STATE_KEY: ${{ secrets.MICROSOFT_STATE_KEY }}
+      APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+      NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
+      XBOX_CLIENT_ID: ${{ inputs.client_id || secrets.XBOX_CLIENT_ID }}
+      XBOX_DEVICE_LOGIN: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+      XBOX_REAUTHORIZE: ${{ inputs.reauthorize && 'true' || 'false' }}
+      XBOX_REFRESH_TOKEN: ${{ secrets.XBOX_REFRESH_TOKEN }}
+      XBOX_CLIENT_SECRET: ${{ secrets.XBOX_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Restore encrypted Microsoft private state
+        uses: actions/cache/restore@v4
+        with:
+          path: .private/microsoft
+          key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-start
+          restore-keys: microsoft-private-v1-main-
+      - name: Authorize or renew Microsoft account
+        run: node --experimental-strip-types scripts/microsoft-shadow.ts authorize
+      - name: Checkpoint encrypted authorization before scanning
+        uses: actions/cache/save@v4
+        with:
+          path: .private/microsoft
+          key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-start
+      - name: Audit entire Xbox library without changing the website
+        run: node --experimental-strip-types scripts/microsoft-shadow.ts scan
+      - name: Preserve encrypted rotated token and candidate snapshot
+        if: always() && hashFiles('.private/microsoft/auth.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .private/microsoft
+          key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-end

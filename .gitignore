@@ -12,3 +12,6 @@ node_modules
 .qa/
 
 public/media/
+
+# Private Microsoft credentials and candidate snapshots are never committed.
+.private/
