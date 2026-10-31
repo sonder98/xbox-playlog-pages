@@ -58,7 +58,7 @@ try{
     page.on('pageerror',error=>errors.push(error.message));
     await page.route('https://covers.example.test/**',route=>{
       const original=route.request().url().endsWith('original.svg'),medium=route.request().url().endsWith('medium.svg');
-      const width=original?1920:medium?288:64,height=original?1080:medium?158:64;
+      const width=original?1920:medium?480:64,height=width;
       return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#789"/></svg>`});
     });
     await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
@@ -93,7 +93,7 @@ try{
       const image=el.querySelector('img');
       return {width:rect.width,height:rect.height,fit:getComputedStyle(image).objectFit,source:image.currentSrc,naturalHeight:image.naturalHeight};
     });
-    assert.ok(Math.abs(cover.width/cover.height-1920/1080)<.03,'Artwork keeps its original full-frame ratio');
+    assert.ok(Math.abs(cover.width/cover.height-1)<.03,'Artwork uses a square frame');
     assert.equal(cover.fit,'contain','Artwork must remain uncropped');
     assert.ok(cover.source.endsWith('original.svg'),'Screen density must select the matching artwork');
     assert.ok(cover.naturalHeight>=cover.height*(mobile?3:2),'Artwork must have enough real pixels');
@@ -105,7 +105,7 @@ try{
     // Cached display variants avoid original artwork; a missing mirror still has the upstream fallback.
     await page.route('**/cached-*.svg',route=>{
       const width=route.request().url().includes('1600')?1600:480;
-      return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${width*9/16}"><rect width="100%" height="100%" fill="#789"/></svg>`});
+      return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${width}"><rect width="100%" height="100%" fill="#789"/></svg>`});
     });
     const cachePayload=await decryptVault(envelope,password);
     for(const game of cachePayload.records[0].games){game.cachedImage='https://covers.example.test/cached-480.svg';game.cachedImageLarge='https://covers.example.test/cached-1600.svg';for(const a of game.achievements||[])a.cachedImage='https://covers.example.test/cached-award.svg';}

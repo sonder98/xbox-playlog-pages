@@ -31,7 +31,7 @@ export function GameCover({game,wide=false,priority=false}:{game:Game;wide?:bool
   useEffect(()=>setAttempt(0),[game.id,game.cachedImage,game.cachedImageLarge,game.image3x,game.image]);
   const source=candidates[attempt],completed=completion(game).mythic;
   return <span className={'game-cover'+(wide?' detail-cover':'')+(completed?' completion-frame':'')}>
-    {source?<img src={source} alt="" loading={wide||priority?'eager':'lazy'} fetchPriority={wide||priority?'high':'auto'} decoding="async" width="1920" height="1080" onError={()=>setAttempt(a=>a+1)}/>:<span className="cover-fallback" role="img" aria-label="游戏封面暂不可用"><Gamepad2 size={28}/></span>}
+    {source?<img src={source} alt="" loading={wide||priority?'eager':'lazy'} fetchPriority={wide||priority?'high':'auto'} decoding="async" width="1080" height="1080" onError={()=>setAttempt(a=>a+1)}/>:<span className="cover-fallback" role="img" aria-label="游戏封面暂不可用"><Gamepad2 size={28}/></span>}
     {completed&&<CompletionOrnament/>}
   </span>;
 }
