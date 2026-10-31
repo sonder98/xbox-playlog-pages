@@ -1694,3 +1694,138 @@ footer .dot {
 .game-detail .achievement-points .gamerscore-icon {
   flex-shrink:0;
 }
+
+
+/* Figma interaction spec: unified one-line metrics, conditional classification tabs,
+   and a compact native, keyboard accessible sort control above a single progress row. */
+.game-detail .detail-heading h2{
+  margin:0;
+  font-size:28px;
+  font-weight:600;
+  line-height:1.32;
+}
+.game-detail .detail-summary{
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:28px;
+  margin:20px 0 28px;
+  font-size:17px;
+  font-weight:600;
+  color:var(--text-secondary);
+  font-variant-numeric:tabular-nums;
+  min-width:0;
+}
+.game-detail .detail-summary .detail-stat{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  flex:0 0 auto;
+  white-space:nowrap;
+  color:inherit;
+  font-weight:inherit;
+}
+.game-detail .detail-summary .detail-stat > span{display:inline;white-space:nowrap}
+.game-detail .detail-summary .detail-stat svg{flex:0 0 auto}
+.game-detail .achievement-tabs{
+  display:flex;
+  flex-wrap:nowrap;
+  gap:8px;
+  overflow-x:auto;
+  scrollbar-width:none;
+  margin:2px 0 16px;
+}
+.game-detail .achievement-tabs::-webkit-scrollbar{display:none}
+.game-detail .achievement-tab{
+  flex:0 0 auto;
+  min-height:36px;
+  padding:7px 14px;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:15px;
+  color:var(--text-muted);
+  background:var(--surface-raised);
+  font-size:14px;
+  font-weight:400;
+  white-space:nowrap;
+}
+.game-detail .achievement-tab.active{
+  color:var(--text-primary);
+  background:var(--surface-raised);
+  border-color:rgba(255,255,255,.16);
+  font-weight:600;
+}
+.game-detail .achievement-tab:hover{color:var(--text-primary);background:var(--surface-hover)}
+.game-detail .detail-achievement-section{margin-top:0}
+.game-detail .achievement-sort-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  min-height:32px;
+  margin:0 0 12px;
+  color:var(--text-secondary);
+  font-size:14px;
+  font-weight:500;
+}
+.game-detail .achievement-sort-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  position:relative;
+  cursor:pointer;
+  padding:4px 5px 4px 0;
+  min-height:32px;
+  color:var(--text-muted);
+}
+.game-detail .achievement-sort-toggle:hover{color:var(--text-primary)}
+.game-detail .achievement-sort-toggle:focus-within{
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+  border-radius:6px;
+}
+.game-detail .achievement-sort-toggle select{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  border:0;
+  margin:0;
+  padding:0;
+  opacity:0;
+  cursor:pointer;
+  appearance:none;
+}
+.game-detail .achievement-filter-count{white-space:nowrap;font-variant-numeric:tabular-nums}
+.game-detail .detail-achievement-section>.progress{
+  display:block;
+  margin:0 0 16px;
+  height:5px;
+}
+.game-detail .detail-achievement-section .achievement-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.game-detail .detail-achievement-section .achievement{
+  margin-top:0;
+}
+@media(max-width:700px){
+  .game-detail .detail-heading h2{font-size:22px}
+  .game-detail .detail-summary{
+    flex-wrap:nowrap;
+    gap:13px;
+    font-size:13px;
+    margin:16px 0 23px;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .game-detail .detail-summary::-webkit-scrollbar{display:none}
+  .game-detail .detail-summary .detail-stat{gap:5px;flex-shrink:0}
+  .game-detail .detail-summary .detail-stat svg{width:15px;height:15px}
+  .game-detail .achievement-tab{font-size:13px}
+}
+@media(max-width:370px){
+  .game-detail .detail-summary{gap:8px;font-size:11px}
+  .game-detail .detail-summary .detail-stat{gap:4px}
+  .game-detail .detail-summary .detail-stat svg{width:13px;height:13px}
+  .game-detail .achievement-tab{padding:7px 10px;font-size:12px}
+}

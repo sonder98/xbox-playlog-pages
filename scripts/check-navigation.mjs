@@ -152,7 +152,7 @@ try{
     // Gamerscore shares Lucide's transparent, 2px stroke vocabulary and aligned 24px grid.
     const scoreSummary=page.locator('.game-detail .detail-gamerscore');
     assert.equal(await scoreSummary.count(),1);
-    assert.equal(await scoreSummary.innerText(),'10','Total earned points keep their original value');
+    assert.equal(await scoreSummary.innerText(),'10/100','Gamerscore shows earned and total points');
     const iconStyle=await scoreSummary.locator('svg.gamerscore-icon').evaluate(svg=>{
       const path=svg.querySelector('path'),ring=svg.querySelector('circle'),box=svg.getBoundingClientRect(),outline=path?.getBBox();
       const group=svg.closest('.detail-summary');
@@ -192,28 +192,47 @@ try{
     }));
     assert.deepEqual(achievementLayout.map(a=>a.tier),['rare','rare','common',null]);
     const achievementIds=()=>page.locator('.achievement').evaluateAll(rows=>rows.map(row=>row.getAttribute('data-achievement-id')));
-    assert.deepEqual(await achievementIds(),['2','1','3','4'],'Default is newest unlock first, with locked entries last');
+    assert.deepEqual(await achievementIds(),['2','1','3','4'],'All-classes tab sorts achievements globally, newest first');
+    assert.equal(await page.locator('.game-detail .eyebrow').count(),0,'GAME DETAILS heading is removed');
+    assert.equal(await page.locator('.game-detail .detail-achievements').innerText(),'2/4','Achievement count drops redundant suffix');
+    assert.deepEqual(await page.locator('.detail-summary .detail-stat').allTextContents(),['1 小时','2/4','10/100']);
+    const summaryLayout=await page.locator('.detail-summary .detail-stat').evaluateAll(nodes=>nodes.map(n=>{
+      const r=n.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right};
+    }));
+    assert.equal(summaryLayout.length,3);
+    assert.ok(summaryLayout.every(s=>Math.abs(s.y-summaryLayout[0].y)<2),'All three metrics share a single row');
+    assert.ok(summaryLayout[2].right<=(await page.locator('.detail-summary').boundingBox()).x+(await page.locator('.detail-summary').boundingBox()).width+1,'Stats fit viewport width');
+    const tabs=page.getByRole('tablist',{name:'成就分类'});
+    assert.deepEqual(await tabs.getByRole('tab').allTextContents(),['全部成就','本体成就','DLC成就']);
+    assert.equal(await page.locator('.achievement-filter-count').innerText(),'2/4');
+    assert.equal(await page.locator('.achievement-group').count(),1,'One sorted list rather than separate base/DLC section blocks');
+    assert.equal(await page.locator('.achievement-group').getAttribute('data-group-id'),'all');
     for(const [sort,expected] of [['date-asc',['1','2','3','4']],['rarity-asc',['1','2','3','4']],['rarity-desc',['2','1','3','4']],['date-desc',['2','1','3','4']]]){
       await page.getByRole('combobox',{name:'成就排序',exact:true}).selectOption(sort);
       assert.deepEqual(await achievementIds(),expected);
-      assert.deepEqual(await page.locator('.achievement-group').evaluateAll(sections=>sections.map(s=>({id:s.dataset.groupId,title:s.querySelector('h3').textContent,ids:[...s.querySelectorAll('.achievement')].map(a=>a.dataset.achievementId)}))),[
-        {id:'base',title:'本体',ids:expected.slice(0,2)},
-        {id:'dlc',title:'追加故事',ids:expected.slice(2)}
-      ],'Every sort retains base and DLC headers and membership');
     }
-
-    const tools=await page.locator('.game-detail .achievement-tools label').evaluateAll(labels=>labels.map(label=>{const r=label.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width};}));
-    assert.equal(tools.length,2,'Two achievement toolbar controls exist');
-    assert.ok(Math.abs(tools[0].y-tools[1].y)<1,'Group and sort controls share one row');
-    assert.ok(Math.abs(tools[0].width-tools[1].width)<2,'Group and sort controls each use half the row');
-    assert.ok(tools[1].x>tools[0].x,'Sort control appears to the right');
-    await page.getByRole('combobox',{name:'成就分组',exact:true}).selectOption('base');
+    await tabs.getByRole('tab',{name:'本体成就'}).click();
     assert.deepEqual(await achievementIds(),['2','1']);
-    await page.getByRole('combobox',{name:'成就分组',exact:true}).selectOption('dlc');
+    assert.equal(await page.locator('.achievement-filter-count').innerText(),'2/2');
+    assert.equal(await page.locator('.achievement-group').getAttribute('data-group-id'),'base');
+    assert.equal(await page.getByRole('progressbar',{name:'当前成就分类完成度'}).getAttribute('aria-valuenow'),'100');
+    await tabs.getByRole('tab',{name:'DLC成就'}).click();
     assert.deepEqual(await achievementIds(),['3','4']);
-    await page.getByRole('combobox',{name:'成就分组',exact:true}).selectOption('__all');
+    assert.equal(await page.locator('.achievement-filter-count').innerText(),'0/2');
+    assert.equal(await page.getByRole('progressbar',{name:'当前成就分类完成度'}).getAttribute('aria-valuenow'),'0');
+    await tabs.getByRole('tab',{name:'全部成就'}).click();
     assert.deepEqual(await achievementIds(),['2','1','3','4']);
-    console.log((mobile?'Mobile':'Desktop')+': PASS four within-group achievement sort orders, preserved base/DLC headers and membership, filters and default newest-first');
+    assert.equal(await page.locator('.achievement-filter-count').innerText(),'2/4');
+    assert.equal(await page.getByRole('progressbar',{name:'当前成就分类完成度'}).getAttribute('aria-valuenow'),'50');
+    // Compact sort selector occupies the same horizontal line as the current completion count.
+    const sortRow=await page.locator('.achievement-sort-row').evaluate(el=>{
+      const a=el.querySelector('.achievement-sort-toggle').getBoundingClientRect(),b=el.querySelector('.achievement-filter-count').getBoundingClientRect();
+      return {sameLine:Math.abs(a.y-b.y)<5,leftFirst:a.x<b.x,sortText:el.querySelector('.achievement-sort-toggle span').textContent};
+    });
+    assert.equal(sortRow.sameLine,true);
+    assert.equal(sortRow.leftFirst,true);
+    assert.equal(sortRow.sortText,'排序');
+    console.log((mobile?'Mobile':'Desktop')+': PASS categorized tabs, aggregate counters, interactive sorting, and unified summary row');
     for(const row of achievementLayout){
       assert.ok(row.imageWidth>=(mobile?93:145),'Thumbnail retains a readable widescreen size');
       assert.ok(Math.abs(row.imageRatio-16/9)<.06,'Achievement thumbnail uses 16:9');
@@ -310,6 +329,24 @@ try{
     await page.locator('.game-card').first().waitFor();
     assert.equal(await page.locator('.game-card').count(),12,'Officially unhidden game returns when Xbox snapshot updates');
     console.log((mobile?'Mobile':'Desktop')+': PASS official hiding, manual hiding, history totals, unhide restoration and toolbar 50/50 layout');
+    // When the title has no verified base/DLC classification, there are no tabs.
+    const uncategorized=await decryptVault(envelope,password);
+    const noGroup=uncategorized.records[0].games.find(g=>g.id==='101');
+    noGroup.groupStatus='unavailable';delete noGroup.groups;
+    activeEnvelope=await encryptVault(uncategorized,password);
+    await unlock('#library');
+    await page.locator('.game-card[data-game-id="101"]').click();
+    await page.getByRole('dialog').waitFor();
+    assert.equal(await page.getByRole('tablist',{name:'成就分类'}).count(),0,'No classification means no category tabs');
+    assert.equal(await page.locator('.achievement-sort-row').count(),1,'Sorting is directly under summary when there are no tabs');
+    assert.equal(await page.locator('.achievement-filter-count').innerText(),'2/4');
+    assert.equal(await page.locator('.achievement-list .achievement').count(),4);
+    await page.getByRole('combobox',{name:'成就排序'}).selectOption('date-asc');
+    assert.deepEqual(await page.locator('.achievement').evaluateAll(rows=>rows.map(r=>r.dataset.achievementId)),['1','2','3','4']);
+    await page.getByRole('button',{name:'关闭详情'}).click();
+    activeEnvelope=envelope;
+    await unlock('#library');
+    console.log((mobile?'Mobile':'Desktop')+': PASS unclassified game omits tabs and retains functional sort and completion');
     // Remembered credentials survive a reload and a new snapshot's random salt.
     async function signInRemembered(){
       await page.locator('input[type="password"]').fill(password);

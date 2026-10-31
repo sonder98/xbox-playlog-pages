@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState,useId,type ReactNode} from 'react';
-import {Gamepad2,Trophy,X,Lock,Check,Clock3,Gem} from 'lucide-react';
+import {Gamepad2,Trophy,X,Lock,Check,Clock3,Gem,ArrowDownUp} from 'lucide-react';
 import {completion} from '../completion';
 import {GamerscoreIcon} from './gamerscore-icon';
 import {sortAchievements,type AchievementSort} from '../achievement-sort';
@@ -89,23 +89,63 @@ function AchievementItem({achievement:a}:{achievement:Achievement}){
   </article>;
 }
 export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
-  const groups=game.groupStatus==='verified'&&game.groups?.length?game.groups:[{id:'all',name:'已同步成就',kind:'base',earned:game.earned,total:game.total,achievementIds:game.achievements?.map(a=>a.id)||[]}];
+  // Verified base/DLC memberships are the only source of truth for the category tabs.
+  // A title with just one group or unverified grouping has no tabs at all.
+  const groups=game.groupStatus==='verified'?game.groups||[]:[];
+  const base=groups.find(group=>group.kind==='base');
+  const addOns=groups.filter(group=>group.kind!=='base');
+  const categorized=!!base&&addOns.length>0;
   const [order,setOrder]=useState<AchievementSort>('date-desc');
-  const [groupId,setGroupId]=useState('__all');
-  const selected=groups.find(g=>g.id===groupId);
-  const visibleGroups=selected?[selected]:[...groups].sort((a,b)=>Number(b.kind==='base')-Number(a.kind==='base'));
-  const sections=visibleGroups.map(group=>{
-    const ids=new Set(group.achievementIds);
-    return {group,achievements:sortAchievements((game.achievements||[]).filter(a=>ids.has(a.id)),order)};
-  });
-  return <Modal title={game.name+' · 游戏详情'} onClose={onClose} className="game-detail"><GameCover game={game} wide/><div className="detail-heading"><div><span className="eyebrow">GAME DETAILS</span><h2>{game.name}</h2></div></div><div className="detail-summary"><span><Clock3 size={16}/>{hours(game.minutes)}</span><span><Trophy size={16}/>{game.earned}/{game.total} 成就</span><span className="detail-gamerscore" aria-label={`已获得 ${game.score.toLocaleString('zh-CN')} 玩家积分`}><GamerscoreIcon size={16}/><span>{game.score.toLocaleString('zh-CN')}</span></span></div>
-    {game.groupStatus!=='verified'&&<p className="note">本体与追加内容分组待同步，当前显示已取得的逐项记录。</p>}
+  const [category,setCategory]=useState<'all'|'base'|'dlc'>('all');
+  const selectedCategory=categorized?category:'all';
+  const selectedGroups=selectedCategory==='base'?base?[base]:[]:selectedCategory==='dlc'?addOns:groups;
+  const ids=categorized&&selectedCategory!=='all'?new Set(selectedGroups.flatMap(g=>g.achievementIds)):null;
+  const achievements=sortAchievements((game.achievements||[]).filter(a=>!ids||ids.has(a.id)),order);
+  const earned=selectedCategory==='all'?game.earned:selectedGroups.reduce((sum,g)=>sum+g.earned,0);
+  const total=selectedCategory==='all'?game.total:selectedGroups.reduce((sum,g)=>sum+g.total,0);
+  const categories=[{id:'all',name:'全部成就'},{id:'base',name:'本体成就'},{id:'dlc',name:'DLC成就'}] as const;
+  const numberFormat=(value:number)=>value.toLocaleString('zh-CN');
+  return <Modal title={game.name+' · 游戏详情'} onClose={onClose} className="game-detail">
+    <GameCover game={game} wide/>
+    <div className="detail-heading"><h2>{game.name}</h2></div>
+    <div className="detail-summary">
+      <span className="detail-stat detail-playtime"><Clock3 size={16} aria-hidden="true"/><span>{hours(game.minutes)}</span></span>
+      <span className="detail-stat detail-achievements" aria-label={`已解锁 ${game.earned} / ${game.total} 成就`}><Trophy size={16} aria-hidden="true"/><span>{game.earned}/{game.total}</span></span>
+      <span className="detail-stat detail-gamerscore" aria-label={`已获得 ${numberFormat(game.score)} / ${numberFormat(game.maxScore)} 玩家积分`}><GamerscoreIcon size={16}/><span>{numberFormat(game.score)}/{numberFormat(game.maxScore)}</span></span>
+    </div>
     {!!game.achievements?.length&&<>
-      <div className="achievement-tools">
-        {groups.length>1&&<label>成就分组<select aria-label="成就分组" value={groupId} onChange={e=>setGroupId(e.target.value)}><option value="__all">全部成就</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}
-        <label>排序方式<select aria-label="成就排序" value={order} onChange={e=>setOrder(e.target.value as AchievementSort)}><option value="date-desc">解锁时间：新 → 旧</option><option value="date-asc">解锁时间：旧 → 新</option><option value="rarity-asc">稀有度：低 → 高</option><option value="rarity-desc">稀有度：高 → 低</option></select></label>
-      </div>
-      <div className="achievement-groups">{sections.map(({group,achievements})=><section className="achievement-group" key={group.id} data-group-id={group.id}><div className="section-heading"><h3>{group.name}</h3><span>{group.earned}/{group.total}</span></div><Progress earned={group.earned} total={group.total} complete={group.earned===group.total&&group.total>0} label={group.name+' 完成度'}/>{achievements.map(a=><AchievementItem key={a.id} achievement={a}/>)}</section>)}</div>
+      {categorized&&<div className="achievement-tabs" role="tablist" aria-label="成就分类">
+        {categories.map(({id,name},i)=><button
+          type="button" key={id} role="tab" className={'achievement-tab'+(selectedCategory===id?' active':'')}
+          id={'achievement-tab-'+id} aria-controls="achievement-panel" aria-selected={selectedCategory===id} tabIndex={selectedCategory===id?0:-1}
+          onClick={()=>setCategory(id)}
+          onKeyDown={event=>{
+            if(event.key!=='ArrowRight'&&event.key!=='ArrowLeft'&&event.key!=='Home'&&event.key!=='End')return;
+            event.preventDefault();
+            const next=event.key==='Home'?0:event.key==='End'?categories.length-1:(i+(event.key==='ArrowRight'?1:-1)+categories.length)%categories.length;
+            setCategory(categories[next].id);
+            (event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next])?.focus();
+          }}
+        >{name}</button>)}
+      </div>}
+      <section className="achievement-group detail-achievement-section" data-group-id={selectedCategory}>
+        <div className="achievement-sort-row">
+          <label className="achievement-sort-toggle" title="选择成就排序方式">
+            <span>排序</span><ArrowDownUp size={17} aria-hidden="true"/>
+            <select aria-label="成就排序" value={order} onChange={event=>setOrder(event.target.value as AchievementSort)}>
+              <option value="date-desc">解锁时间：新 → 旧</option>
+              <option value="date-asc">解锁时间：旧 → 新</option>
+              <option value="rarity-asc">稀有度：低 → 高</option>
+              <option value="rarity-desc">稀有度：高 → 低</option>
+            </select>
+          </label>
+          <span className="achievement-filter-count" aria-live="polite">{earned}/{total}</span>
+        </div>
+        <Progress earned={earned} total={total} complete={earned===total&&total>0} label="当前成就分类完成度"/>
+        <div className="achievement-list" id="achievement-panel" role={categorized?'tabpanel':undefined} aria-labelledby={categorized?'achievement-tab-'+selectedCategory:undefined}>
+          {achievements.map(a=><AchievementItem key={a.id} achievement={a}/>)}
+        </div>
+      </section>
     </>}
     {!game.achievements?.length&&<div className="empty"><Trophy/><h3>成就明细尚未同步</h3><p>下一次同步成功后将在这里展示。</p></div>}
   </Modal>;
