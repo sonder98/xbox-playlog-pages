@@ -259,6 +259,7 @@ try{
     assert.equal(await page.locator('.game-card').count(),10,'Manual hiding applies to remaining official-visible games');
     await page.getByRole('button',{name:'概览',exact:true}).click();
     assert.equal(await page.locator('.stats').innerText(),statsBeforeHiding,'Official and local hiding never change totals');
+    await page.getByRole('button',{name:'游戏库',exact:true}).click();
     await manageDisplay();
     await page.getByRole('button',{name:'全部展示',exact:true}).click();
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
