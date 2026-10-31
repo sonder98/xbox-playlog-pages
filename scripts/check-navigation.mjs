@@ -154,27 +154,28 @@ try{
     assert.equal(await scoreSummary.count(),1);
     assert.equal(await scoreSummary.innerText(),'10','Total earned points keep their original value');
     const iconStyle=await scoreSummary.locator('svg.gamerscore-icon').evaluate(svg=>{
-      const path=svg.querySelector('path'),box=svg.getBoundingClientRect(),outline=path?.getBBox();
+      const path=svg.querySelector('path'),ring=svg.querySelector('circle'),box=svg.getBoundingClientRect(),outline=path?.getBBox();
       const group=svg.closest('.detail-summary');
       const trophy=group?.querySelector('svg.lucide-trophy');
       const computed=getComputedStyle(svg);
       return {
-       size:box.width,iconHeight:box.height,circle:svg.querySelector('circle')!==null,
+       size:box.width,iconHeight:box.height,ring:{present:!!ring,cx:ring?.getAttribute('cx'),cy:ring?.getAttribute('cy'),radius:ring?.getAttribute('r')},
        fill:svg.getAttribute('fill'),stroke:svg.getAttribute('stroke'),strokeWidth:svg.getAttribute('stroke-width'),
        pathFill:path?.getAttribute('fill'),hasPath:!!path,
-       glyphCenter:outline?{x:outline.x+outline.width/2,y:outline.y+outline.height/2}:null,
+       glyphCenter:outline?{x:outline.x+outline.width/2,y:outline.y+outline.height/2,width:outline.width,height:outline.height}:null,
        color:computed.color,trophyColor:trophy?getComputedStyle(trophy).color:null,
        hidden:svg.getAttribute('aria-hidden')
       };
     });
     assert.equal(iconStyle.size,16,'Summary G icon matches neighboring time/trophy icons');
     assert.equal(iconStyle.iconHeight,16);
-    assert.equal(iconStyle.circle,false,'G has no white circular background');
+    assert.deepEqual(iconStyle.ring,{present:true,cx:'12',cy:'12',radius:'10'},'The outlined badge retains a complete centered circle');
     assert.equal(iconStyle.fill,'none');
     assert.equal(iconStyle.stroke,'currentColor');
     assert.equal(iconStyle.strokeWidth,'2','G matches Lucide stroke weight');
     assert.ok(iconStyle.hasPath);
     assert.ok(iconStyle.glyphCenter&&Math.abs(iconStyle.glyphCenter.x-12)<.6&&Math.abs(iconStyle.glyphCenter.y-12)<.6,'G glyph is optically centered on the 24px grid');
+    assert.ok(iconStyle.glyphCenter.height>=8&&iconStyle.glyphCenter.width/iconStyle.glyphCenter.height>.7,'G is upright and not vertically squashed');
     assert.equal(iconStyle.color,iconStyle.trophyColor,'G uses the same muted color as the other detail icons');
     assert.equal(iconStyle.hidden,'true');
     const scoreRows=await page.locator('.achievement').evaluateAll(rows=>rows.map(row=>{
