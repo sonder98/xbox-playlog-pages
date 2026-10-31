@@ -12,16 +12,23 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
   if(!response.ok)throw Error('微软澳区游戏资料读取失败；保留线上记录。');
   const data=await response.json();
   const products=data.Products||[];
-  // Refuse ambiguous products (bundles/editions); never pick an arbitrary cover.
-  const matches=products.filter((p:any)=>p.ProductKind==='Game');
-  if(matches.length!==1)continue;
-  const localized=matches[0].LocalizedProperties||[];
-  const info=localized.find((p:any)=>p.Language==='en-AU')||localized.find((p:any)=>/^en(?:-|$)/.test(p.Language||''));
-  if(!info?.ProductTitle)continue;
-  const images=(info.Images||[]).filter((i:any)=>i.Width>0&&i.Width===i.Height&&safeImage(i.Uri));
-  images.sort((a:any,b:any)=>(Number(b.ImagePurpose==='BoxArt')-Number(a.ImagePurpose==='BoxArt'))||b.Width-a.Width);
-  if(!images.length)continue;
-  game.name=info.ProductTitle;game.image=safeImage(images[0].Uri);
+  const normalize=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]+/g,'');
+  const wanted=normalize(game.name);
+  const candidates=products.map((product:any)=>{
+    const localized=product.LocalizedProperties||[];
+    const info=localized.find((p:any)=>p.Language==='en-AU')||localized.find((p:any)=>/^en(?:-|$)/.test(p.Language||''));
+    if(!info?.ProductTitle)return null;
+    const images=(info.Images||[]).filter((i:any)=>i.Width>0&&i.Width===i.Height&&safeImage(i.Uri));
+    images.sort((a:any,b:any)=>(Number(b.ImagePurpose==='BoxArt')-Number(a.ImagePurpose==='BoxArt'))||b.Width-a.Width);
+    if(!images.length)return null;
+    const title=normalize(info.ProductTitle);
+    const exact=title===wanted?100:title.includes(wanted)||wanted.includes(title)?70:0;
+    const kind=product.ProductKind==='Game'?20:product.ProductKind==='GameEdition'?10:0;
+    return {product,info,image:images[0],score:exact+kind};
+  }).filter(Boolean).sort((a:any,b:any)=>b.score-a.score);
+  const selected=candidates[0];
+  if(!selected||selected.score<10)continue;
+  game.name=selected.info.ProductTitle;game.image=safeImage(selected.image.Uri);
   delete game.imageWide;delete game.image2x;delete game.image3x;delete game.cachedImage;delete game.cachedImageLarge;
   resolved++;
  }
