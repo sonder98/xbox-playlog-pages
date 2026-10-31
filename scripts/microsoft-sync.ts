@@ -10,8 +10,9 @@ const session=await credentials(process.env),{old,target}=getPasswords(process.e
 const root=process.env.MICROSOFT_STATE_DIR||'.private/microsoft',key=process.env.MICROSOFT_STATE_KEY!;
 const saved=readState(root+'/candidate.json',key);
 const previous=fs.existsSync('public/vault.json')?(await readVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),old,target)).records:[];
-if(previous[0]?.source==='Xbox'&&Date.now()-Date.parse(previous[0].at)<20*60_000){
- await publishSnapshot(previous[0],previous.slice(1),target);console.log('复用刚完成的微软快照。');process.exit(0);
+const fresh=saved?.record?.games?.some((g:any)=>g.cachedImage)&&Date.now()-Date.parse(saved.record.at)<20*60_000?saved.record:previous[0];
+if(fresh?.source==='Xbox'&&Date.now()-Date.parse(fresh.at)<20*60_000){
+ await publishSnapshot(fresh,previous.filter((r:any)=>r.id!==fresh.id).slice(0,29),target);console.log('复用刚完成的微软快照。');process.exit(0);
 }
 const result=await scanMicrosoft(session.config,{previous:saved?.record,expectedOwner:session.state.owner,progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
 if(result.audit.failed||result.audit.interrupted||result.audit.historySourcesFailed)throw Error('微软同步未完整完成。');

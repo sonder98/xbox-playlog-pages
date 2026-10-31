@@ -76,6 +76,7 @@ jobs:
           git add public/vault.json public/status.json
           if ! git diff --cached --quiet; then
             git commit -m "Update encrypted Microsoft snapshot"
+            git pull --rebase origin main
             git push origin HEAD:main
           fi
       - run: npm test
