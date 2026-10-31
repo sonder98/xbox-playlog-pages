@@ -19,7 +19,7 @@ export function usePageNavigation(){
  function push(hash:string){
   const old=history.state;
   history.replaceState({...old,scrollY:window.scrollY},'');
-  history.pushState({playlog:true,depth:(old?.depth||0)+1,scrollY:hash.includes('/game/')||hash.includes('/day/')?window.scrollY:0},'',hash);
+  history.pushState({playlog:true,depth:(old?.depth||0)+1,scrollY:hash.includes('/game/')?window.scrollY:0},'',hash);
   setCurrent(route());
  }
  function navigate(next:PageTab){if(next!==current.tab||current.gameId)push('#'+next);}

@@ -2131,3 +2131,8 @@ footer .dot {
  .ah-day-title h1 {font-size:18px;}
  .ah-date-arrows button {width:34px;height:34px;}
 }
+
+/* Image orientation is supplied by the loaded achievement asset; never crop a square achievement into a wide frame. */
+.ah-achievement-art.ah-art-square {width:70px;aspect-ratio:1;}
+@media(max-width:700px){.ah-achievement-art.ah-art-square {width:67px;}}
+@media(max-width:360px){.ah-achievement-art.ah-art-square {width:60px;}}

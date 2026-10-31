@@ -125,10 +125,12 @@ try{
     assert.ok(page.url().endsWith('#achievements/day/2026-10-27'),'Day detail is deep-linkable');
     assert.equal(await page.locator('.ah-achievement-card .ah-game-source').count(),12,'Each achievement identifies its original game');
     assert.equal(await page.locator('.ah-achievement-card time').first().innerText(),'20:24');
+    await page.locator('.ah-achievement-art img').first().waitFor();
+    await page.waitForFunction(()=>document.querySelector('.ah-achievement-art')?.classList.contains('ah-art-square'));
     const artFrame=await page.locator('.ah-achievement-art').first().evaluate(el=>{
       const r=el.getBoundingClientRect(),img=el.querySelector('img');return {ratio:r.width/r.height,fit:img?getComputedStyle(img).objectFit:null};
     });
-    assert.ok(Math.abs(artFrame.ratio-16/9)<.04,'Achievement images adapt to 16:9 frame');
+    assert.ok(Math.abs(artFrame.ratio-1)<.04,'Square achievement art retains a square fitting frame');
     assert.equal(artFrame.fit,'contain','Achievement art is not cropped');
     await page.getByRole('button',{name:/前一天 2026 年 10 月 26 日/}).click();
     assert.equal(await page.getByRole('heading',{name:'2026 年 10 月 26 日'}).count(),1);
