@@ -9,9 +9,16 @@ import {adjacentDay,buildActivity,calendarMonth,dayLabel,heatLevel,recentCalenda
 const fmt=(n:number)=>n.toLocaleString('zh-CN');
 const time=(value:number)=>new Date(value).toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',hour12:false});
 function Art({src,alt='',className}:{src?:string;alt?:string;className:string}){
- const [broken,setBroken]=useState(false);
- useEffect(()=>setBroken(false),[src]);
- return <span className={className}>{src&&!broken?<img src={src} alt={alt} loading="lazy" onError={()=>setBroken(true)}/>:<Trophy size={19} aria-hidden="true"/>}</span>;
+ const [broken,setBroken]=useState(false),[artRatio,setArtRatio]=useState<number|null>(null);
+ useEffect(()=>{setBroken(false);setArtRatio(null);},[src]);
+ const artwork=className==='ah-achievement-art';
+ const square=artwork&&artRatio!==null&&artRatio<1.35;
+ return <span className={className+(square?' ah-art-square':'')}
+  style={artwork&&artRatio?{aspectRatio:String(artRatio)}:undefined}>
+  {src&&!broken?<img src={src} alt={alt} loading="lazy"
+   onLoad={e=>{if(artwork){const img=e.currentTarget;setArtRatio(Math.min(2.5,Math.max(.7,img.naturalWidth/img.naturalHeight)));}}}
+   onError={()=>setBroken(true)}/>:<Trophy size={19} aria-hidden="true"/>}
+ </span>;
 }
 const weekdays=['一','二','三','四','五','六','日'];
 function Calendar({activity,year,month,selected,onSelect}:{activity:Activity;year:number;month:number;selected:string|null;onSelect:(day:string,button:HTMLButtonElement)=>void}){
