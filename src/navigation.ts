@@ -25,9 +25,15 @@ export function usePageNavigation(){
  function navigate(next:PageTab){if(next!==current.tab||current.gameId)push('#'+next);}
  function openGame(id:string){push('#'+current.tab+'/game/'+id);}
  function openAchievementDay(day:string){push('#achievements/day/'+day);}
+ // Adjacent-day browsing replaces the current day entry so Back returns to the heatmap,
+ // not a trail of dates visited with the arrow controls.
+ function changeAchievementDay(day:string){
+  history.replaceState({...history.state,scrollY:0},'','#achievements/day/'+day);
+  setCurrent(route());
+ }
  function back(){
   if(history.state?.playlog&&history.state.depth>0)history.back();
   else {history.replaceState({playlog:true,depth:0,scrollY:0},'',current.gameId?'#'+current.tab:'#overview');setCurrent(route());}
  }
- return {...current,navigate,back,openGame,openAchievementDay};
+ return {...current,navigate,back,openGame,openAchievementDay,changeAchievementDay};
 }

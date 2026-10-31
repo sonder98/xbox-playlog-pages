@@ -110,7 +110,7 @@ function DayCard({event,onGame}:{event:UnlockEvent;onGame:(id:string)=>void}){
   </button>
  </article>;
 }
-export function AchievementJourney({games,dayId,onBack,onOpenDay,onOpenGame}:{games:Game[];dayId:string|null;onBack:()=>void;onOpenDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
+export function AchievementJourney({games,dayId,onBack,onOpenDay,onChangeDay,onOpenGame}:{games:Game[];dayId:string|null;onBack:()=>void;onOpenDay:(day:string)=>void;onChangeDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
  const activity=useMemo(()=>buildActivity(games),[games]);
  const [selected,setSelected]=useState<string|null>(null);
  const [sheetDay,setSheetDay]=useState<string|null>(null);
@@ -132,8 +132,8 @@ export function AchievementJourney({games,dayId,onBack,onOpenDay,onOpenGame}:{ga
   return <section className="ah-page ah-day-detail">
    <button className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回热力图</button>
    <div className="ah-day-title"><h1>{dayLabel(dayId)}</h1><div className="ah-date-arrows">
-    <button type="button" aria-label={'前一天 '+dayLabel(prev)} title="前一天" disabled={prev<'2022-01-01'} onClick={()=>onOpenDay(prev)}><ChevronLeft size={22}/></button>
-    <button type="button" aria-label={'后一天 '+dayLabel(next)} title="后一天" disabled={next>activity.today} onClick={()=>onOpenDay(next)}><ChevronRight size={22}/></button>
+    <button type="button" aria-label={'前一天 '+dayLabel(prev)} title="前一天" disabled={prev<'2022-01-01'} onClick={()=>onChangeDay(prev)}><ChevronLeft size={22}/></button>
+    <button type="button" aria-label={'后一天 '+dayLabel(next)} title="后一天" disabled={next>activity.today} onClick={()=>onChangeDay(next)}><ChevronRight size={22}/></button>
    </div></div><p className="ah-intro">解锁 {bucket?.events.length||0} 个成就 · 涉及 {bucket?.games.length||0} 款游戏</p>
    <div className="ah-day-toolbar"><span>{events.length} 个成就</span><AchievementSortControl order={order} onChange={setOrder}/></div>
    {events.length?<div className="ah-achievement-list">{events.map(e=><DayCard key={e.key} event={e} onGame={onOpenGame}/>)}</div>:<p className="ah-empty-day">这一天没有可查询的已解锁成就。</p>}
