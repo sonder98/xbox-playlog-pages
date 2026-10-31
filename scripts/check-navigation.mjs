@@ -227,7 +227,7 @@ try{
     // Compact sort selector occupies the same horizontal line as the current completion count.
     const sortRow=await page.locator('.achievement-sort-row').evaluate(el=>{
       const a=el.querySelector('.achievement-sort-toggle').getBoundingClientRect(),b=el.querySelector('.achievement-filter-count').getBoundingClientRect();
-      return {sameLine:Math.abs(a.y-b.y)<5,leftFirst:a.x<b.x,sortText:el.querySelector('.achievement-sort-toggle span').textContent};
+      return {sameLine:Math.abs((a.y+a.height/2)-(b.y+b.height/2))<2,leftFirst:a.x<b.x,sortText:el.querySelector('.achievement-sort-toggle span').textContent};
     });
     assert.equal(sortRow.sameLine,true);
     assert.equal(sortRow.leftFirst,true);
