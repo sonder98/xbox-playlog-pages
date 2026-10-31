@@ -1,7 +1,18 @@
-/** Xbox Gamerscore emblem: a crisp, scalable white disc with dark G, matching the native badge. */
+/** A transparent, stroke-based G mark with the same weight and 24px grid as Lucide icons. */
 export function GamerscoreIcon({size=16}:{size?:number}){
- return <svg className="gamerscore-icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-  <circle cx="12" cy="12" r="12" fill="#fff"/>
-  <path fill="#191919" d="M18.7 10.7H12.1v3.1h3.05c-.45 1.58-1.83 2.5-3.63 2.5-2.68 0-4.3-1.87-4.3-4.3 0-2.48 1.68-4.33 4.2-4.33 1.76 0 2.9.79 3.63 1.95l3.07-1.56c-1.29-2.62-3.66-4.12-6.7-4.12-4.47 0-7.63 3.34-7.63 8.05 0 4.58 3.07 8.05 7.73 8.05 4.43 0 7.46-3.19 7.46-7.84v-1.51Z"/>
+ return <svg
+  className="gamerscore-icon"
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth={2}
+  strokeLinecap="round"
+  strokeLinejoin="round"
+  aria-hidden="true"
+  focusable="false"
+ >
+  <path d="M18 7.6C16.6 5.9 14.5 5 12 5C7.8 5 4.5 8.2 4.5 12S7.8 19 12 19C16.2 19 19.5 16.2 19.5 12.5V12H12.5"/>
  </svg>;
 }

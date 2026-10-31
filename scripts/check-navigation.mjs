@@ -149,18 +149,33 @@ try{
     const beforeDetail=await page.evaluate(()=>window.scrollY);
     await page.locator('.game-card').first().click();
     await page.getByRole('dialog').waitFor();
-    // Both Gamerscore placements use the same white-disc icon, with no duplicated G suffix.
+    // Gamerscore shares Lucide's transparent, 2px stroke vocabulary and aligned 24px grid.
     const scoreSummary=page.locator('.game-detail .detail-gamerscore');
     assert.equal(await scoreSummary.count(),1);
     assert.equal(await scoreSummary.innerText(),'10','Total earned points keep their original value');
     const iconStyle=await scoreSummary.locator('svg.gamerscore-icon').evaluate(svg=>{
-      const circle=svg.querySelector('circle'),glyph=svg.querySelector('path');
-      const box=svg.getBoundingClientRect();
-      return {size:box.width,fill:circle?.getAttribute('fill'),glyph:!!glyph,hidden:svg.getAttribute('aria-hidden')};
+      const path=svg.querySelector('path'),box=svg.getBoundingClientRect(),outline=path?.getBBox();
+      const group=svg.closest('.detail-summary');
+      const trophy=group?.querySelector('svg.lucide-trophy');
+      const computed=getComputedStyle(svg);
+      return {
+       size:box.width,iconHeight:box.height,circle:svg.querySelector('circle')!==null,
+       fill:svg.getAttribute('fill'),stroke:svg.getAttribute('stroke'),strokeWidth:svg.getAttribute('stroke-width'),
+       pathFill:path?.getAttribute('fill'),hasPath:!!path,
+       glyphCenter:outline?{x:outline.x+outline.width/2,y:outline.y+outline.height/2}:null,
+       color:computed.color,trophyColor:trophy?getComputedStyle(trophy).color:null,
+       hidden:svg.getAttribute('aria-hidden')
+      };
     });
-    assert.equal(iconStyle.size,18,'Summary icon is compact and aligned with existing metadata');
-    assert.equal(iconStyle.fill,'#fff');
-    assert.ok(iconStyle.glyph,'Crisp vector G is rendered inside the white disc');
+    assert.equal(iconStyle.size,16,'Summary G icon matches neighboring time/trophy icons');
+    assert.equal(iconStyle.iconHeight,16);
+    assert.equal(iconStyle.circle,false,'G has no white circular background');
+    assert.equal(iconStyle.fill,'none');
+    assert.equal(iconStyle.stroke,'currentColor');
+    assert.equal(iconStyle.strokeWidth,'2','G matches Lucide stroke weight');
+    assert.ok(iconStyle.hasPath);
+    assert.ok(iconStyle.glyphCenter&&Math.abs(iconStyle.glyphCenter.x-12)<.6&&Math.abs(iconStyle.glyphCenter.y-12)<.6,'G glyph is optically centered on the 24px grid');
+    assert.equal(iconStyle.color,iconStyle.trophyColor,'G uses the same muted color as the other detail icons');
     assert.equal(iconStyle.hidden,'true');
     const scoreRows=await page.locator('.achievement').evaluateAll(rows=>rows.map(row=>{
       const badge=row.querySelector('.achievement-points'),svg=badge?.querySelector('svg.gamerscore-icon');

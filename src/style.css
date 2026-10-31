@@ -1668,19 +1668,19 @@ footer .dot {
 .game-detail .achievement-tools select { max-width:100%; }
 
 
-/* Screenshot-matched Gamerscore emblem, shared by total earned and each achievement. */
+/* Transparent outline Gamerscore mark, matching the Lucide time/trophy icons. */
 .gamerscore-icon {
-  display:inline-block;
-  flex:none;
+  display:block;
+  flex-shrink:0;
   vertical-align:middle;
 }
 .game-detail .detail-summary .detail-gamerscore {
   display:inline-flex;
   align-items:center;
-  gap:7px;
-  font-weight:600;
+  gap:8px;
+  font-weight:inherit;
   font-variant-numeric:tabular-nums;
-  color:var(--text-primary);
+  color:inherit;
   white-space:nowrap;
 }
 .game-detail .achievement-points {

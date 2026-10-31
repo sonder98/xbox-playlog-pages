@@ -98,7 +98,7 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
     const ids=new Set(group.achievementIds);
     return {group,achievements:sortAchievements((game.achievements||[]).filter(a=>ids.has(a.id)),order)};
   });
-  return <Modal title={game.name+' · 游戏详情'} onClose={onClose} className="game-detail"><GameCover game={game} wide/><div className="detail-heading"><div><span className="eyebrow">GAME DETAILS</span><h2>{game.name}</h2></div></div><div className="detail-summary"><span><Clock3 size={16}/>{hours(game.minutes)}</span><span><Trophy size={16}/>{game.earned}/{game.total} 成就</span><span className="detail-gamerscore" aria-label={`已获得 ${game.score.toLocaleString('zh-CN')} 玩家积分`}><GamerscoreIcon size={18}/><span>{game.score.toLocaleString('zh-CN')}</span></span></div>
+  return <Modal title={game.name+' · 游戏详情'} onClose={onClose} className="game-detail"><GameCover game={game} wide/><div className="detail-heading"><div><span className="eyebrow">GAME DETAILS</span><h2>{game.name}</h2></div></div><div className="detail-summary"><span><Clock3 size={16}/>{hours(game.minutes)}</span><span><Trophy size={16}/>{game.earned}/{game.total} 成就</span><span className="detail-gamerscore" aria-label={`已获得 ${game.score.toLocaleString('zh-CN')} 玩家积分`}><GamerscoreIcon size={16}/><span>{game.score.toLocaleString('zh-CN')}</span></span></div>
     {game.groupStatus!=='verified'&&<p className="note">本体与追加内容分组待同步，当前显示已取得的逐项记录。</p>}
     {!!game.achievements?.length&&<>
       <div className="achievement-tools">
