@@ -10,7 +10,9 @@ export async function deviceAuthorization(clientId:string,challenge:(info:{userC
  const diagnostic=(response:Response,data:any)=>'HTTP '+response.status+(errors.includes(data.error)?' '+data.error:'')+(Array.isArray(data.error_codes)?' codes='+data.error_codes.filter((v:any)=>Number.isInteger(v)&&v>0&&v<1000000000).slice(0,4).join(','):'');
  if(!first.response.ok||typeof first.data.device_code!=='string'||!/^[-A-Z0-9]{6,20}$/.test(first.data.user_code)||!Number.isFinite(first.data.expires_in))throw Error('微软没有接受设备授权（'+diagnostic(first.response,first.data)+'），请检查应用类型、公共客户端流与 scope。');
  // The public user code is only a sign-in challenge; the private device code never leaves memory.
- challenge({userCode:first.data.user_code,verificationUri:'https://microsoft.com/devicelogin'});
+ let verificationUri:string;
+ try{const uri=new URL(first.data.verification_uri);if(uri.protocol!=='https:'||!['microsoft.com','www.microsoft.com','login.microsoftonline.com','login.live.com'].includes(uri.hostname)||uri.username||uri.password||uri.search||uri.hash)throw Error();verificationUri=uri.href;}catch{throw Error('微软返回的设备验证地址无效，已停止授权。');}
+ challenge({userCode:first.data.user_code,verificationUri});
  let interval=Math.max(5,Number(first.data.interval)||5),elapsed=0;
  const expiry=Math.min(600,first.data.expires_in);
  while(elapsed+interval<=expiry){
