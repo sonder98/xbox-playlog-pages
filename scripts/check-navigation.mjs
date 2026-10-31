@@ -207,7 +207,7 @@ try{
     assert.equal(await page.locator('.achievement-filter-count').innerText(),'2/4');
     assert.equal(await page.locator('.achievement-group').count(),1,'One sorted list rather than separate base/DLC section blocks');
     assert.equal(await page.locator('.achievement-group').getAttribute('data-group-id'),'all');
-    for(const [sort,expected] of [['date-asc',['1','2','3','4']],['rarity-asc',['1','2','3','4']],['rarity-desc',['2','1','3','4']],['date-desc',['2','1','3','4']]]){
+    for(const [sort,expected] of [['date-asc',['1','2','3','4']],['rarity-asc',['1','2','3','4']],['rarity-desc',['3','2','1','4']],['date-desc',['2','1','3','4']]]){
       await page.getByRole('combobox',{name:'成就排序',exact:true}).selectOption(sort);
       assert.deepEqual(await achievementIds(),expected);
     }
