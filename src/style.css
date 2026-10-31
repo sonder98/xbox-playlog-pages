@@ -1927,3 +1927,129 @@ footer .dot {
   .title-row .overview-refresh .refresh-label { display:none; }
   .game-detail .achievement-tab { padding-left:16px; padding-right:16px; }
 }
+
+
+/* ACHIEVEMENT JOURNEY — mobile-first native Playlog surface */
+.ah-preview { margin-bottom:24px; overflow:hidden; }
+.ah-preview-link {display:flex;flex-direction:column;align-items:stretch;width:100%;gap:18px;text-align:left;padding:0;color:inherit;}
+.ah-preview-heading,.ah-preview-footer {display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;}
+.ah-preview-heading>span:first-child {display:flex;flex-direction:column;gap:7px;min-width:0;}
+.ah-preview-heading strong {font-size:20px;font-weight:600;line-height:1.25;}
+.ah-preview-heading small {font-size:12px;color:var(--text-muted);font-weight:400;}
+.ah-preview-more {display:inline-flex;align-items:center;gap:4px;color:var(--text-secondary);font-size:12px;white-space:nowrap;}
+.ah-preview-grid {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;width:100%;}
+.ah-preview-cell {display:block;height:18px;border-radius:5px;}
+.ah-preview-footer {font-size:12px;color:var(--text-secondary);}
+.ah-preview-footer svg {color:var(--accent);}
+.ah-preview-link:hover .ah-preview-more,.ah-preview-link:hover .ah-preview-footer svg {color:var(--accent);}
+.ah-level-0 {background:#303030;}
+.ah-level-1 {background:#30451e;}
+.ah-level-2 {background:#567e30;}
+.ah-level-3 {background:#8dbd43;}
+.ah-level-4 {background:var(--accent);}
+.ah-page {width:min(100%,710px);margin:0 auto 32px;}
+.ah-page .ah-back {display:inline-flex;gap:8px;align-items:center;min-height:44px;padding:0;color:var(--text-secondary);font-size:13px;margin:0 0 20px;}
+.ah-page .ah-back:hover {color:var(--accent);}
+.ah-page h1 {font-size:30px;font-weight:600;letter-spacing:-.7px;}
+.ah-intro {font-size:13px;color:var(--text-secondary);margin-top:9px;}
+.ah-intro-block {margin-bottom:22px;}
+.ah-overview-stats {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 20px;}
+.ah-overview-stats>div {display:flex;flex-direction:column;gap:7px;padding:18px;background:var(--surface-raised);border-radius:16px;min-width:0;}
+.ah-overview-stats small {color:var(--text-muted);font-size:12px;}
+.ah-overview-stats strong {font-size:24px;font-weight:600;line-height:1.25;font-variant-numeric:tabular-nums;}
+.ah-legend {display:flex;align-items:center;justify-content:space-between;gap:9px;padding:16px;border-radius:17px;background:var(--surface);font-size:13px;margin-bottom:24px;}
+.ah-legend-right {display:flex;align-items:center;gap:7px;}
+.ah-legend-right small {font-size:11px;color:var(--text-muted);}
+.ah-legend-right i {width:28px;height:11px;border-radius:3px;display:block;flex:none;}
+.ah-year {padding-bottom:22px;margin-bottom:24px;border-bottom:1px solid var(--border);}
+.ah-year:last-of-type {border-bottom:none;}
+.ah-year-heading {display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:17px;}
+.ah-year-heading h2 {font-size:21px;font-weight:600;}
+.ah-year-heading span {font-size:12px;color:var(--text-secondary);white-space:nowrap;}
+.ah-half+.ah-half {margin-top:19px;}
+.ah-months,.ah-week-area {display:grid;grid-template-columns:18px minmax(0,1fr);align-items:start;}
+.ah-months {margin-bottom:9px;}
+.ah-month-grid {display:grid;min-width:0;align-items:center;}
+.ah-month-grid span {font-size:10px;color:var(--text-muted);white-space:nowrap;grid-row:1;}
+.ah-weekdays {height:100%;display:grid;grid-template-rows:repeat(7,minmax(0,1fr));font-size:9px;color:var(--text-muted);text-align:left;align-items:center;}
+.ah-weekdays span:nth-child(1){grid-row:1;}
+.ah-weekdays span:nth-child(2){grid-row:3;}
+.ah-weekdays span:nth-child(3){grid-row:5;}
+.ah-day-grid {display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,minmax(0,1fr));gap:3px;min-width:0;}
+.ah-cell,.ah-blank-day {display:block;width:100%;aspect-ratio:1;border-radius:2px;padding:0;min-width:0;position:relative;}
+.ah-cell {border:0;cursor:pointer;}
+.ah-cell:hover:not(:disabled) {outline:1px solid var(--text-primary);outline-offset:1px;z-index:2;}
+.ah-cell:focus-visible {outline:2px solid var(--accent);outline-offset:2px;z-index:3;}
+.ah-cell.is-selected {outline:2px solid var(--accent);outline-offset:2px;z-index:2;}
+.ah-cell:disabled {background:#151515;cursor:default;opacity:.55;}
+.ah-blank-day {background:#151515;opacity:.48;}
+.ah-footnote {font-size:11px;color:var(--text-muted);line-height:1.7;margin-top:24px;}
+.ah-sheet-backdrop {position:fixed;inset:0;background:rgba(0,0,0,.66);z-index:80;display:flex;justify-content:center;align-items:flex-end;}
+.ah-sheet {width:100%;max-width:620px;min-height:min(45svh,370px);max-height:82svh;background:var(--surface-raised);border:1px solid #454545;border-radius:26px 26px 0 0;padding:0 20px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;box-shadow:0 -18px 60px rgba(0,0,0,.44);overflow-y:auto;}
+.ah-sheet-grab {height:32px;display:flex;align-items:center;justify-content:center;flex:none;touch-action:pan-y;}
+.ah-sheet-grab i {width:40px;height:5px;background:#616161;border-radius:10px;}
+.ah-sheet .ah-sheet-heading {padding:0;min-height:unset;border:0;background:none;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
+.ah-sheet-heading>div {display:flex;flex-direction:column;gap:5px;}
+.ah-sheet-heading strong {font-size:20px;font-weight:600;}
+.ah-sheet-heading span {font-size:12px;color:var(--text-muted);}
+.ah-sheet-close {display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;background:var(--surface-hover);border-radius:50%;}
+.ah-sheet-total {display:flex;align-items:baseline;gap:8px;margin:14px 0;border-bottom:1px solid var(--border);padding-bottom:15px;}
+.ah-sheet-total strong {font-size:36px;color:var(--accent);line-height:1.2;}
+.ah-sheet-total span {font-size:13px;color:var(--text-secondary);}
+.ah-sheet-games {display:flex;flex-direction:column;gap:12px;margin-bottom:16px;}
+.ah-sheet-game {display:flex;align-items:center;gap:10px;min-width:0;font-size:13px;}
+.ah-sheet-game>span:nth-child(2) {flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.ah-sheet-game b {font-size:13px;white-space:nowrap;font-weight:500;}
+.ah-mini-art {width:38px;height:38px;flex:none;border-radius:8px;background:var(--surface-hover);display:grid;place-items:center;overflow:hidden;color:var(--text-muted);}
+.ah-mini-art img {width:100%;height:100%;object-fit:contain;}
+.ah-more-games,.ah-no-activity {font-size:12px;color:var(--text-muted);}
+.ah-sheet-action {display:flex;align-items:center;justify-content:space-between;min-height:49px;padding:12px 15px;background:var(--accent);color:var(--on-accent);border-radius:14px;font-weight:600;margin-top:auto;}
+.ah-day-toolbar {display:flex;align-items:center;justify-content:space-between;gap:10px;margin:26px 0 15px;font-size:12px;color:var(--text-secondary);}
+.ah-day-toolbar>span {display:flex;align-items:center;gap:7px;}
+.ah-day-toolbar button {color:var(--accent);font-size:12px;min-height:38px;}
+.ah-achievement-list {display:flex;flex-direction:column;gap:14px;}
+.ah-achievement-card {background:var(--surface);padding:14px;border-radius:18px;min-width:0;}
+.ah-achievement-primary {display:flex;gap:13px;align-items:flex-start;min-width:0;}
+.ah-achievement-art {display:grid;place-items:center;flex:none;width:104px;height:65px;border-radius:11px;background:var(--surface-hover);overflow:hidden;color:var(--accent);}
+.ah-achievement-art img {width:100%;height:100%;object-fit:contain;}
+.ah-achievement-main {flex:1;min-width:0;}
+.ah-achievement-heading {display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.ah-achievement-heading h3 {font-size:14px;line-height:1.45;font-weight:600;overflow-wrap:anywhere;}
+.ah-achievement-heading time {font-size:12px;color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums;}
+.ah-achievement-desc {font-size:12px;color:var(--text-secondary);margin-top:7px;line-height:1.5;overflow-wrap:anywhere;}
+.ah-achievement-meta {display:flex;gap:16px;align-items:center;margin-top:10px;flex-wrap:wrap;}
+.ah-achievement-meta span {display:inline-flex;gap:5px;align-items:center;font-size:11px;color:var(--text-secondary);}
+.ah-achievement-meta .ah-rare,.ah-achievement-meta .ah-rare svg {color:#E5BE73;}
+.ah-game-source {display:flex;align-items:center;gap:10px;width:100%;min-width:0;text-align:left;margin-top:12px;padding:12px 0 0;border-top:1px solid var(--border);color:var(--text-muted);}
+.ah-game-source .ah-mini-art {width:28px;height:28px;border-radius:6px;}
+.ah-game-source>span:nth-child(2) {font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ah-game-source .ah-game-group {font-size:11px;flex:none;}
+.ah-game-source:hover {color:var(--text-primary);}
+.ah-empty-day {background:var(--surface);padding:32px 20px;border-radius:16px;color:var(--text-secondary);font-size:13px;text-align:center;}
+@media(max-width:700px){
+ .ah-preview {padding:17px;border-radius:22px;margin-bottom:20px;}
+ .ah-preview-heading strong {font-size:18px;}
+ .ah-preview-grid {gap:7px;}
+ .ah-preview-cell {height:16px;}
+ .ah-page {margin-top:0;}
+ .ah-page h1 {font-size:27px;}
+ .ah-overview-stats {gap:10px;}
+ .ah-overview-stats>div {padding:13px;}
+ .ah-overview-stats strong {font-size:22px;}
+ .ah-year-heading h2 {font-size:18px;}
+ .ah-legend {padding:13px;font-size:12px;}
+ .ah-legend-right {gap:5px;}
+ .ah-legend-right i {width:22px;}
+ .ah-achievement-art {width:74px;height:66px;}
+ .ah-achievement-heading h3 {font-size:13px;}
+ .ah-achievement-desc {font-size:11px;}
+ .ah-achievement-card {padding:13px;}
+ .ah-sheet {min-height:48svh;}
+}
+@media(max-width:360px){
+ .ah-achievement-art {width:60px;height:60px;}
+ .ah-achievement-primary {gap:10px;}
+ .ah-achievement-meta {gap:10px;}
+ .ah-day-grid {gap:2px;}
+}
+@media(prefers-reduced-motion:no-preference){.ah-sheet {animation:ah-sheet-enter .18s ease-out both;}@keyframes ah-sheet-enter{from{transform:translateY(24px);opacity:.8;}to{transform:translateY(0);opacity:1;}}}
