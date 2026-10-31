@@ -29,7 +29,7 @@ export async function microsoftProvider(config:DirectConfig,request:typeof fetch
   if(local.pathname==='/account'&&!body){url='https://profile.xboxlive.com/users/me/profile/settings?settings=Gamertag,GameDisplayPicRaw';}
   else{
    if(!xuid)throw Error('尚未确认 Xbox 账号身份。');
-   if(local.pathname==='/player/titleHistory'&&!body)url=`https://titlehub.xboxlive.com/users/xuid(${xuid})/titles/titlehistory/decoration/achievement,image,scid?${continuation()}`;
+   if(local.pathname==='/player/titleHistory'&&!body){const params=continuation();params.set('maxItems','5000');url=`https://titlehub.xboxlive.com/users/xuid(${xuid})/titles/titlehistory/decoration/achievement,image,scid?${params}`;}
    else if(/^\/player\/achievements\/[0-9]{1,10}$/.test(local.pathname)&&!body){
     const titleId=local.pathname.split('/').pop()!;if(Number(titleId)<1||Number(titleId)>4294967295)throw Error('Title ID 格式无效。');
     const params=continuation();params.set('titleId',titleId);params.set('unlockedOnly','false');
