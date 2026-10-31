@@ -73,6 +73,9 @@ try{
     }
     await unlock();
     await page.locator('.game-card').first().waitFor();
+    const firstSpan=page.locator('.game-card').first().locator('.game-time-span');
+    assert.equal(await firstSpan.innerText(),'时间跨度：1.0天','Games show time between earliest and latest unlocked achievements');
+    assert.equal(await page.locator('.game-card .game-time-span').count(),5,'Overview recent games all display achievement time spans');
     if(mobile){
       const refresh=await page.locator('.title-row .overview-refresh').evaluate(button=>{
         const a=button.getBoundingClientRect(),b=button.querySelector('svg').getBoundingClientRect();
@@ -274,7 +277,13 @@ try{
     await page.getByRole('heading',{name:'我的游戏档案',exact:true}).waitFor();
     await page.getByRole('button',{name:'全部游戏',exact:true}).click();
     await page.getByRole('textbox',{name:'搜索游戏名称'}).fill('Test Game 1');
-    await page.getByRole('combobox',{name:'排序游戏'}).selectOption('time');
+    const gameSort=page.getByRole('combobox',{name:'排序游戏'});
+    await gameSort.selectOption('span-desc');
+    assert.equal(await gameSort.inputValue(),'span-desc','Longest-to-shortest achievement span sorting is available');
+    assert.equal(await page.locator('.game-card .game-time-span').first().innerText(),'时间跨度：1.0天');
+    await gameSort.selectOption('span-asc');
+    assert.equal(await gameSort.inputValue(),'span-asc','Shortest-to-longest achievement span sorting is available');
+    await gameSort.selectOption('time');
     const beforeDetail=await page.evaluate(()=>window.scrollY);
     await page.locator('.game-card').first().click();
     await page.getByRole('dialog').waitFor();

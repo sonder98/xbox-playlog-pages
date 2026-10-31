@@ -2189,3 +2189,8 @@ footer .dot {
  .ah-sheet .ah-sheet-heading strong {font-size:clamp(16px,4.9vw,19px);}
  .ah-preview-cell .ah-dot {font-size:10px;}
 }
+
+/* Time between a game's earliest and latest timestamped unlocked achievement. */
+.game-card .game-last {display:flex;flex-wrap:wrap;column-gap:10px;row-gap:3px;align-items:baseline;line-height:1.5;}
+.game-card .game-last-played,.game-card .game-time-span {display:inline-block;white-space:nowrap;}
+.game-card .game-time-span {font-variant-numeric:tabular-nums;color:var(--text-muted);}
