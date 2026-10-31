@@ -85,7 +85,13 @@ try{
     assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['heatmap','recent','top','stats']);
     assert.equal(await page.locator('.ah-preview-grid .ah-preview-cell').count(),30,'Overview shows only 30 days');
     assert.equal(await page.locator('.ah-preview-weekdays span').count(),7,'Overview has explicit Monday-Sunday weekday labels');
-    assert.match(await page.locator('.ah-preview-axis').innerText(),/左 → 右.*上往下/,'Preview explains the chronology');
+    assert.equal(await page.locator('.ah-preview-axis').count(),0,'Overview omits explanatory direction text');
+    const previewDot=await page.locator('.ah-preview-cell .ah-dot').first().evaluate(el=>{
+      const button=el.parentElement.getBoundingClientRect(),dot=el.getBoundingClientRect();
+      return {ratio:dot.width/dot.height,relative:dot.width/button.width,radius:getComputedStyle(el).borderRadius};
+    });
+    assert.ok(Math.abs(previewDot.ratio-1)<.04&&previewDot.relative<.9&&previewDot.relative>.7,'Circular heatmap dots are slightly smaller than tap targets');
+    assert.equal(previewDot.radius,'50%','Overview heatmap dots are circular');
     const previewSquare=await page.locator('.ah-preview-cell').first().evaluate(el=>{
       const r=el.getBoundingClientRect();return r.width/r.height;
     });
@@ -105,20 +111,43 @@ try{
       const rect=await overviewSheet.boundingBox();
       assert.ok(rect&&rect.y>250&&rect.y<650,'Home preview opens a lower-half mobile sheet');
     }
+    await overviewSheet.getByRole('button',{name:/前一天 2026 年 10 月 26 日/}).click();
+    await page.getByRole('dialog',{name:'2026 年 10 月 26 日 成就摘要'}).waitFor();
+    assert.ok((await page.getByRole('dialog',{name:'2026 年 10 月 26 日 成就摘要'}).innerText()).includes('0'));
+    await page.getByRole('dialog',{name:'2026 年 10 月 26 日 成就摘要'}).getByRole('button',{name:/后一天 2026 年 10 月 27 日/}).click();
+    await overviewSheet.waitFor();
     await overviewSheet.getByRole('button',{name:'关闭日期摘要'}).click();
     await page.getByRole('button',{name:'查看全部成就热力图'}).click();
     await page.locator('.ah-month-card').first().waitFor();
     assert.equal(await page.locator('.ah-month-card').count(),59,'Month-by-month calendars cover 2022 through Nov 2026');
     assert.equal(await page.locator('.ah-month-card').first().getByRole('heading').innerText(),'2026 年 11 月');
-    const monthSquare=await page.locator('.ah-month-card .ah-cell').first().evaluate(el=>{
-      const box=el.getBoundingClientRect();return {ratio:box.width/box.height,width:box.width};
+    const monthDot=await page.locator('.ah-month-card .ah-cell .ah-dot').first().evaluate(el=>{
+      const box=el.getBoundingClientRect(),button=el.parentElement.getBoundingClientRect();
+      return {ratio:box.width/box.height,width:button.width,relative:box.width/button.width,radius:getComputedStyle(el).borderRadius};
     });
-    assert.ok(Math.abs(monthSquare.ratio-1)<.04&&monthSquare.width>=27,'Month tiles are touch-size squares');
+    assert.ok(Math.abs(monthDot.ratio-1)<.04&&monthDot.width>=27,'Monthly date tap targets remain touch-friendly');
+    assert.equal(monthDot.radius,'50%','Month heatmap points are circular');
+    assert.ok(monthDot.relative<.9&&monthDot.relative>.7,'Monthly circles are slightly inset');
+    assert.equal(await page.locator('.ah-legend').count(),0,'Full heatmap no longer contains a color legend');
+    const yearNav=page.getByRole('navigation',{name:'按年份定位热力图'});
+    await yearNav.getByRole('button',{name:'2024'}).click();
+    await page.waitForFunction(()=>Math.abs(document.getElementById('ah-year-2024')?.getBoundingClientRect().top-85)<45);
+    assert.equal(await yearNav.getByRole('button',{name:'2024'}).getAttribute('aria-current'),'location','Year anchor reflects the active year');
+    assert.equal(await yearNav.evaluate(el=>getComputedStyle(el).position),'sticky','Year navigation remains sticky');
+    await yearNav.getByRole('button',{name:'2026'}).click();
+    await page.waitForFunction(()=>Math.abs(document.getElementById('ah-year-2026')?.getBoundingClientRect().top-85)<45);
     await page.getByRole('button',{name:'2026 年 10 月 27 日，解锁 12 个成就',exact:true}).click();
     const sheet=page.getByRole('dialog',{name:'2026 年 10 月 27 日 成就摘要'});
     await sheet.waitFor();
     assert.ok((await sheet.innerText()).includes('12'));
     assert.ok((await sheet.innerText()).includes('Test Game 0'));
+    await sheet.getByRole('button',{name:/前一天 2026 年 10 月 26 日/}).click();
+    const previousSheet=page.getByRole('dialog',{name:'2026 年 10 月 26 日 成就摘要'});
+    await previousSheet.waitFor();
+    assert.equal(await page.locator('.ah-cell.is-selected').count(),1,'Day stepper keeps the calendar selection in sync');
+    assert.equal(await previousSheet.getByRole('button',{name:'查看当天全部成就'}).isDisabled(),true,'Empty-day detail CTA is disabled');
+    await previousSheet.getByRole('button',{name:/后一天 2026 年 10 月 27 日/}).click();
+    await sheet.waitFor();
     await sheet.getByRole('button',{name:'查看当天全部成就'}).click();
     await page.locator('.ah-achievement-card').first().waitFor();
     assert.equal(await page.locator('.ah-achievement-card').count(),12,'All day unlocks across games appear');
@@ -150,7 +179,7 @@ try{
     assert.equal(await page.locator('.ah-cell.is-selected').count(),1,'Selected calendar date persists after returning');
     await page.getByRole('button',{name:/返回概览/}).click();
     await page.locator('.game-card').first().waitFor();
-    console.log((mobile?'Mobile':'Desktop')+': PASS square preview, month calendars, day sheets, chronological/rarity sort, date arrows and artwork fit');
+    console.log((mobile?'Mobile':'Desktop')+': PASS circular dots, sticky year anchors, sheet date stepping, chronological/rarity sort and artwork fit');
     assert.equal(await page.locator('.top-card').count(),5);
     assert.equal(await page.locator('.top-card .completion-ornament').count(),5);
     await page.locator('.top-card').last().click();
