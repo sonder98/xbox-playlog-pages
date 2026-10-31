@@ -131,7 +131,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    const title=titles.find(t=>String(t.titleId)===game.id),summary=title?.achievement;
    const lastPlayed=title?.titleHistory?.lastTimePlayed||null;
    const oldAchievements=old?.achievements||[],oldGroups=old?.groups||[];
-   const unchanged=oldAchievements.length>0&&old.groupStatus==='verified'&&oldGroups.length>0&&!!lastPlayed&&old.lastPlayed===lastPlayed&&summary?.totalAchievements>0&&summary.totalAchievements===old.total&&summary.currentAchievements===old.earned&&summary.currentGamerscore===old.score;
+   const unchanged=!!old&&oldAchievements.length>0&&old.groupStatus==='verified'&&oldGroups.length>0&&!!lastPlayed&&old.lastPlayed===lastPlayed&&summary?.totalAchievements>0&&summary.totalAchievements===old.total&&summary.currentAchievements===old.earned&&summary.currentGamerscore===old.score;
    if(unchanged){
     const minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id);
     Object.assign(game,{achievements:oldAchievements,groups:oldGroups,groupStatus:old.groupStatus,earned:old.earned,total:old.total,score:old.score,maxScore:old.maxScore,minutes:minutes??old.minutes,lastPlayed:old.lastPlayed});
