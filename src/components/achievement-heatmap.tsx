@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {ArrowLeft,ArrowRight,ChevronLeft,ChevronRight,Gem,Trophy,X} from 'lucide-react';
+import {ArrowLeft,ArrowRight,ChevronLeft,ChevronRight,Gem,Trophy} from 'lucide-react';
 import type {Game} from '../data';
 import {GamerscoreIcon} from './gamerscore-icon';
 import {AchievementSortControl} from './achievement-sort-control';
@@ -58,7 +58,7 @@ export function AchievementPreview({games,onOpen,onOpenDay}:{games:Game[];onOpen
     <button type="button" key={d.day} data-day={d.day}
      className="ah-preview-cell"
      aria-label={dayLabel(d.day)+'，解锁 '+d.count+' 个成就'}
-     onClick={()=>setSheetDay(d.day!)}><span aria-hidden="true" className={'ah-dot ah-level-'+heatLevel(d.count)}/></button>:<span className="ah-preview-placeholder" key={'pad-'+i} aria-hidden="true"/>)}
+     onClick={()=>setSheetDay(d.day!)}><span aria-hidden="true" className={'ah-dot ah-level-'+heatLevel(d.count)}>{Number(d.day.slice(-2))}</span></button>:<span className="ah-preview-placeholder" key={'pad-'+i} aria-hidden="true"/>)}
   </div>
   <button className="ah-preview-footer" type="button" onClick={onOpen}><span>解锁 {fmt(count)} 个 · 活跃 {active} 天</span><ArrowRight size={17}/></button>
   {sheetDay&&<Sheet day={sheetDay} activity={activity} minDay={days[0].day} onChangeDay={setSheetDay} onClose={()=>setSheetDay(null)} onDetail={()=>{const day=sheetDay;setSheetDay(null);onOpenDay(day);}}/>}
@@ -71,23 +71,20 @@ function Sheet({day,activity,minDay='2022-01-01',onChangeDay,onClose,onDetail}:{
  useEffect(()=>{
   const before=document.body.style.overflow;
   document.body.style.overflow='hidden';
-  handle.current?.querySelector<HTMLButtonElement>('.ah-sheet-close')?.focus({preventScroll:true});
+  const nextAction=handle.current?.querySelector<HTMLButtonElement>('.ah-sheet-date-arrow:not(:disabled)');
+  if(nextAction)nextAction.focus({preventScroll:true});
+  else handle.current?.focus({preventScroll:true});
   const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();onClose();}};
   document.addEventListener('keydown',key);
   return ()=>{document.body.style.overflow=before;document.removeEventListener('keydown',key);};
  },[onClose]);
  return <div className="ah-sheet-backdrop" onClick={onClose}>
-  <section ref={handle} className="ah-sheet" role="dialog" aria-modal="true" aria-label={dayLabel(day)+' 成就摘要'} onClick={e=>e.stopPropagation()}>
+  <section ref={handle} tabIndex={-1} className="ah-sheet" role="dialog" aria-modal="true" aria-label={dayLabel(day)+' 成就摘要'} onClick={e=>e.stopPropagation()}>
    <div className="ah-sheet-grab" onTouchStart={e=>{touchY.current=e.touches[0]?.clientY??null;}} onTouchEnd={e=>{if(touchY.current!==null&&(e.changedTouches[0]?.clientY??0)-touchY.current>70)onClose();touchY.current=null;}}><i/></div>
-   <header className="ah-sheet-heading">
-    <div className="ah-sheet-title-row">
-     <strong>{dayLabel(day)}</strong>
-     <button className="ah-sheet-close" type="button" aria-label="关闭日期摘要" onClick={onClose}><X size={19}/></button>
-    </div>
-    <div className="ah-sheet-date-nav" aria-label="切换日期">
-     <button type="button" className="ah-sheet-date-arrow" aria-label={'前一天 '+dayLabel(prev)} disabled={prev<minDay} onClick={()=>onChangeDay(prev)}><ChevronLeft size={18}/><span>前一天</span></button>
-     <button type="button" className="ah-sheet-date-arrow" aria-label={'后一天 '+dayLabel(next)} disabled={next>activity.today} onClick={()=>onChangeDay(next)}><span>后一天</span><ChevronRight size={18}/></button>
-    </div>
+   <header className="ah-sheet-heading" aria-label="日期及前后导航">
+    <button type="button" className="ah-sheet-date-arrow" aria-label={'前一天 '+dayLabel(prev)} title="前一天" disabled={prev<minDay} onClick={()=>onChangeDay(prev)}><ChevronLeft size={20} aria-hidden="true"/></button>
+    <strong>{dayLabel(day)}</strong>
+    <button type="button" className="ah-sheet-date-arrow" aria-label={'后一天 '+dayLabel(next)} title="后一天" disabled={next>activity.today} onClick={()=>onChangeDay(next)}><ChevronRight size={20} aria-hidden="true"/></button>
    </header>
    <div className="ah-sheet-games">
     {games.length?games.slice(0,3).map(({game,count:num})=><div className="ah-sheet-game" key={game.id}><Art src={game.cachedImage||game.image} className="ah-mini-art"/><span>{game.name}</span><b>{num} 个</b></div>):<p className="ah-no-activity">这一天没有解锁成就</p>}
