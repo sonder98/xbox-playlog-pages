@@ -84,35 +84,71 @@ try{
     const statsBeforeHiding=await page.locator('.stats').innerText();
     assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['heatmap','recent','top','stats']);
     assert.equal(await page.locator('.ah-preview-grid .ah-preview-cell').count(),30,'Overview shows only 30 days');
+    assert.equal(await page.locator('.ah-preview-weekdays span').count(),7,'Overview has explicit Monday-Sunday weekday labels');
+    assert.match(await page.locator('.ah-preview-axis').innerText(),/左 → 右.*上往下/,'Preview explains the chronology');
+    const previewSquare=await page.locator('.ah-preview-cell').first().evaluate(el=>{
+      const r=el.getBoundingClientRect();return r.width/r.height;
+    });
+    assert.ok(Math.abs(previewSquare-1)<.04,'Recent 30-day preview tiles are square');
+    await page.locator('.ah-preview-cell[data-day="2026-10-27"]').click();
+    const overviewSheet=page.getByRole('dialog',{name:'2026 年 10 月 27 日 成就摘要'});
+    await overviewSheet.waitFor();
+    const placement=await overviewSheet.evaluate(el=>{
+      const games=el.querySelector('.ah-sheet-games').getBoundingClientRect();
+      const summary=el.querySelector('.ah-sheet-total').getBoundingClientRect();
+      const icon=el.querySelector('.ah-sheet-game .ah-mini-art').getBoundingClientRect();
+      return {gamesBottom:games.bottom,summaryTop:summary.top,iconWidth:icon.width};
+    });
+    assert.ok(placement.gamesBottom<placement.summaryTop,'Per-game summary is above overall totals');
+    assert.ok(placement.iconWidth>=50,'Game artwork is visibly larger in day sheet');
+    if(mobile){
+      const rect=await overviewSheet.boundingBox();
+      assert.ok(rect&&rect.y>250&&rect.y<650,'Home preview opens a lower-half mobile sheet');
+    }
+    await overviewSheet.getByRole('button',{name:'关闭日期摘要'}).click();
     await page.getByRole('button',{name:'查看全部成就热力图'}).click();
-    await page.locator('.ah-year').first().waitFor();
-    assert.equal(await page.locator('.ah-year').count(),5,'Calendar covers 2022 through 2026');
-    assert.equal(await page.locator('.ah-year').first().getByRole('heading').innerText(),'2026 年');
+    await page.locator('.ah-month-card').first().waitFor();
+    assert.equal(await page.locator('.ah-month-card').count(),59,'Month-by-month calendars cover 2022 through Nov 2026');
+    assert.equal(await page.locator('.ah-month-card').first().getByRole('heading').innerText(),'2026 年 11 月');
+    const monthSquare=await page.locator('.ah-month-card .ah-cell').first().evaluate(el=>{
+      const box=el.getBoundingClientRect();return {ratio:box.width/box.height,width:box.width};
+    });
+    assert.ok(Math.abs(monthSquare.ratio-1)<.04&&monthSquare.width>=27,'Month tiles are touch-size squares');
     await page.getByRole('button',{name:'2026 年 10 月 27 日，解锁 12 个成就',exact:true}).click();
     const sheet=page.getByRole('dialog',{name:'2026 年 10 月 27 日 成就摘要'});
     await sheet.waitFor();
     assert.ok((await sheet.innerText()).includes('12'));
     assert.ok((await sheet.innerText()).includes('Test Game 0'));
-    if(mobile){
-      const rect=await sheet.boundingBox();
-      assert.ok(rect&&rect.y>280&&rect.y<650,'Mobile day summary opens as a lower-half bottom sheet');
-    }
     await sheet.getByRole('button',{name:'查看当天全部成就'}).click();
     await page.locator('.ah-achievement-card').first().waitFor();
     assert.equal(await page.locator('.ah-achievement-card').count(),12,'All day unlocks across games appear');
     assert.ok(page.url().endsWith('#achievements/day/2026-10-27'),'Day detail is deep-linkable');
     assert.equal(await page.locator('.ah-achievement-card .ah-game-source').count(),12,'Each achievement identifies its original game');
-    assert.ok(await page.locator('.ah-achievement-card time').first().innerText()==='20:24');
-    await page.getByRole('button',{name:'切换解锁时间排序'}).click();
+    assert.equal(await page.locator('.ah-achievement-card time').first().innerText(),'20:24');
+    const artFrame=await page.locator('.ah-achievement-art').first().evaluate(el=>{
+      const r=el.getBoundingClientRect(),img=el.querySelector('img');return {ratio:r.width/r.height,fit:img?getComputedStyle(img).objectFit:null};
+    });
+    assert.ok(Math.abs(artFrame.ratio-16/9)<.04,'Achievement images adapt to 16:9 frame');
+    assert.equal(artFrame.fit,'contain','Achievement art is not cropped');
+    await page.getByRole('button',{name:/前一天 2026 年 10 月 26 日/}).click();
+    assert.equal(await page.getByRole('heading',{name:'2026 年 10 月 26 日'}).count(),1);
+    assert.ok((await page.locator('.ah-empty-day').innerText()).includes('没有'));
+    await page.getByRole('button',{name:/后一天 2026 年 10 月 27 日/}).click();
+    await page.locator('.ah-achievement-card').first().waitFor();
+    await page.getByRole('button',{name:'成就排序'}).click();
+    await page.getByRole('menu',{name:'成就排序方式'}).getByRole('menuitemradio',{name:'稀有度：低 → 高'}).click();
+    await page.getByRole('button',{name:'成就排序'}).click();
+    assert.equal(await page.getByRole('menu',{name:'成就排序方式'}).getByRole('menuitemradio',{name:'稀有度：低 → 高'}).getAttribute('aria-checked'),'true');
+    await page.getByRole('button',{name:'成就排序'}).click();
     await page.locator('.ah-game-source').first().click();
     await page.getByRole('dialog',{name:/游戏详情/}).waitFor();
     await page.getByRole('button',{name:'关闭详情'}).click();
     await page.getByRole('button',{name:/返回热力图/}).click();
-    await page.locator('.ah-day-grid').first().waitFor();
+    await page.locator('.ah-month-calendar').first().waitFor();
     assert.equal(await page.locator('.ah-cell.is-selected').count(),1,'Selected calendar date persists after returning');
     await page.getByRole('button',{name:/返回概览/}).click();
     await page.locator('.game-card').first().waitFor();
-    console.log((mobile?'Mobile':'Desktop')+': PASS recent heatmap, 2022+ history, day bottom sheet, chronological achievement detail, deep links and game provenance');
+    console.log((mobile?'Mobile':'Desktop')+': PASS square preview, month calendars, day sheets, chronological/rarity sort, date arrows and artwork fit');
     assert.equal(await page.locator('.top-card').count(),5);
     assert.equal(await page.locator('.top-card .completion-ornament').count(),5);
     await page.locator('.top-card').last().click();
