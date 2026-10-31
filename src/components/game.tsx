@@ -1,7 +1,8 @@
 import {useEffect,useRef,useState,useId,type ReactNode} from 'react';
-import {Gamepad2,Trophy,X,Lock,Check,Clock3,Gem,ArrowDownUp} from 'lucide-react';
+import {Gamepad2,Trophy,X,Lock,Check,Clock3,Gem} from 'lucide-react';
 import {completion} from '../completion';
 import {GamerscoreIcon} from './gamerscore-icon';
+import {AchievementSortControl} from './achievement-sort-control';
 import {sortAchievements,type AchievementSort} from '../achievement-sort';
 import type {Game,Achievement} from '../data';
 
@@ -96,25 +97,6 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
   const addOns=groups.filter(group=>group.kind!=='base');
   const categorized=!!base&&addOns.length>0;
   const [order,setOrder]=useState<AchievementSort>('date-desc');
-  const [sortOpen,setSortOpen]=useState(false);
-  const sortContainerRef=useRef<HTMLDivElement>(null);
-  const sortTriggerRef=useRef<HTMLButtonElement>(null);
-  const sortMenuRef=useRef<HTMLDivElement>(null);
-  const sortChoices:[AchievementSort,string][]=[
-    ['date-desc','解锁时间：新 → 旧'],
-    ['date-asc','解锁时间：旧 → 新'],
-    ['rarity-asc','稀有度：低 → 高'],
-    ['rarity-desc','稀有度：高 → 低'],
-  ];
-  useEffect(()=>{
-    if(!sortOpen)return;
-    const outside=(event:PointerEvent)=>{
-      if(!sortContainerRef.current?.contains(event.target as Node))setSortOpen(false);
-    };
-    document.addEventListener('pointerdown',outside);
-    sortMenuRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus();
-    return ()=>document.removeEventListener('pointerdown',outside);
-  },[sortOpen]);
   const [category,setCategory]=useState<'all'|'base'|'dlc'>('all');
   const selectedCategory=categorized?category:'all';
   const selectedGroups=selectedCategory==='base'?base?[base]:[]:selectedCategory==='dlc'?addOns:groups;
@@ -149,46 +131,7 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
       </div>}
       <section className="achievement-group detail-achievement-section" data-group-id={selectedCategory}>
         <div className="achievement-sort-row">
-          <div className="achievement-sort-control" ref={sortContainerRef}>
-            <button
-              type="button" ref={sortTriggerRef}
-              className={'achievement-sort-toggle'+(sortOpen?' is-open':'')}
-              aria-label="成就排序"
-              aria-haspopup="menu"
-              aria-expanded={sortOpen}
-              aria-controls={sortOpen?'achievement-sort-menu':undefined}
-              title="选择成就排序方式"
-              onClick={()=>setSortOpen(value=>!value)}
-              onKeyDown={event=>{
-                if(event.key==='ArrowDown'||event.key==='ArrowUp'){
-                  event.preventDefault();setSortOpen(true);
-                }
-                if(event.key==='Escape'&&sortOpen){event.preventDefault();setSortOpen(false);}
-              }}
-            ><span>排序</span><ArrowDownUp size={17} aria-hidden="true"/></button>
-            {sortOpen&&<div
-              className="achievement-sort-menu" id="achievement-sort-menu" role="menu"
-              aria-label="成就排序方式" ref={sortMenuRef}
-              onKeyDown={event=>{
-                if(event.key==='Escape'){
-                  event.preventDefault();event.stopPropagation();
-                  setSortOpen(false);sortTriggerRef.current?.focus();return;
-                }
-                if(event.key==='Tab'){setSortOpen(false);return;}
-                if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
-                event.preventDefault();
-                const items=Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]'));
-                const current=items.indexOf(document.activeElement as HTMLButtonElement);
-                const next=event.key==='Home'?0:event.key==='End'?items.length-1:
-                  (current+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;
-                items[next]?.focus();
-              }}
-            >{sortChoices.map(([id,name])=><button
-              type="button" className={'achievement-sort-option'+(order===id?' selected':'')}
-              key={id} role="menuitemradio" aria-checked={order===id}
-              onClick={()=>{setOrder(id);setSortOpen(false);sortTriggerRef.current?.focus();}}
-            ><span>{name}</span>{order===id&&<Check size={16} aria-hidden="true"/>}</button>)}</div>}
-          </div>
+          <AchievementSortControl order={order} onChange={setOrder}/>
           <span className="achievement-filter-count" aria-live="polite">{earned}/{total}</span>
         </div>
         <Progress earned={earned} total={total} complete={earned===total&&total>0} label="当前成就分类完成度"/>
