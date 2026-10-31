@@ -80,3 +80,5 @@ https://github.com/OpenXbox/xbox-webapi-python/blob/master/xbox/webapi/api/provi
 Titlehub 请求 maxItems=5000，并在达到该上限时停止，不能将默认 100 条当作全库。若摘要不提供 totalAchievements，或返回零占位值，则从全部成就分页统计总数；同时用已解锁数量和摘要总 Gamerscore（如有）核对，拒绝将缺失字段当作零。
 
 全库快照已保存后可在工作流 mode 选择 compare，只重新核对现有候选快照。比较时通过同一 Xbox Title ID 的官方英文 Titlehub 别名匹配本地化游戏名，遇到同名版本仍标为歧义。matchedAchievementDates 显示实际成功匹配且两侧均有时间的成就数量，避免把未能匹配的成就误报为时间一致。
+
+mode=repair 只补查上一快照中 total=0 且明细为空的条目，尝试旧版 titleachievements/achievements 接口；不依赖 Titlehub 旧版标记一定存在。候选快照合并时保留其他已核验游戏，报告单列尝试、恢复和仍为空的数量。对于旧版接口，以其完整目录和已解锁列表为准，不将 Titlehub 的零占位已解锁数量作为真零。

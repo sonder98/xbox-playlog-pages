@@ -73,7 +73,7 @@ export async function titleAliases(read:(path:string)=>Promise<any>){
  const history=await collectPages(t=>read('/player/titleHistory?locale=en-US'+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');
  return new Map<string,string[]>(history.values.filter(t=>typeof t.name==='string').map(t=>[String(t.titleId),[t.name]]));
 }
-export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void}={}){
+export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
  // Sustained pacing, no retries against permissions/security errors. 429 stops this scan.
  const request:typeof fetch=async(input,init)=>{await pause(1050);return (options.request||fetch)(input,init);};
@@ -83,7 +83,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  const history=await collectPages(t=>provider.call('/player/titleHistory'+(t?'?continuationToken='+encodeURIComponent(t):'')),'titles');
  const titles=[...new Map(history.values.filter(g=>g.type!=='App'&&/^\d{1,10}$/.test(String(g.titleId))).map(g=>[String(g.titleId),g])).values()];
  if(!titles.length||titles.length>=5000)throw Error('Xbox 游戏历史为空或超出上限；未覆盖暂存记录。');
- const games=normalizeTitles({titles:titles.map(t=>({...t,titleHistory:{...t.titleHistory,visible:true}}))});
+ const games=normalizeTitles({titles:titles.filter(t=>!options.onlyIds||options.onlyIds.has(String(t.titleId))).map(t=>({...t,titleHistory:{...t.titleHistory,visible:true}}))});
  const prior=options.previous?.profile.xuid===provider.xuid?new Map(options.previous.games.map(g=>[g.id,g])):new Map<string,Game>();
  const audit:ScanAudit={version:1,at:new Date().toISOString(),titlePages:history.pages,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
  const pagesFor=async(id:string,version:string,possible=false,legacy=false,earned=false)=>{
@@ -96,14 +96,18 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
   audit.responseFields.rarity ||=raw.some(a=>Object.hasOwn(a,'rarity'));audit.responseFields.groupIds ||=raw.some(a=>Object.hasOwn(a,'groupIds'));audit.responseFields.completion ||=pages.some(p=>Object.hasOwn(p,'completion'));
   return {raw,pages};
  };
+ const legacyFor=async(id:string)=>{
+  const all=await pagesFor(id,'1',false,true),earned=await pagesFor(id,'1',false,true,true),unlocked=new Map(earned.raw.map(a=>[String(a.id),a]));
+  if(earned.raw.some(a=>!all.raw.some(b=>String(a.id)===String(b.id))))throw Error('Xbox 旧版目录与已解锁列表不一致。');
+  return {raw:all.raw.map(a=>({...a,...unlocked.get(String(a.id)),unlocked:unlocked.has(String(a.id))})),pages:all.pages};
+ };
  const fatal=(error:unknown)=>error instanceof XboxReadError&&[401,429].includes(error.status);
  for(let i=0;i<games.length;i++){
   const game=games[i],old=prior.get(game.id);let complete=false;
   try{
    let data:Awaited<ReturnType<typeof pagesFor>>|undefined,version='6';const isLegacy=titles.find(t=>String(t.titleId)===game.id)?.devices?.some((d:any)=>/xbox\s*360/i.test(String(d)))||titles.find(t=>String(t.titleId)===game.id)?.achievement?.sourceVersion===1;
    if(isLegacy){
-    const all=await pagesFor(game.id,'1',false,true),earned=await pagesFor(game.id,'1',false,true,true);const unlocked=new Map(earned.raw.map(a=>[String(a.id),a]));
-    data={raw:all.raw.map(a=>({...a,...unlocked.get(String(a.id)),unlocked:unlocked.has(String(a.id))})),pages:all.pages};version='1';audit.legacy++;
+    data=await legacyFor(game.id);version='1';audit.legacy++;
    }else{
     for(const candidate of ['6','4','2']){
      try{const result=await pagesFor(game.id,candidate);if(result.raw.length||game.total===0){data=result;version=candidate;break;}}
@@ -111,6 +115,9 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
     }
    }
    if(!data)throw Error('Xbox 成就读取未完成。');
+   if(!data.raw.length&&version!=='1'){
+    try{const legacy=await legacyFor(game.id);if(legacy.raw.length){data=legacy;version='1';audit.legacy++;}}catch(error){if(fatal(error))throw error;}
+   }
    if(version!=='1'){
     // Explicit possibleOnly catalog prevents unlocked-only payloads from masquerading as full lists.
     const catalog=await pagesFor(game.id,version,true),current=new Map(data.raw.map(a=>[String(a.id),a])),ids=new Set(catalog.raw.map(a=>String(a.id)));
@@ -122,11 +129,12 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    }
    const awards=data.raw.map(achievement),unlocked=awards.filter(a=>a.unlocked).length;
    const titleSummary=titles.find(t=>String(t.titleId)===game.id)?.achievement;
-   const expectedTotal=typeof titleSummary?.totalAchievements==='number'&&titleSummary.totalAchievements>0?titleSummary.totalAchievements:null,expectedEarned=typeof titleSummary?.currentAchievements==='number'?titleSummary.currentAchievements:null;
+   const expectedTotal=typeof titleSummary?.totalAchievements==='number'&&titleSummary.totalAchievements>0?titleSummary.totalAchievements:null,expectedEarned=version==='1'?null:typeof titleSummary?.currentAchievements==='number'?titleSummary.currentAchievements:null;
    const returnedScore=awards.reduce((sum,a)=>sum+(a.points||0),0),expectedScore=typeof titleSummary?.totalGamerscore==='number'&&titleSummary.totalGamerscore>0?titleSummary.totalGamerscore:null;
    if(audit.diagnostics.length<3)audit.diagnostics.push({summaryKeys:Object.keys(titleSummary||{}).filter(k=>/^[A-Za-z]{1,40}$/.test(k)).slice(0,30),awardKeys:Object.keys(data.raw[0]||{}).filter(k=>/^[A-Za-z]{1,40}$/.test(k)).slice(0,30),expectedTotal,expectedEarned,returned:awards.length,unlocked,expectedScore,returnedScore,rarityKeys:Object.keys(data.raw[0]?.rarity||{}).filter(k=>/^[A-Za-z]{1,40}$/.test(k)),completionShape:Array.isArray(data.pages[0]?.completion)?'array':typeof data.pages[0]?.completion,groupFields:Object.keys(Object.values(data.pages[0]?.completion?.[0]?.groups||{})[0]||{}).filter(k=>/^[A-Za-z]{1,40}$/.test(k))});
    if(expectedTotal===null){game.total=awards.length;audit.summaryTotalsDerived++;}
    if(expectedEarned===null)game.earned=unlocked;
+   if(version==='1')game.score=awards.filter(a=>a.unlocked).reduce((sum,a)=>sum+(a.points||0),0);
    if(expectedScore===null)game.maxScore=returnedScore;
    if(awards.length!==game.total||unlocked!==game.earned||(expectedScore!==null&&expectedScore!==returnedScore)){audit.summaryMismatches++;throw Error('Xbox 成就明细与摘要不一致。');}
    game.achievements=awards;complete=true;audit.complete++;audit.contracts[version]=(audit.contracts[version]||0)+1;

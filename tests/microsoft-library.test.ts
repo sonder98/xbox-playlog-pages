@@ -75,3 +75,17 @@ test('official title aliases reconcile localized names without confusing duplica
  const aliases=new Map([['1',['English title']]]);assert.equal(compareLibrary([current],prior,aliases).matched,1);
  prior.games.push({...game('2'),name:'English title'});assert.equal(compareLibrary([current],prior,aliases).ambiguous,1);
 });
+
+test('empty modern responses try legacy catalogs even without legacy flags; targeted repair preserves other games',async()=>{
+ const request:typeof fetch=async(input,init)=>{
+  const u=new URL(String(input));if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
+  if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-LEGACY',devices:['PC'],achievement:{currentAchievements:0,totalAchievements:0}},{titleId:'2',name:'PRIVATE-PRESERVED'}]});
+  assert.equal(u.searchParams.get('titleId'),'1');
+  if((init?.headers as any)['x-xbl-contract-version']==='1')return Response.json({achievements:[{id:1,name:'PRIVATE-AWARD',gamerscore:10,unlocked:true,timeUnlocked:'2026-10-30T00:00:00Z'}]});
+  return Response.json({achievements:[]});
+ };
+ const old=game('2');const result=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old]),onlyIds:new Set(['1'])});
+ assert.equal(result.audit.titles,1);assert.equal(result.audit.legacy,1);assert.equal(result.audit.failed,0);assert.equal(result.record.games[0].earned,1);assert.equal(result.record.games[0].total,1);assert.deepEqual(result.record.games.find(g=>g.id==='2'),old);
+});
