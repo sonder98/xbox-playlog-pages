@@ -17,7 +17,7 @@ try{
   const previous=readState(root+'/candidate.json',stateKey)?.record as RecordData|undefined;
   const baseline=fs.existsSync('public/vault.json')?(await readVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),old,target)).records?.[0]:undefined;
   const catalog=fs.existsSync('data/achievement-catalogs.json')?parseCatalogBundle(JSON.parse(fs.readFileSync('data/achievement-catalogs.json','utf8'))):undefined;
-  const result=await scanMicrosoft(session.config,{previous,baseline,catalog,expectedOwner:session.state.owner,progress:(n,total)=>{if(n%10===0||n===total)console.log(`微软全库核对进度：${n}/${total}`);}});
+  const result=await scanMicrosoft(session.config,{previous,baseline,catalog,expectedOwner:session.state.owner,progress:(n,total,audit)=>{if(n%10===0||n===total)console.log(`微软全库核对进度：${n}/${total}；已核验 ${audit.complete}，官方分组 ${audit.officialBaseGroups}，稀有度 ${audit.rarityTitles}，时长 ${audit.playtimeTitles}，失败 ${audit.failed}`);if(n===10)console.log('微软接口结构诊断：'+JSON.stringify(audit.diagnostics));}});
   if(!session.state.owner||session.state.owner!==result.record.profile.xuid)throw Error('微软账号校验未通过；未保存候选记录。');
   // Candidate records are encrypted server-only state, separate from the production vault.
   writeState(root+'/candidate.json',result,stateKey);session.save();

@@ -77,4 +77,4 @@ https://xct.live/wiki/mythic
 Xbox 360 分离目录与已解锁接口参考 OpenXbox 原始实现：
 https://github.com/OpenXbox/xbox-webapi-python/blob/master/xbox/webapi/api/provider/achievements/__init__.py
 
-Titlehub 请求 maxItems=5000，并在达到该上限时停止，不能将默认 100 条当作全库。若摘要不提供 totalAchievements，则从全部成就分页统计总数；同时用已解锁数量和摘要总 Gamerscore（如有）核对，拒绝将缺失字段当作零。
+Titlehub 请求 maxItems=5000，并在达到该上限时停止，不能将默认 100 条当作全库。若摘要不提供 totalAchievements，或返回零占位值，则从全部成就分页统计总数；同时用已解锁数量和摘要总 Gamerscore（如有）核对，拒绝将缺失字段当作零。

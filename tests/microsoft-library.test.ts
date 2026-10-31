@@ -61,10 +61,10 @@ test('missing title summary total is derived from the complete catalog, never mi
   const u=new URL(String(input));if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
   if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
   if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
-  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',achievement:{currentAchievements:1}}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',achievement:{currentAchievements:1,totalAchievements:0}}]});
   if(u.hostname==='userstats.xboxlive.com')return Response.json({stats:[{name:'MinutesPlayed',value:10}]});
-  return Response.json({achievements:[{id:'1',name:'PRIVATE-AWARD',progressState:'Achieved',rarity:{currentPercentage:0.1}}],completion:[{titleId:'1',groups:{g:{groupType:'BaseGame',achievementIds:['1'],unlockedAchievementIds:['1']}}}]});
+  return Response.json({achievements:[{id:'1',name:'PRIVATE-AWARD',progressState:'Achieved',rarity:{currentPercentage:0.1}},...(u.searchParams.get('possibleOnly')==='true'?[{id:'2',name:'PRIVATE-LOCKED',rarity:{currentPercentage:0.5}}]:[])],completion:[{titleId:'1',groups:{g:{groupType:'BaseGame',achievementIds:['1'],unlockedAchievementIds:['1']}}}]});
  };
  const {record:r,audit}=await scanMicrosoft(config,{request,pause:async()=>{}});
- assert.equal(r.games[0].total,1);assert.equal(audit.complete,1);assert.equal(audit.summaryMismatches,0);assert.equal(audit.summaryTotalsDerived,1);assert.equal(audit.rarityAchievements,1);assert.equal(audit.officialBaseGroups,1);assert.ok(!JSON.stringify(audit).includes('PRIVATE'));
+ assert.equal(r.games[0].total,2);assert.equal(r.games[0].earned,1);assert.equal(r.games[0].achievements?.find(a=>a.id==='2')?.unlocked,false);assert.equal(audit.complete,1);assert.equal(audit.summaryMismatches,0);assert.equal(audit.summaryTotalsDerived,1);assert.equal(audit.rarityAchievements,2);assert.equal(audit.officialBaseGroups,1);assert.ok(!JSON.stringify(audit).includes('PRIVATE'));
 });
