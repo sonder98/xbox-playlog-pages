@@ -17,7 +17,7 @@ if(fresh?.source==='Xbox'&&Date.now()-Date.parse(fresh.at)<20*60_000){
 }
 const result=await scanMicrosoft(session.config,{previous:saved?.record,expectedOwner:session.state.owner,progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
 if(result.audit.failed||result.audit.interrupted||result.audit.historySourcesFailed)throw Error('微软同步未完整完成。');
-const artwork=await australianArtwork(result.record);
+const artwork=await australianArtwork(result.record,fetch,previous[0]);
 console.log('澳区英文封面覆盖：'+JSON.stringify(artwork));
 result.record.games=result.record.games.filter(g=>g.total>0||g.minutes!==null);
 await cacheRecordImages(result.record);

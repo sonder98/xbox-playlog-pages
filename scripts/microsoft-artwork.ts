@@ -1,8 +1,10 @@
 import {safeImage,type RecordData} from '../src/data.ts';
 /** Store metadata is public; authorization headers must never be sent here. */
-export async function australianArtwork(record:RecordData,request:typeof fetch=fetch){
+export async function australianArtwork(record:RecordData,request:typeof fetch=fetch,previous?:RecordData){
  let resolved=0;
  for(const game of record.games){
+  const old=previous?.games.find(item=>item.id===game.id);
+  if(old?.name===game.name&&old.image.includes('store-images.s-microsoft.com/image/')){game.name=old.name;game.image=old.image;resolved++;continue;}
   const url=new URL('https://displaycatalog.mp.microsoft.com/v7.0/products/lookup');
   url.search=new URLSearchParams({alternateId:'XboxTitleId',Value:game.id,market:'AU',languages:'en-AU,en,neutral',fieldsTemplate:'Details'}).toString();
   const response=await request(url,{redirect:'error',signal:AbortSignal.timeout(20000)});
