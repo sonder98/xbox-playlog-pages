@@ -244,19 +244,24 @@ try{
     console.log((mobile?'Mobile':'Desktop')+': PASS encrypted hide/restore preferences, unchanged statistics, new snapshot persistence, hide-all recovery and cancel');
     // Official Xbox hiding is independent from reversible local preferences.
     const officialPayload=await decryptVault(envelope,password);
+    officialPayload.records[0].source='Xbox';
+    for(const game of officialPayload.records[0].games)game.officialHidden=false;
     officialPayload.records[0].games.find(g=>g.id==='102').officialHidden=true;
+    delete officialPayload.records[0].games.find(g=>g.id==='103').officialHidden;
     activeEnvelope=await encryptVault(officialPayload,password);
     await unlock('#library');
     await page.locator('.game-card').first().waitFor();
     assert.equal(await page.locator('.game-card[data-game-id="102"]').count(),0,'Officially hidden game is not listed');
-    assert.equal(await page.locator('.game-card').count(),11,'Only official-visible games appear');
+    assert.equal(await page.locator('.game-card[data-game-id="103"]').count(),0,'Missing official visibility also hides the game');
+    assert.equal(await page.locator('.game-card').count(),10,'Only explicit official-visible games appear');
     await manageDisplay();
     assert.equal(await page.getByRole('checkbox',{name:'显示 Test Game 2',exact:true}).count(),0,'Officially hidden game is not manageable');
-    assert.equal(await page.locator('.display-game-choice').count(),11,'Manager only contains official-visible games');
+    assert.equal(await page.getByRole('checkbox',{name:'显示 Test Game 3',exact:true}).count(),0,'Missing visibility title also excluded from manager');
+    assert.equal(await page.locator('.display-game-choice').count(),10,'Manager only contains explicit official-visible games');
     await page.getByRole('checkbox',{name:'显示 Test Game 1',exact:true}).uncheck();
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
     await page.locator('.game-card[data-game-id="101"]').waitFor({state:'detached'});
-    assert.equal(await page.locator('.game-card').count(),10,'Manual hiding applies to remaining official-visible games');
+    assert.equal(await page.locator('.game-card').count(),9,'Manual hiding applies to remaining official-visible games');
     await page.getByRole('button',{name:'概览',exact:true}).click();
     assert.equal(await page.locator('.stats').innerText(),statsBeforeHiding,'Official and local hiding never change totals');
     await page.getByRole('button',{name:'游戏库',exact:true}).click();

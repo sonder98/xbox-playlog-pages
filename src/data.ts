@@ -2,6 +2,10 @@ import {validateGroups} from './completion.ts';
 export type Achievement = { id:string; name:string; image:string; cachedImage?:string; unlockedAt:string|null; rarity:number|null; unlocked:boolean; description?:string; groupId?:string; points?:number };
 export type AchievementGroup={id:string;name:string;kind:'base'|'dlc'|'update';achievementIds:string[];earned:number;total:number};
 export type Game = { id:string; name:string; image:string; imageWide?:string; image2x?:string; image3x?:string; detailImage?:string; detailImagePurpose?:'SuperHeroArt'|'TitledHeroArt'; cachedDetailImage?:string; cachedImage?:string; cachedImageLarge?:string; devices:string[]; lastPlayed:string|null; minutes:number|null; earned:number; total:number; score:number; maxScore:number; achievements?:Achievement[]; groups?:AchievementGroup[]; catalogAt?:string; groupStatus?:'verified'|'unavailable'; officialHidden?:boolean };
+/** An Xbox title is displayable only when the official title-history flag explicitly says visible. */
+export function officialGameVisible(game:Game,source:string):boolean {
+ return source==='Xbox'?game.officialHidden===false:game.officialHidden!==true;
+}
 export type Profile = { xuid:string; gamertag:string; avatar:string };
 export type RecordData = { id:string; at:string; profile:Profile; games:Game[]; source:string; warnings:string[] };
 export function number(v:unknown):number { const n=Number(v);return Number.isFinite(n)&&n>=0?n:0; }

@@ -29,7 +29,7 @@ test('full scan reads modern contract 6, legacy all+earned, explicit groups, tim
   else if(url.hostname==='user.auth.xboxlive.com')data={Token:'PRIVATE-USER'};
   else if(url.hostname==='xsts.auth.xboxlive.com')data={Token:'PRIVATE-XSTS',DisplayClaims:{xui:[{uhs:'PRIVATE-HASH'}]}};
   else if(url.hostname==='profile.xboxlive.com')data={profileUsers:[{id:'2530000000000000',settings:[{id:'Gamertag',value:'PRIVATE-GAMERTAG'}]}]};
-  else if(url.hostname==='titlehub.xboxlive.com')data={titles:[{titleId:'1',name:'PRIVATE-MODERN',devices:['XboxSeries'],achievement:{totalAchievements:2,currentAchievements:1}},{titleId:'2',name:'PRIVATE-LEGACY',devices:['Xbox360'],achievement:{totalAchievements:2,currentAchievements:1}}]};
+  else if(url.hostname==='titlehub.xboxlive.com')data={titles:[{titleId:'1',name:'PRIVATE-MODERN',titleHistory:{visible:true},devices:['XboxSeries'],achievement:{totalAchievements:2,currentAchievements:1}},{titleId:'2',name:'PRIVATE-LEGACY',titleHistory:{visible:true},devices:['Xbox360'],achievement:{totalAchievements:2,currentAchievements:1}}]};
   else if(url.hostname==='userstats.xboxlive.com')data={statlistscollection:[{stats:[{name:'MinutesPlayed',value:'0'}]}]};
   else if(url.pathname.endsWith('titleachievements'))data={achievements:[{id:1,name:'PRIVATE-ONE'},{id:2,name:'PRIVATE-TWO'}]};
   else if(url.searchParams.get('titleId')==='2')data={achievements:[{id:1,name:'PRIVATE-ONE',unlocked:true,timeUnlocked:'2026-10-30T00:00:00Z'}]};
@@ -48,7 +48,7 @@ test('permission failures preserve previous title records; 429 interrupts withou
   const u=new URL(String(input));if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
   if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
   if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
-  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',achievement:{totalAchievements:2,currentAchievements:1}}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',titleHistory:{visible:true},achievement:{totalAchievements:2,currentAchievements:1}}]});
   reads++;return Response.json({error:'do not print me'},{status:429});
  };
  const result=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old,game('missing')])});
@@ -61,7 +61,7 @@ test('missing title summary total is derived from the complete catalog, never mi
   const u=new URL(String(input));if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
   if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
   if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
-  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',achievement:{currentAchievements:1,totalAchievements:0}}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',titleHistory:{visible:true},achievement:{currentAchievements:1,totalAchievements:0}}]});
   if(u.hostname==='userstats.xboxlive.com')return Response.json({stats:[{name:'MinutesPlayed',value:10}]});
   return Response.json({achievements:[{id:'1',name:'PRIVATE-AWARD',progressState:'Achieved',rarity:{currentPercentage:0.1}},...(u.searchParams.get('possibleOnly')==='true'?[{id:'2',name:'PRIVATE-LOCKED',rarity:{currentPercentage:0.5}}]:[])],completion:[{titleId:'1',groups:{g:{groupType:'BaseGame',achievementIds:['1'],unlockedAchievementIds:['1']}}}]});
  };
@@ -81,7 +81,7 @@ test('empty modern responses try legacy catalogs even without legacy flags; targ
   const u=new URL(String(input));if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
   if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
   if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
-  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-LEGACY',devices:['PC'],achievement:{currentAchievements:0,totalAchievements:0}},{titleId:'2',name:'PRIVATE-PRESERVED'}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-LEGACY',titleHistory:{visible:true},devices:['PC'],achievement:{currentAchievements:0,totalAchievements:0}},{titleId:'2',name:'PRIVATE-PRESERVED',titleHistory:{visible:true}}]});
   assert.equal(u.searchParams.get('titleId'),'1');
   if((init?.headers as any)['x-xbl-contract-version']==='1')return Response.json({achievements:[{id:1,name:'PRIVATE-AWARD',gamerscore:10,unlocked:true,timeUnlocked:'2026-10-30T00:00:00Z'}]});
   return Response.json({achievements:[]});
@@ -143,8 +143,8 @@ test('Microsoft hidden games stay archived without detail requests, and unhide o
  assert.equal(output.audit.failed,0);
 });
 
-test('Missing visibility flag preserves previously verified hidden setting on refreshed titles',async()=>{
- const previous=record([{...game('1'),officialHidden:true}]);
+test('Missing visibility field overrides old visible state without losing playtime',async()=>{
+ const previous=record([{...game('1'),officialHidden:false}]);
  const request:typeof fetch=async input=>{
   const u=new URL(String(input));
   if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
@@ -156,5 +156,24 @@ test('Missing visibility flag preserves previously verified hidden setting on re
   throw Error('Unknown visibility should not trigger hidden title detail fetch');
  };
  const result=await scanMicrosoft(config,{request,pause:async()=>{},previous});
- assert.equal(result.record.games[0].officialHidden,true);
+ assert.equal(result.record.games[0].officialHidden,undefined);
+ assert.equal(result.record.games[0].minutes,42,'No data loss while game is not displayable');
+});
+
+test('Previously visible game absent from title history stays archived, but not displayed',async()=>{
+ const previous=record([{...game('55'),officialHidden:false}]);
+ const request:typeof fetch=async input=>{
+  const u=new URL(String(input));
+  if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});
+  if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
+  if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'66',name:'Visible',titleHistory:{visible:true}}]});
+  if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});
+  return Response.json({achievements:[]});
+ };
+ const {record:latest}=await scanMicrosoft(config,{request,pause:async()=>{},previous});
+ assert.equal(latest.games.find(g=>g.id==='55')?.officialHidden,undefined);
+ assert.equal(latest.games.find(g=>g.id==='55')?.minutes,42);
+ assert.equal(latest.games.find(g=>g.id==='66')?.officialHidden,false);
 });
