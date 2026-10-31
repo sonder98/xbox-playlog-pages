@@ -1,8 +1,10 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {ArrowLeft,ArrowRight,ChevronRight,Clock3,Gem,Trophy,X} from 'lucide-react';
+import {ArrowLeft,ArrowRight,ChevronLeft,ChevronRight,Gem,Trophy,X} from 'lucide-react';
 import type {Game} from '../data';
 import {GamerscoreIcon} from './gamerscore-icon';
-import {buildActivity,calendarHalf,dayLabel,heatLevel,recentDays,type Activity,type UnlockEvent} from '../achievement-activity';
+import {AchievementSortControl} from './achievement-sort-control';
+import {sortAchievements,type AchievementSort} from '../achievement-sort';
+import {adjacentDay,buildActivity,calendarMonth,dayLabel,heatLevel,recentCalendar,recentDays,type Activity,type UnlockEvent} from '../achievement-activity';
 
 const fmt=(n:number)=>n.toLocaleString('zh-CN');
 const time=(value:number)=>new Date(value).toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',hour12:false});
@@ -11,32 +13,50 @@ function Art({src,alt='',className}:{src?:string;alt?:string;className:string}){
  useEffect(()=>setBroken(false),[src]);
  return <span className={className}>{src&&!broken?<img src={src} alt={alt} loading="lazy" onError={()=>setBroken(true)}/>:<Trophy size={19} aria-hidden="true"/>}</span>;
 }
-function Calendar({activity,year,half,selected,onSelect}:{activity:Activity;year:number;half:0|1;selected:string|null;onSelect:(day:string,button:HTMLButtonElement)=>void}){
- const calendar=useMemo(()=>calendarHalf(year,half,activity.today),[year,half,activity.today]);
- return <div className="ah-half" data-year={year} data-half={half}>
-  <div className="ah-months"><span aria-hidden="true"/><div className="ah-month-grid" style={{gridTemplateColumns:'repeat('+calendar.columns+',minmax(0,1fr))'}}>{calendar.months.map(m=><span key={m.label} style={{gridColumnStart:m.column+1}}>{m.label}</span>)}</div></div>
-  <div className="ah-week-area"><div className="ah-weekdays" aria-hidden="true"><span>一</span><span>三</span><span>五</span></div>
-   <div className="ah-day-grid" style={{gridTemplateColumns:'repeat('+calendar.columns+',minmax(0,1fr))'}}>
-    {calendar.days.map((d,i)=>{
-     if(!d.day)return <span className="ah-blank-day" aria-hidden="true" key={'blank-'+i}/>;
-     const count=activity.byDay.get(d.day)?.events.length||0;
-     return <button key={d.day} type="button" className={'ah-cell ah-level-'+heatLevel(count)+(selected===d.day?' is-selected':'')} aria-label={dayLabel(d.day)+'，解锁 '+count+' 个成就'} aria-pressed={selected===d.day} disabled={d.future} title={dayLabel(d.day)+' · '+count+' 个成就'} onClick={e=>onSelect(d.day!,e.currentTarget)}/>;
-    })}
-   </div>
+const weekdays=['一','二','三','四','五','六','日'];
+function Calendar({activity,year,month,selected,onSelect}:{activity:Activity;year:number;month:number;selected:string|null;onSelect:(day:string,button:HTMLButtonElement)=>void}){
+ const calendar=useMemo(()=>calendarMonth(year,month,activity.today),[year,month,activity.today]);
+ const monthEvents=calendar.days.reduce((sum,d)=>sum+(d.day?activity.byDay.get(d.day)?.events.length||0:0),0);
+ return <section className="ah-month-card" data-year={year} data-month={month} aria-label={year+' 年 '+month+' 月'}>
+  <div className="ah-month-title"><h2>{year} 年 {month} 月</h2><span>{monthEvents} 个成就</span></div>
+  <div className="ah-calendar-weekdays" aria-hidden="true">{weekdays.map(w=><span key={w}>{w}</span>)}</div>
+  <div className="ah-month-calendar" data-rows={calendar.rows}>
+   {calendar.days.map((d,i)=>{
+    if(!d.day)return <span key={'pad-'+i} className="ah-calendar-placeholder" aria-hidden="true"/>;
+    const count=activity.byDay.get(d.day)?.events.length||0;
+    return <button key={d.day} type="button"
+      className={'ah-cell ah-level-'+heatLevel(count)+(selected===d.day?' is-selected':'')}
+      data-day={d.day} aria-label={dayLabel(d.day)+'，解锁 '+count+' 个成就'}
+      aria-pressed={selected===d.day} disabled={d.future}
+      title={dayLabel(d.day)+' · '+count+' 个成就'}
+      onClick={e=>onSelect(d.day!,e.currentTarget)}><span aria-hidden="true">{Number(d.day.slice(-2))}</span></button>;
+   })}
   </div>
- </div>;
+ </section>;
 }
 function Legend(){return <div className="ah-legend"><span>每日解锁强度</span><div className="ah-legend-right"><small>少</small>{[0,1,2,3,4].map(x=><i key={x} className={'ah-level-'+x}/>)}<small>多</small></div></div>;}
-export function AchievementPreview({games,onOpen}:{games:Game[];onOpen:()=>void}){
+export function AchievementPreview({games,onOpen,onOpenDay}:{games:Game[];onOpen:()=>void;onOpenDay:(day:string)=>void}){
  const activity=useMemo(()=>buildActivity(games),[games]);
- const days=recentDays(activity);
+ const days=recentDays(activity),calendar=recentCalendar(activity);
+ const [sheetDay,setSheetDay]=useState<string|null>(null);
  const count=days.reduce((sum,d)=>sum+d.count,0),active=days.filter(d=>d.count>0).length;
+ const span=days[0].day.slice(5).replace('-','/')+' — '+days.at(-1)!.day.slice(5).replace('-','/');
  return <section className="panel ah-preview" data-overview-section="heatmap">
-  <button className="ah-preview-link" type="button" onClick={onOpen} aria-label="查看全部成就热力图">
-   <span className="ah-preview-heading"><span><strong>成就热力图</strong><small>最近 30 天的解锁活跃度</small></span><span className="ah-preview-more">查看全部 <ChevronRight size={17}/></span></span>
-   <span className="ah-preview-grid" aria-hidden="true">{days.map(d=><span className={'ah-preview-cell ah-level-'+heatLevel(d.count)} key={d.day}/>)}</span>
-   <span className="ah-preview-footer"><span>解锁 {fmt(count)} 个 · 活跃 {active} 天</span><ArrowRight size={17}/></span>
-  </button>
+  <div className="ah-preview-heading">
+   <div><strong>成就热力图</strong><small>最近 30 天 · {span}</small></div>
+   <button type="button" className="ah-preview-more" onClick={onOpen} aria-label="查看全部成就热力图">查看全部 <ChevronRight size={17}/></button>
+  </div>
+  <div className="ah-preview-weekdays" aria-hidden="true">{weekdays.map(w=><span key={w}>{w}</span>)}</div>
+  <div className="ah-preview-grid">
+   {calendar.map((d,i)=>d.day?
+    <button type="button" key={d.day} data-day={d.day}
+     className={'ah-preview-cell ah-level-'+heatLevel(d.count)}
+     aria-label={dayLabel(d.day)+'，解锁 '+d.count+' 个成就'}
+     onClick={()=>setSheetDay(d.day!)}/>:<span className="ah-preview-placeholder" key={'pad-'+i} aria-hidden="true"/>)}
+  </div>
+  <p className="ah-preview-axis">日期：左 → 右为周一至周日，按周从上往下</p>
+  <button className="ah-preview-footer" type="button" onClick={onOpen}><span>解锁 {fmt(count)} 个 · 活跃 {active} 天</span><ArrowRight size={17}/></button>
+  {sheetDay&&<Sheet day={sheetDay} activity={activity} onClose={()=>setSheetDay(null)} onDetail={()=>{const day=sheetDay;setSheetDay(null);onOpenDay(day);}}/>}
  </section>;
 }
 function Sheet({day,activity,onClose,onDetail}:{day:string;activity:Activity;onClose:()=>void;onDetail:()=>void}){
@@ -54,12 +74,12 @@ function Sheet({day,activity,onClose,onDetail}:{day:string;activity:Activity;onC
   <section ref={handle} className="ah-sheet" role="dialog" aria-modal="true" aria-label={dayLabel(day)+' 成就摘要'} onClick={e=>e.stopPropagation()}>
    <div className="ah-sheet-grab" onTouchStart={e=>{touchY.current=e.touches[0]?.clientY??null;}} onTouchEnd={e=>{if(touchY.current!==null&&(e.changedTouches[0]?.clientY??0)-touchY.current>70)onClose();touchY.current=null;}}><i/></div>
    <header className="ah-sheet-heading"><div><strong>{dayLabel(day)}</strong><span>当天解锁记录</span></div><button className="ah-sheet-close" type="button" aria-label="关闭日期摘要" onClick={onClose}><X size={19}/></button></header>
-   <div className="ah-sheet-total"><strong>{fmt(count)}</strong><span>个成就 · {games.length} 款游戏</span></div>
    <div className="ah-sheet-games">
     {games.length?games.slice(0,3).map(({game,count:num})=><div className="ah-sheet-game" key={game.id}><Art src={game.cachedImage||game.image} className="ah-mini-art"/><span>{game.name}</span><b>{num} 个</b></div>):<p className="ah-no-activity">这一天没有解锁成就</p>}
     {games.length>3&&<p className="ah-more-games">另有 {games.length-3} 款游戏，共 {games.slice(3).reduce((s,g)=>s+g.count,0)} 个成就</p>}
    </div>
-   <button type="button" className="ah-sheet-action" onClick={onDetail}>查看当天全部成就 <ArrowRight size={18}/></button>
+   <div className="ah-sheet-total"><strong>{fmt(count)}</strong><span>个成就 · {games.length} 款游戏</span></div>
+   <button type="button" className="ah-sheet-action" disabled={!count} onClick={onDetail}>查看当天全部成就 <ArrowRight size={18}/></button>
   </section>
  </div>;
 }
@@ -87,20 +107,28 @@ export function AchievementJourney({games,dayId,onBack,onOpenDay,onOpenGame}:{ga
  const activity=useMemo(()=>buildActivity(games),[games]);
  const [selected,setSelected]=useState<string|null>(null);
  const [sheetDay,setSheetDay]=useState<string|null>(null);
- const [ascending,setAscending]=useState(true);
+ const [order,setOrder]=useState<AchievementSort>('date-asc');
  const lastFocus=useRef<HTMLButtonElement|null>(null);
  const closeSheet=()=>{setSheetDay(null);requestAnimationFrame(()=>lastFocus.current?.focus({preventScroll:true}));};
  const selectDay=(date:string,button:HTMLButtonElement)=>{
   lastFocus.current=button;setSelected(date);setSheetDay(date);
  };
- const years=Array.from({length:Math.max(0,Number(activity.today.slice(0,4))-2021)},(_,i)=>Number(activity.today.slice(0,4))-i);
+ const nowYear=Number(activity.today.slice(0,4)),nowMonth=Number(activity.today.slice(5,7));
+ const years=Array.from({length:Math.max(0,nowYear-2021)},(_,i)=>nowYear-i);
+ const months=years.flatMap(y=>Array.from({length:y===nowYear?nowMonth:12},(_,i)=>({year:y,month:(y===nowYear?nowMonth:12)-i})));
  const bucket=dayId?activity.byDay.get(dayId):undefined;
  if(dayId){
-  const events=ascending?[...(bucket?.events||[])]:[...(bucket?.events||[])].reverse();
+  const entries=bucket?.events||[];
+  const byAchievement=new Map(entries.map(e=>[e.achievement,e]));
+  const events=sortAchievements(entries.map(e=>e.achievement),order).map(a=>byAchievement.get(a)!);
+  const prev=adjacentDay(dayId,-1),next=adjacentDay(dayId,1);
   return <section className="ah-page ah-day-detail">
    <button className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回热力图</button>
-   <h1>{dayLabel(dayId)}</h1><p className="ah-intro">解锁 {bucket?.events.length||0} 个成就 · 涉及 {bucket?.games.length||0} 款游戏</p>
-   <div className="ah-day-toolbar"><span><Clock3 size={16}/> 按解锁时间</span><button aria-label="切换解锁时间排序" type="button" onClick={()=>setAscending(v=>!v)}>{ascending?'早 → 晚':'晚 → 早'} <span aria-hidden="true">↕</span></button></div>
+   <div className="ah-day-title"><h1>{dayLabel(dayId)}</h1><div className="ah-date-arrows">
+    <button type="button" aria-label={'前一天 '+dayLabel(prev)} title="前一天" disabled={prev<'2022-01-01'} onClick={()=>onOpenDay(prev)}><ChevronLeft size={22}/></button>
+    <button type="button" aria-label={'后一天 '+dayLabel(next)} title="后一天" disabled={next>activity.today} onClick={()=>onOpenDay(next)}><ChevronRight size={22}/></button>
+   </div></div><p className="ah-intro">解锁 {bucket?.events.length||0} 个成就 · 涉及 {bucket?.games.length||0} 款游戏</p>
+   <div className="ah-day-toolbar"><span>{events.length} 个成就</span><AchievementSortControl order={order} onChange={setOrder}/></div>
    {events.length?<div className="ah-achievement-list">{events.map(e=><DayCard key={e.key} event={e} onGame={onOpenGame}/>)}</div>:<p className="ah-empty-day">这一天没有可查询的已解锁成就。</p>}
   </section>;
  }
@@ -114,11 +142,10 @@ export function AchievementJourney({games,dayId,onBack,onOpenDay,onOpenGame}:{ga
    <div><small>单日最高</small><strong>{fmt(activity.peak)} 个</strong></div>
   </div>
   <Legend/>
-  {years.map(year=><section className="ah-year" key={year} aria-label={year+' 年成就热力图'}>
-   <div className="ah-year-heading"><h2>{year} 年</h2><span>解锁 {fmt(activity.years.get(year)||0)} 个成就</span></div>
-   <Calendar activity={activity} year={year} half={0} selected={selected} onSelect={selectDay}/>
-   <Calendar activity={activity} year={year} half={1} selected={selected} onSelect={selectDay}/>
-  </section>)}
+  <nav className="ah-year-jump" aria-label="快速跳转年份">{years.map(y=><button type="button" key={y} onClick={()=>document.getElementById('ah-year-'+y)?.scrollIntoView({behavior:'smooth',block:'start'})}>{y}</button>)}</nav>
+  <div className="ah-month-list">{months.map(({year,month},index)=><div key={year+'-'+month} id={index===0||months[index-1].year!==year?'ah-year-'+year:undefined}>
+   <Calendar activity={activity} year={year} month={month} selected={selected} onSelect={selectDay}/>
+  </div>)}</div>
   {!activity.total&&<p className="ah-empty-day">尚无带有效解锁时间的成就。完成 Xbox 同步后会自动显示。</p>}
   <p className="ah-footnote">统计来自已展示游戏中带解锁时间的成就；没有解锁时间的记录无法归入具体日期。时间采用北京时间。</p>
   {sheetDay&&<Sheet day={sheetDay} activity={activity} onClose={closeSheet} onDetail={()=>{setSheetDay(null);onOpenDay(sheetDay);}}/>}
