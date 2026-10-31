@@ -107,8 +107,8 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  const hubTitles=titles.length;titles=mergeTitleHistories(titles,extra[0],extra[1]);
  if(!titles.length||titles.length>=5000)throw Error('Xbox 游戏历史为空或超出上限；未覆盖暂存记录。');
  const prior=options.previous?.profile.xuid===provider.xuid?new Map(options.previous.games.map(g=>[g.id,g])):new Map<string,Game>();
- // Product policy: only explicit visible=true is showable. Never inherit previously
- // visible state when a later response lacks the visibility field.
+ // Display policy: explicit visible=true is the only showable Xbox state.
+ // Missing flags remain unknown in the archive, but are hidden in UI and on later syncs.
  const games=normalizeTitles({titles:titles.filter(t=>!options.onlyIds||options.onlyIds.has(String(t.titleId))||!prior.has(String(t.titleId)))});
  const audit:ScanAudit={version:1,at:new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
  const pagesFor=async(id:string,version:string,possible=false,legacy=false,earned=false)=>{
