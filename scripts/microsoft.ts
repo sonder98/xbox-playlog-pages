@@ -30,7 +30,10 @@ export async function microsoftProvider(config:DirectConfig,request:typeof fetch
   else{
    if(!xuid)throw Error('尚未确认 Xbox 账号身份。');
    if(local.pathname==='/player/titleHistory'&&!body){const params=continuation();params.set('maxItems','5000');url=`https://titlehub.xboxlive.com/users/xuid(${xuid})/titles/titlehistory/decoration/achievement,image,scid?${params}`;}
-   else if(/^\/player\/achievements\/[0-9]{1,10}$/.test(local.pathname)&&!body){
+   else if(local.pathname==='/player/achievementHistory'&&!body){
+    contract=local.searchParams.get('contractVersion')||'2';if(!['1','2'].includes(contract))throw Error('不支持的游戏历史协议版本。');
+    url=`https://achievements.xboxlive.com/users/xuid(${xuid})/history/titles?${continuation()}`;
+   }else if(/^\/player\/achievements\/[0-9]{1,10}$/.test(local.pathname)&&!body){
     const titleId=local.pathname.split('/').pop()!;if(Number(titleId)<1||Number(titleId)>4294967295)throw Error('Title ID 格式无效。');
     const params=continuation();params.set('titleId',titleId);params.set('unlockedOnly','false');
     const version=local.searchParams.get('contractVersion')||'2';if(!['2','4','6'].includes(version))throw Error('不支持的成就协议版本。');contract=version;

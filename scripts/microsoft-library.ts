@@ -58,20 +58,38 @@ export function catalogGroups(bundle:CatalogBundle|undefined,game:Game):Achievem
  if(map.size!==game.achievements.length)return;
  return validateGroups(catalog.data.groups.map(g=>({...g,achievementIds:g.achievementIds.map(id=>map.get(id)!)})),game.achievements,game.total,game.earned);
 }
-export type ScanAudit={version:1;at:string;titlePages:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;failed:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number;matchedAchievementDates:number};};
-export function compareLibrary(games:Game[],prior?:RecordData,aliases=new Map<string,string[]>()){
+export type ScanAudit={version:1;at:string;titlePages:number;achievementHistoryPages:number;historySourcesFailed:number;historyTitlesAdded:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;failed:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number;matchedAchievementDates:number};};
+export function compareLibrary(games:Game[],prior?:RecordData,aliases=new Map<string,string[]>(),awardNames=new Map<string,Map<string,string>>()){
  const out={matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0};
- for(const g of games){const names=new Set([g.name,...(aliases.get(g.id)||[])].map(normalizedName));const matches=(prior?.games||[]).filter(p=>names.has(normalizedName(p.name)));if(matches.length!==1){out[matches.length?'ambiguous':'unmatched']++;continue;}
-  out.matched++;const p=matches[0];if(p.earned!==g.earned)out.earnedDifferences++;if(p.total!==g.total)out.totalDifferences++;
+ const choices=new Map(games.map(g=>{const names=new Set([g.name,...(aliases.get(g.id)||[])].map(normalizedName));return [g.id,(prior?.games||[]).filter(p=>names.has(normalizedName(p.name)))];}));
+ const claims=new Map<string,Game[]>();for(const g of games){const m=choices.get(g.id)!;if(m.length===1)claims.set(m[0].id,[...(claims.get(m[0].id)||[]),g]);}
+ for(const g of games){const matches=choices.get(g.id)!;if(matches.length!==1){out[matches.length?'ambiguous':'unmatched']++;continue;}
+  const p=matches[0],claimants=claims.get(p.id)||[];if(claimants.length>1){const exact=claimants.filter(c=>c.total>0&&c.total===p.total&&(p.maxScore===0||c.maxScore===p.maxScore));if(exact.length!==1||exact[0].id!==g.id){out.ambiguous++;continue;}}
+  out.matched++;if(p.earned!==g.earned)out.earnedDifferences++;if(p.total!==g.total)out.totalDifferences++;
   if(g.minutes!==null&&p.minutes!==null&&Math.abs(g.minutes-p.minutes)>6)out.playtimeDifferences++;
-  for(const a of g.achievements||[]){const candidates=p.achievements?.filter(b=>normalizedName(b.name)===normalizedName(a.name)&&b.points===a.points)||[];
+  for(const a of g.achievements||[]){const candidates=p.achievements?.filter(b=>[a.name,awardNames.get(g.id)?.get(a.id)||''].filter(Boolean).some(name=>normalizedName(b.name)===normalizedName(name))&&b.points===a.points)||[];
    if(candidates.length===1&&a.unlockedAt&&candidates[0].unlockedAt){out.matchedAchievementDates++;if(Math.abs(Date.parse(a.unlockedAt)-Date.parse(candidates[0].unlockedAt!))>60000)out.achievementDateDifferences++;}
   }
  }return out;
 }
 export async function titleAliases(read:(path:string)=>Promise<any>){
  const history=await collectPages(t=>read('/player/titleHistory?locale=en-US'+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');
- return new Map<string,string[]>(history.values.filter(t=>typeof t.name==='string').map(t=>[String(t.titleId),[t.name]]));
+ const values=history.values.slice();
+ for(const version of ['2','1'])try{const extra=await collectPages(t=>read('/player/achievementHistory?contractVersion='+version+'&locale=en-US'+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');values.push(...extra.values);}catch(error){if(error instanceof XboxReadError&&[401,429].includes(error.status))throw error;}
+ const aliases=new Map<string,string[]>();for(const t of values)if(typeof t.name==='string'){const id=String(t.titleId);aliases.set(id,[...new Set([...(aliases.get(id)||[]),t.name])]);}return aliases;
+}
+export function mergeTitleHistories(hub:any[],modern:any[],legacy:any[]){
+ const titles=new Map(hub.filter(t=>t.type!=='App').map(t=>[String(t.titleId),t]));
+ for(const [source,list] of [[2,modern],[1,legacy]] as const)for(const item of list){
+  if(item.titleType==='LiveApp'||item.titleType===5||!/^\d{1,10}$/.test(String(item.titleId)))continue;
+  const id=String(item.titleId),old=titles.get(id),summary={...old?.achievement};
+  for(const [target,fields]of Object.entries({currentAchievements:['currentAchievements','earnedAchievements'],totalAchievements:['totalAchievements'],currentGamerscore:['currentGamerscore'],totalGamerscore:['totalGamerscore','maxGamerscore']})){
+   const field=fields.find(k=>typeof item[k]==='number');if(field)summary[target]=item[field];
+  }
+  const legacyContract=source===1&&typeof item.titleType==='number';if(legacyContract)summary.sourceVersion=1;
+  titles.set(id,{...old,titleId:id,name:old?.name||item.name||'Xbox 游戏',type:'Game',devices:old?.devices||(legacyContract?['Xbox360']:['XboxOne']),achievement:summary,titleHistory:old?.titleHistory||{lastTimePlayed:item.lastPlayed||null,visible:true}});
+ }
+ return [...titles.values()];
 }
 export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
@@ -81,11 +99,16 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  if(options.expectedOwner&&options.expectedOwner!==provider.xuid)throw Error('微软续期账号发生变化；停止同步。');
  const settings=rawProfile.profileUsers[0].settings||[],setting=(id:string)=>settings.find((s:any)=>s.id===id)?.value||'';
  const history=await collectPages(t=>provider.call('/player/titleHistory'+(t?'?continuationToken='+encodeURIComponent(t):'')),'titles');
- const titles=[...new Map(history.values.filter(g=>g.type!=='App'&&/^\d{1,10}$/.test(String(g.titleId))).map(g=>[String(g.titleId),g])).values()];
+ let titles=[...new Map(history.values.filter(g=>g.type!=='App'&&/^\d{1,10}$/.test(String(g.titleId))).map(g=>[String(g.titleId),g])).values()];
+ let historyFailures=0,achievementPages=0;const extra:any[][]=[];
+ for(const version of ['2','1']){
+  try{const list=await collectPages(t=>provider.call('/player/achievementHistory?contractVersion='+version+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');extra.push(list.values);achievementPages+=list.pages;}catch(error){if(error instanceof XboxReadError&&[401,429].includes(error.status))throw error;historyFailures++;extra.push([]);}
+ }
+ const hubTitles=titles.length;titles=mergeTitleHistories(titles,extra[0],extra[1]);
  if(!titles.length||titles.length>=5000)throw Error('Xbox 游戏历史为空或超出上限；未覆盖暂存记录。');
- const games=normalizeTitles({titles:titles.filter(t=>!options.onlyIds||options.onlyIds.has(String(t.titleId))).map(t=>({...t,titleHistory:{...t.titleHistory,visible:true}}))});
+ const games=normalizeTitles({titles:titles.filter(t=>!options.onlyIds||options.onlyIds.has(String(t.titleId))||!(options.previous?.games||[]).some(g=>g.id===String(t.titleId))).map(t=>({...t,titleHistory:{...t.titleHistory,visible:true}}))});
  const prior=options.previous?.profile.xuid===provider.xuid?new Map(options.previous.games.map(g=>[g.id,g])):new Map<string,Game>();
- const audit:ScanAudit={version:1,at:new Date().toISOString(),titlePages:history.pages,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
+ const audit:ScanAudit={version:1,at:new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
  const pagesFor=async(id:string,version:string,possible=false,legacy=false,earned=false)=>{
   const pages:any[]=[];const result=await collectPages(async token=>{
    const params=new URLSearchParams(legacy?{earned:String(earned)}:{contractVersion:version,possibleOnly:String(possible)});if(token)params.set('continuationToken',token);
@@ -110,7 +133,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
     data=await legacyFor(game.id);version='1';audit.legacy++;
    }else{
     for(const candidate of ['6','4','2']){
-     try{const result=await pagesFor(game.id,candidate);if(result.raw.length||game.total===0){data=result;version=candidate;break;}}
+     try{const result=await pagesFor(game.id,candidate);data=result;version=candidate;if(result.raw.length)break;}
      catch(error){if(fatal(error))throw error;}
     }
    }
@@ -129,7 +152,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    }
    const awards=data.raw.map(achievement),unlocked=awards.filter(a=>a.unlocked).length;
    const titleSummary=titles.find(t=>String(t.titleId)===game.id)?.achievement;
-   const expectedTotal=typeof titleSummary?.totalAchievements==='number'&&titleSummary.totalAchievements>0?titleSummary.totalAchievements:null,expectedEarned=version==='1'?null:typeof titleSummary?.currentAchievements==='number'?titleSummary.currentAchievements:null;
+   const expectedTotal=typeof titleSummary?.totalAchievements==='number'&&titleSummary.totalAchievements>0?titleSummary.totalAchievements:null,expectedEarned=version==='1'||(titleSummary?.totalAchievements===0&&titleSummary?.currentAchievements===0&&unlocked>0)?null:typeof titleSummary?.currentAchievements==='number'?titleSummary.currentAchievements:null;
    const returnedScore=awards.reduce((sum,a)=>sum+(a.points||0),0),expectedScore=typeof titleSummary?.totalGamerscore==='number'&&titleSummary.totalGamerscore>0?titleSummary.totalGamerscore:null;
    if(audit.diagnostics.length<3)audit.diagnostics.push({summaryKeys:Object.keys(titleSummary||{}).filter(k=>/^[A-Za-z]{1,40}$/.test(k)).slice(0,30),awardKeys:Object.keys(data.raw[0]||{}).filter(k=>/^[A-Za-z]{1,40}$/.test(k)).slice(0,30),expectedTotal,expectedEarned,returned:awards.length,unlocked,expectedScore,returnedScore,rarityKeys:Object.keys(data.raw[0]?.rarity||{}).filter(k=>/^[A-Za-z]{1,40}$/.test(k)),completionShape:Array.isArray(data.pages[0]?.completion)?'array':typeof data.pages[0]?.completion,groupFields:Object.keys(Object.values(data.pages[0]?.completion?.[0]?.groups||{})[0]||{}).filter(k=>/^[A-Za-z]{1,40}$/.test(k))});
    if(expectedTotal===null){game.total=awards.length;audit.summaryTotalsDerived++;}

@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary} from '../scripts/microsoft-library.ts';
+import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories} from '../scripts/microsoft-library.ts';
 import type {Achievement,Game,RecordData} from '../src/data.ts';
 const config={clientId:'11111111-1111-1111-1111-111111111111',refreshToken:'PRIVATE-REFRESH'};
 const award=(id:string,unlocked=false):Achievement=>({id,name:'Award '+id,image:'',unlocked,unlockedAt:null,rarity:null,points:10});
@@ -24,7 +24,7 @@ test('rarity zero, legacy sentinel dates, native statlists, and ambiguous catalo
 test('full scan reads modern contract 6, legacy all+earned, explicit groups, time, and emits only counts in audit',async()=>{
  const calls:{url:URL;headers:any}[]=[];
  const request:typeof fetch=async(input,init)=>{
-  const url=new URL(String(input));calls.push({url,headers:init?.headers});let data:any;
+  const url=new URL(String(input));if(url.pathname.includes('/history/titles'))return Response.json({titles:[]});calls.push({url,headers:init?.headers});let data:any;
   if(url.hostname==='login.microsoftonline.com')data={access_token:'PRIVATE-ACCESS',refresh_token:'PRIVATE-ROTATED'};
   else if(url.hostname==='user.auth.xboxlive.com')data={Token:'PRIVATE-USER'};
   else if(url.hostname==='xsts.auth.xboxlive.com')data={Token:'PRIVATE-XSTS',DisplayClaims:{xui:[{uhs:'PRIVATE-HASH'}]}};
@@ -39,13 +39,13 @@ test('full scan reads modern contract 6, legacy all+earned, explicit groups, tim
  const {record:r,audit}=await scanMicrosoft(config,{request,pause:async()=>{},expectedOwner:'2530000000000000'});
  assert.equal(audit.processed,2);assert.equal(audit.complete,2);assert.equal(audit.legacy,1);assert.equal(audit.rarityAchievements,2);assert.equal(audit.officialBaseGroups,1);assert.equal(audit.officialAddonGroups,1);assert.equal(audit.failed,0);
  assert.equal(r.games[0].minutes,0);assert.equal(r.games[1].minutes,null);assert.equal(r.games[1].achievements?.filter(a=>a.unlocked).length,1);
- assert.equal(calls.find(c=>c.url.hostname==='achievements.xboxlive.com')?.headers['x-xbl-contract-version'],'6');
+ assert.equal(calls.find(c=>c.url.hostname==='achievements.xboxlive.com'&&!c.url.pathname.includes('/history/'))?.headers['x-xbl-contract-version'],'6');
  for(const value of ['PRIVATE','2530000000000000','2026-10-30'])assert.ok(!JSON.stringify(audit).includes(value));
 });
 test('permission failures preserve previous title records; 429 interrupts without a request storm',async()=>{
  let reads=0;const old=game();
  const request:typeof fetch=async(input)=>{
-  const u=new URL(String(input));if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  const u=new URL(String(input));if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
   if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
   if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
   if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',achievement:{totalAchievements:2,currentAchievements:1}}]});
@@ -58,7 +58,7 @@ test('permission failures preserve previous title records; 429 interrupts withou
 
 test('missing title summary total is derived from the complete catalog, never mistaken for zero',async()=>{
  const request:typeof fetch=async(input)=>{
-  const u=new URL(String(input));if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  const u=new URL(String(input));if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
   if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
   if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
   if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',achievement:{currentAchievements:1,totalAchievements:0}}]});
@@ -78,7 +78,7 @@ test('official title aliases reconcile localized names without confusing duplica
 
 test('empty modern responses try legacy catalogs even without legacy flags; targeted repair preserves other games',async()=>{
  const request:typeof fetch=async(input,init)=>{
-  const u=new URL(String(input));if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  const u=new URL(String(input));if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
   if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
   if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
   if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-LEGACY',devices:['PC'],achievement:{currentAchievements:0,totalAchievements:0}},{titleId:'2',name:'PRIVATE-PRESERVED'}]});
@@ -88,4 +88,14 @@ test('empty modern responses try legacy catalogs even without legacy flags; targ
  };
  const old=game('2');const result=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old]),onlyIds:new Set(['1'])});
  assert.equal(result.audit.titles,1);assert.equal(result.audit.legacy,1);assert.equal(result.audit.failed,0);assert.equal(result.record.games[0].earned,1);assert.equal(result.record.games[0].total,1);assert.deepEqual(result.record.games.find(g=>g.id==='2'),old);
+});
+
+test('a metadata-only PC duplicate cannot be compared against the console record as a second match',()=>{
+ const consoleGame=game('1'),pc={...game('2'),earned:0,total:0,score:0,achievements:[]};const prior=record([game('exophase')]);
+ const result=compareLibrary([consoleGame,pc],prior);assert.equal(result.matched,1);assert.equal(result.ambiguous,1);assert.equal(result.earnedDifferences,0);assert.equal(result.totalDifferences,0);
+});
+
+test('achievement histories add omitted games, identify legacy explicitly, and exclude application history',()=>{
+ const result=mergeTitleHistories([{titleId:'1',name:'中文游戏',devices:['XboxOne'],achievement:{currentAchievements:0,totalAchievements:0}}],[{titleId:1,name:'English Game',titleType:'DGame',earnedAchievements:3,currentGamerscore:30,maxGamerscore:100},{titleId:2,name:'Missing modern',titleType:'DGame',earnedAchievements:1,maxGamerscore:1000},{titleId:9,name:'App',titleType:'LiveApp'}],[{titleId:3,name:'Old game',titleType:1,currentAchievements:5,totalAchievements:50,totalGamerscore:1000},{titleId:10,name:'Video app',titleType:5}]);
+ assert.deepEqual(result.map(t=>t.titleId),['1','2','3']);assert.equal(result[0].name,'中文游戏');assert.equal(result[0].achievement.currentAchievements,3);assert.equal(result[1].achievement.totalGamerscore,1000);assert.equal(result[2].achievement.sourceVersion,1);assert.equal(result[2].achievement.totalAchievements,50);
 });
