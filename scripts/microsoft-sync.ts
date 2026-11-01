@@ -17,12 +17,18 @@ if(fresh?.source==='Xbox'&&Date.now()-Date.parse(fresh.at)<20*60_000){
  await cacheRecordImages(fresh);
  await publishSnapshot(fresh,previous.filter((r:any)=>r.id!==fresh.id).slice(0,29),target);console.log('复用刚完成的微软快照。');process.exit(0);
 }
+const began=Date.now();
 const result=await scanMicrosoft(session.config,{previous:saved?.record,expectedOwner:session.state.owner,progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
+const scanSeconds=Math.round((Date.now()-began)/1000);
+console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,failed:result.audit.failed}));
 if(result.audit.failed||result.audit.interrupted||result.audit.historySourcesFailed)throw Error('微软同步未完整完成。');
+const artworkStarted=Date.now();
 const artwork=await australianArtwork(result.record,fetch,previous[0]);
-console.log('澳区英文封面覆盖：'+JSON.stringify(artwork));
+console.log('澳区英文封面覆盖：'+JSON.stringify({...artwork,seconds:Math.round((Date.now()-artworkStarted)/1000)}));
 result.record.games=result.record.games.filter(g=>g.total>0||g.minutes!==null);
+const mediaStarted=Date.now();
 await cacheRecordImages(result.record);
+console.log('图片缓存耗时（秒）：'+Math.round((Date.now()-mediaStarted)/1000));
 writeState(root+'/candidate.json',result,key);session.save();
 await publishSnapshot(result.record,previous.slice(0,29),target);
-console.log('微软正式同步完成：'+JSON.stringify({games:result.record.games.length,achievements:result.audit.rarityAchievements,baseGroups:result.audit.officialBaseGroups,dlcGroups:result.audit.officialAddonGroups,artwork}));
+console.log('微软正式同步完成：'+JSON.stringify({games:result.record.games.length,achievementsWithRarity:result.audit.rarityAchievements,baseGroups:result.audit.officialBaseGroups,dlcGroups:result.audit.officialAddonGroups,artwork,seconds:Math.round((Date.now()-began)/1000)}));
