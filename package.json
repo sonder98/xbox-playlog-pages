@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "build": "tsc --noEmit && vite build",
+    "build": "node --experimental-strip-types scripts/generate-pwa-icons.ts && tsc --noEmit && vite build",
     "sync": "node --experimental-strip-types scripts/microsoft-sync.ts"
   },
   "dependencies": {
