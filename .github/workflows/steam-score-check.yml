@@ -1,0 +1,29 @@
+name: Check Steam score coverage
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/steam-score-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - name: Restore encrypted snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/live-assets.mjs restore-snapshot
+      - name: Aggregate score availability
+        env:
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
+        run: node --experimental-strip-types scripts/steam-metacritic-audit.ts
