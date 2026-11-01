@@ -71,6 +71,12 @@ export function AchievementPreview({games,onOpen,onOpenDay}:{games:Game[];onOpen
 /** Five metal podiums per scene. Center (rarest) sits highest; every card is real Xbox data. */
 function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
  const rail=useRef<HTMLDivElement>(null);
+ useEffect(()=>{
+  const scroller=rail.current;
+  if(!scroller||scroller.clientWidth>=550)return;
+  const center=scroller.querySelector<HTMLElement>('.ah-podium-center');
+  if(center)scroller.scrollLeft=center.offsetLeft+center.offsetWidth/2-scroller.clientWidth/2;
+ },[items]);
  const groups=Array.from({length:Math.ceil(items.length/5)},(_,page)=>{
   const chunk=items.slice(page*5,page*5+5);
   // Visual placement: center is #1, flanked by #2/#3, then #4/#5.
