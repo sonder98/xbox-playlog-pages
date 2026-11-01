@@ -2,7 +2,7 @@ import {decryptVault,encryptVault} from './crypto';
 import {readDisplayPreferences,saveDisplayPreferences,normalizeDisplayPreferences,type DisplayPreferences} from './display-preferences';
 import {validateRecord,type RecordData} from './data';
 export const repo='https://github.com/sonder98/xbox-playlog-pages';
-export const workflow=repo+'/actions/workflows/pages.yml';
+export const workflow=repo+'/actions/workflows/sync.yml';
 let records:RecordData[]=[],password='';
 let designPreferences:DisplayPreferences|null=null;
 const localKey='playlog-pages-encrypted-imports-v1';

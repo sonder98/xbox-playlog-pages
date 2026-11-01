@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories} from '../scripts/microsoft-library.ts';
+import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime} from '../scripts/microsoft-library.ts';
 import type {Achievement,Game,RecordData} from '../src/data.ts';
 const config={clientId:'11111111-1111-1111-1111-111111111111',refreshToken:'PRIVATE-REFRESH'};
 const award=(id:string,unlocked=false):Achievement=>({id,name:'Award '+id,image:'',unlocked,unlockedAt:null,rarity:null,points:10});
@@ -176,4 +176,45 @@ test('Previously visible game absent from title history stays archived, but not 
  assert.equal(latest.games.find(g=>g.id==='55')?.officialHidden,undefined);
  assert.equal(latest.games.find(g=>g.id==='55')?.minutes,42);
  assert.equal(latest.games.find(g=>g.id==='66')?.officialHidden,false);
+});
+
+test('incremental cache does not refetch unchanged unverified achievements or old playtime, but polls recent titles',async()=>{
+ const at='2026-11-01T01:30:00.000Z',recent='2026-10-31T00:00:00.000Z',dormant='2026-07-01T00:00:00.000Z';
+ const old1={...game('1'),groupStatus:'unavailable' as const,groups:[],lastPlayed:dormant};
+ const old2={...game('2'),groupStatus:'verified' as const,groups:[{id:'base',name:'本体',kind:'base' as const,achievementIds:['1','2'],total:2,earned:1}],lastPlayed:recent};
+ const calls:string[]=[];
+ const request:typeof fetch=async input=>{
+  const u=new URL(String(input));
+  if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'access'});
+  if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'user'});
+  if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'xsts',DisplayClaims:{xui:[{uhs:'hash'}]}});
+  if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[
+   {titleId:'1',name:'PRIVATE-GAME',titleHistory:{visible:true,lastTimePlayed:dormant},achievement:{totalAchievements:2,currentAchievements:1,currentGamerscore:10}},
+   {titleId:'2',name:'PRIVATE-GAME-2',titleHistory:{visible:true,lastTimePlayed:recent},achievement:{totalAchievements:2,currentAchievements:1,currentGamerscore:10}}
+  ]});
+  if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});
+  calls.push(u.toString());
+  if(u.hostname==='userstats.xboxlive.com')return Response.json({statlistscollection:[{stats:[{name:'MinutesPlayed',value:99}]}]});
+  throw Error('Unchanged achievements should not be refetched');
+ };
+ const {record:r,audit}=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old1,old2]),now:at});
+ assert.equal(audit.fullRefresh,false);
+ assert.equal(audit.reusedDetails,2);
+ assert.equal(audit.detailedReads,0);
+ assert.equal(audit.statsReads,1);
+ assert.equal(audit.statsSkipped,1);
+ assert.equal(audit.unknownGroups,1);
+ assert.equal(calls.length,1);
+ assert.equal(r.games.find(g=>g.id==='1')?.minutes,42);
+ assert.equal(r.games.find(g=>g.id==='2')?.minutes,99);
+});
+test('daily catalog sweep is scheduled only once during its UTC hour',()=>{
+ assert.equal(refreshCatalogToday('2026-10-31T01:30:00Z','2026-11-01T02:00:00Z'),true);
+ assert.equal(refreshCatalogToday('2026-11-01T02:05:00Z','2026-11-01T02:35:00Z'),false);
+ assert.equal(refreshCatalogToday('2026-10-31T02:00:00Z','2026-11-01T02:00:00Z'),true);
+ assert.equal(refreshCatalogToday('2026-11-01T01:55:00Z','2026-11-01T03:05:00Z'),false);
+ assert.equal(shouldReadPlaytime('2026-09-01T00:00:00Z',42,'2026-11-01T01:30:00Z'),false);
+ assert.equal(shouldReadPlaytime('2026-10-31T00:00:00Z',42,'2026-11-01T01:30:00Z'),true);
+ assert.equal(shouldReadPlaytime(null,null,'2026-11-01T01:30:00Z'),true);
 });
