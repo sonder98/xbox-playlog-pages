@@ -81,6 +81,14 @@ try{
     }
     await unlock();
     await page.locator('.recent-game-card').first().waitFor();
+    const pwa=await page.evaluate(async()=>{
+      const link=document.querySelector('link[rel="manifest"]');
+      return {href:link?.getAttribute('href'),manifest:link?await (await fetch(link.href)).json():null};
+    });
+    assert.equal(pwa.manifest?.display,'standalone','Production manifest enables standalone PWA');
+    assert.ok(pwa.href?.endsWith('/xbox-playlog-pages/manifest.webmanifest'),'PWA links follow GitHub Pages base path');
+    const pwaIcon=await page.request.get('http://127.0.0.1:4173/xbox-playlog-pages/pwa-192.png');
+    assert.ok(pwaIcon.ok(),'Generated PWA icon is deployed with built assets');
     if(mobile){
       const mobileBar=page.getByRole('navigation',{name:'主导航'});
       assert.equal(await mobileBar.locator('button').count(),4,'Mobile navigation retains four tabs');

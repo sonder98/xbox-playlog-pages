@@ -13,3 +13,9 @@ return <div className="overlay entry-screen"><section className="dialog"><span c
 const root=import.meta.hot?.data.root??createRoot(document.getElementById('root')!);
 if(import.meta.hot)import.meta.hot.data.root=root;
 root.render(<App/>);
+// Cache only the public app shell and artwork; vault.json/status.json always use network.
+if(import.meta.env.PROD&&'serviceWorker' in navigator){
+ window.addEventListener('load',()=>{
+  navigator.serviceWorker.register(import.meta.env.BASE_URL+'sw.js',{scope:import.meta.env.BASE_URL}).catch(()=>{});
+ });
+}

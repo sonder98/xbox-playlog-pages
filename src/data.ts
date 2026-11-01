@@ -9,7 +9,22 @@ export function officialGameVisible(game:Game,source:string):boolean {
 export type Profile = { xuid:string; gamertag:string; avatar:string };
 export type RecordData = { id:string; at:string; profile:Profile; games:Game[]; source:string; warnings:string[] };
 export function number(v:unknown):number { const n=Number(v);return Number.isFinite(n)&&n>=0?n:0; }
-export function safeImage(v:unknown):string { if(typeof v!=='string')return '';try { const u=new URL(v.startsWith('//')?'https:'+v:v);return u.protocol==='https:'?u.href:''; }catch{return '';} }
+export function safeImage(v:unknown):string {
+ if(typeof v!=='string')return '';
+ try {
+  const u=new URL(v.startsWith('//')?'https:'+v:v);
+  if(u.protocol!=='https:')return '';
+  // Older encrypted snapshots reference GitHub Pages artwork URLs. Mirror them
+  // to the active PWA origin when deployed to a second host without GitHub access.
+  if(typeof window!=='undefined'&&u.origin==='https://sonder98.github.io'&&
+     window.location.origin!==u.origin&&u.pathname.startsWith('/xbox-playlog-pages/media/')){
+   const filename=u.pathname.slice('/xbox-playlog-pages/media/'.length);
+   if(/^[a-f0-9]{32}-\d+\.webp$/.test(filename))
+    return new URL(import.meta.env.BASE_URL+'media/'+filename,window.location.origin).href;
+  }
+  return u.href;
+ }catch{return '';}
+}
 export function normalizeTitles(data:any):Game[] {
  if(!Array.isArray(data?.titles))throw new Error('游戏列表返回格式不符合预期，未覆盖已有记录。');
  return data.titles.filter((g:any)=>g.type!=='App').map((g:any)=>({id:String(g.titleId),name:String(g.name||'未命名游戏'),image:safeImage(g.displayImage),...(typeof g.titleHistory?.visible==='boolean'?{officialHidden:!g.titleHistory.visible}:{}),devices:Array.isArray(g.devices)?g.devices.map(String):[],lastPlayed:g.titleHistory?.lastTimePlayed||null,minutes:null,earned:number(g.achievement?.currentAchievements),total:number(g.achievement?.totalAchievements),score:number(g.achievement?.currentGamerscore),maxScore:number(g.achievement?.totalGamerscore)}));
