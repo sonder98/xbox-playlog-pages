@@ -2338,6 +2338,7 @@ footer .dot {
    --podium-focus is a continuous 0..1 proximity score updated from the actual scroller center. */
 .ah-showcase-podium {
  --podium-width:128px;
+ --podium-half-width:64px;
  background:radial-gradient(ellipse at 50% 77%,rgba(166,114,46,.14),transparent 67%),linear-gradient(160deg,#211e1b,#171719 78%);
  border:1px solid rgba(218,167,91,.21);
  box-shadow:inset 0 1px rgba(255,232,177,.055);
@@ -2357,10 +2358,10 @@ footer .dot {
  align-items:flex-end;
  gap:9px;
  height:251px;
- padding:6px calc(50% - var(--podium-width) / 2) 17px;
+ padding:6px calc(50% - var(--podium-half-width)) 17px;
  box-sizing:border-box;
  scroll-snap-type:x mandatory;
- scroll-padding-inline:calc(50% - var(--podium-width) / 2);
+ scroll-padding-inline:calc(50% - var(--podium-half-width));
  scroll-behavior:smooth;
  scrollbar-width:none;
  touch-action:pan-x pan-y;
@@ -2506,7 +2507,7 @@ footer .dot {
 .ah-showcase-podium .ah-showcase-rail-actions button:disabled {opacity:.3;cursor:default;}
 .ah-showcase-podium .ah-showcase-rail-actions button:not(:disabled):hover {color:#241a0e;background:#e0b263;}
 @media(max-width:700px){
- .ah-showcase-podium {--podium-width:116px;padding:13px 9px 10px;}
+ .ah-showcase-podium {--podium-width:116px;--podium-half-width:58px;padding:13px 9px 10px;}
  .ah-showcase-podium .ah-showcase-heading {margin:0 5px 0;}
  .ah-podium-rail {height:227px;gap:7px;padding-top:4px;padding-bottom:15px;}
  .ah-podium {height:202px;padding-inline:2px;}
