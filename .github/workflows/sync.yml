@@ -28,6 +28,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
+      - run: npm install --no-save --ignore-scripts playwright
       - name: Validate before contacting Xbox
         run: |
           npm test
