@@ -87,8 +87,22 @@ try{
     });
     assert.equal(pwa.manifest?.display,'standalone','Production manifest enables standalone PWA');
     assert.ok(pwa.href?.endsWith('/xbox-playlog-pages/manifest.webmanifest'),'PWA links follow GitHub Pages base path');
-    const pwaIcon=await page.request.get('http://127.0.0.1:4173/xbox-playlog-pages/pwa-192.png');
-    assert.ok(pwaIcon.ok(),'Generated PWA icon is deployed with built assets');
+    assert.equal(pwa.manifest.name,'XBOX Playlog','Installed app uses the exact requested brand name');
+    assert.equal(pwa.manifest.short_name,'XBOX Playlog','Home screen label matches the brand');
+    assert.equal(await page.title(),'XBOX Playlog','Website title matches installed brand');
+    assert.ok((await page.locator('aside .brand').innerText()).includes('XBOX Playlog'),'Sidebar uses the new brand');
+    const iconHref=await page.locator('link[rel="apple-touch-icon"]').getAttribute('href');
+    assert.ok(iconHref?.endsWith('/xbox-playlog-pages/apple-touch-icon-v2.png'),
+      'iOS home screen icon uses the explicit updated subpath URL');
+    for(const [file,size] of [['pwa-192-v2.png',192],['pwa-512-v2.png',512],['apple-touch-icon-v2.png',180]]){
+      const image=await page.request.get('http://127.0.0.1:4173/xbox-playlog-pages/'+file);
+      assert.ok(image.ok(),file+' must be available after deployment');
+      assert.ok(image.headers()['content-type']?.includes('image/png'),file+' must return a real PNG');
+      const bytes=await image.body();
+      assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a',file+' has a valid PNG signature');
+      assert.deepEqual([bytes.readUInt32BE(16),bytes.readUInt32BE(20)],[size,size],
+        file+' has the exact dimensions that iOS or the PWA manifest requests');
+    }
     if(mobile){
       const mobileBar=page.getByRole('navigation',{name:'主导航'});
       assert.equal(await mobileBar.locator('button').count(),4,'Mobile navigation retains four tabs');
