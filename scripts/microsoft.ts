@@ -35,7 +35,7 @@ export async function microsoftProvider(config:DirectConfig,request:typeof fetch
     url=`https://achievements.xboxlive.com/users/xuid(${xuid})/history/titles?${continuation()}`;
    }else if(/^\/player\/achievements\/[0-9]{1,10}$/.test(local.pathname)&&!body){
     const titleId=local.pathname.split('/').pop()!;if(Number(titleId)<1||Number(titleId)>4294967295)throw Error('Title ID 格式无效。');
-    const params=continuation();params.set('titleId',titleId);params.set('unlockedOnly','false');
+    const params=continuation();params.set('titleId',titleId);params.set('unlockedOnly',local.searchParams.get('unlockedOnly')==='true'?'true':'false');
     const version=local.searchParams.get('contractVersion')||'2';if(!['2','4','6'].includes(version))throw Error('不支持的成就协议版本。');contract=version;
     params.set('possibleOnly',local.searchParams.get('possibleOnly')==='true'?'true':'false');params.set('types','Persistent');
     url=`https://achievements.xboxlive.com/users/xuid(${xuid})/achievements?${params}`;
