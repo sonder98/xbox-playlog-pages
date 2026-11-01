@@ -1,7 +1,8 @@
 name: Sync Xbox records
 on:
   schedule:
-    - cron: '0,30 * * * *'
+    # Off the GitHub hourly/half-hourly peak; actual start remains best-effort.
+    - cron: '11,41 * * * *'
   workflow_dispatch:
   push:
     branches: [main]
@@ -15,7 +16,7 @@ permissions:
   contents: write
   actions: write
 concurrency:
-  group: xbox-record-sync
+  group: playlog-live-publish
   cancel-in-progress: false
 jobs:
   sync:
@@ -45,6 +46,12 @@ jobs:
           path: .private/microsoft
           key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-sync-start
           restore-keys: microsoft-private-v1-main-
+      - name: Restore newest published encrypted snapshot and durable artwork
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/live-assets.mjs restore-snapshot
+          node scripts/live-assets.mjs restore-media
       - name: Sync and encrypt Microsoft records
         id: microsoft_sync
         env:
@@ -63,26 +70,10 @@ jobs:
         with:
           path: public/media
           key: artwork-webp-v1-${{ runner.os }}-${{ github.run_id }}
-      - name: Publish encrypted snapshot and trigger Pages
-        run: |
-          cp public/vault.json "$RUNNER_TEMP/vault.json"
-          cp public/status.json "$RUNNER_TEMP/status.json"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for attempt in 1 2 3; do
-            git fetch origin main
-            git reset --hard origin/main
-            cp "$RUNNER_TEMP/vault.json" public/vault.json
-            cp "$RUNNER_TEMP/status.json" public/status.json
-            git add public/vault.json public/status.json
-            if git diff --cached --quiet; then exit 0; fi
-            git commit -m "Update encrypted Microsoft snapshot"
-            if git push origin HEAD:main; then exit 0; fi
-            if [ "$attempt" -eq 3 ]; then
-              echo "Unable to publish encrypted snapshot after three attempts" >&2
-              exit 1
-            fi
-          done
+      - name: Publish encrypted snapshot and durable artwork without Git commits
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/live-assets.mjs publish
 
       - name: Trigger Pages explicitly (bot pushes do not start push workflows)
         env:
