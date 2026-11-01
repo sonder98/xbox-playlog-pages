@@ -192,15 +192,16 @@ try{
     await squareArt.scrollIntoViewIfNeeded();
     await page.waitForFunction(()=>document.querySelector('.ah-showcase-art img[src*="square.svg"]')?.naturalWidth>0);
     const firstFrame=await squareArt.evaluate(el=>{
-      const rect=el.getBoundingClientRect(),img=el.querySelector('img');
-      return {ratio:rect.width/rect.height,fit:getComputedStyle(img).objectFit};
+      const img=el.querySelector('img');
+      return {ratio:el.offsetWidth/el.offsetHeight,fit:getComputedStyle(img).objectFit};
     });
     const wideFrame=await wideArt.evaluate(el=>{
-      const rect=el.getBoundingClientRect(),img=el.querySelector('img');
-      return {ratio:rect.width/rect.height,fit:getComputedStyle(img).objectFit};
+      const img=el.querySelector('img');
+      return {ratio:el.offsetWidth/el.offsetHeight,fit:getComputedStyle(img).objectFit};
     });
-    assert.ok(Math.abs(firstFrame.ratio-1)<.04,'Square Xbox art remains square on its podium');
-    assert.ok(Math.abs(wideFrame.ratio-16/9)<.04,'Wide Xbox art retains original aspect ratio');
+    // Compare pre-perspective layout sizes: the side podium intentionally foreshortens in projection.
+    assert.ok(Math.abs(firstFrame.ratio-1)<.04,'Square art keeps intrinsic layout proportions');
+    assert.ok(Math.abs(wideFrame.ratio-16/9)<.04,'Wide art keeps intrinsic layout proportions');
     assert.equal(firstFrame.fit,'contain','Square artwork is not cropped');
     assert.equal(wideFrame.fit,'contain','Wide artwork is not cropped');
     const foil=await page.locator('.ah-showcase-art.ah-rarity-gold').first().evaluate(el=>({
