@@ -17,6 +17,7 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
  const {tab,navigate:setTab,back,gameId,dayId,showcase,gapShowcase,openGame,openAchievementDay,openAchievementShowcase,openAchievementGapShowcase,changeAchievementDay}=usePageNavigation();
  const [mobileNavVisible,setMobileNavVisible]=useState(false);
  const mobileNavHideTimer=useRef<number|undefined>(undefined);
+ const ignoreMobileScrollUntil=useRef(0);
  useEffect(()=>{
   let touchStartX=0,touchStartY=0,lastScrollY=window.scrollY;
   const showOnMovement=()=>{
@@ -27,7 +28,10 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
   };
   const onScroll=()=>{
    const y=window.scrollY;
-   if(Math.abs(y-lastScrollY)>1){lastScrollY=y;showOnMovement();}
+   if(Math.abs(y-lastScrollY)>1){
+    lastScrollY=y;
+    if(performance.now()>=ignoreMobileScrollUntil.current)showOnMovement();
+   }
   };
   const onTouchStart=(event:TouchEvent)=>{
    if(event.touches.length!==1)return;
@@ -56,6 +60,8 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
   };
  },[]);
  useEffect(()=>{
+  // Route restoration uses programmatic scrolling; only user movement should reveal tabs.
+  ignoreMobileScrollUntil.current=performance.now()+350;
   setMobileNavVisible(false);
   window.clearTimeout(mobileNavHideTimer.current);
  },[tab,gameId,dayId,showcase,gapShowcase]);
@@ -110,7 +116,13 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
    <div className="display-manager-footer"><button className="secondary" disabled={savingDisplay} onClick={()=>setManageDisplay(false)}>取消</button><button className="primary" disabled={savingDisplay} onClick={saveDisplay}>{savingDisplay?'保存中…':'保存展示设置'}</button></div>
  </Modal>}
  {selected&&<GameDetail game={selected} onClose={back}/>}
- <nav className={'mobile-nav'+(mobileNavVisible?' is-visible':'')} aria-label="主导航">{nav.map(([id,label,Icon])=><button key={id} onClick={event=>{event.currentTarget.blur();setTab(id);}} aria-current={tab===id?'page':undefined}><Icon size={21}/><span>{label}</span></button>)}</nav>
+ <nav className={'mobile-nav'+(mobileNavVisible?' is-visible':'')} aria-label="主导航">{nav.map(([id,label,Icon])=><button key={id} onClick={event=>{
+   event.currentTarget.blur();
+   ignoreMobileScrollUntil.current=performance.now()+350;
+   setMobileNavVisible(false);
+   window.clearTimeout(mobileNavHideTimer.current);
+   setTab(id);
+  }} aria-current={tab===id?'page':undefined}><Icon size={21}/><span>{label}</span></button>)}</nav>
 
  </div>;
  function renderGames(list:Game[]){return list.length?<div className="game-cards">{list.map((g,index)=><GameCard key={g.id} game={g} priority={index<2} onOpen={()=>loadAchievements(g)}/>)}</div>:<Empty title={loading?'正在读取记录…':hiddenCount===games.length&&games.length?'所有游戏已隐藏':query||filter!=='all'?'没有匹配的游戏':'游戏故事，从连接开始'} text={hiddenCount===games.length&&games.length?'打开管理展示，勾选想重新展示的游戏。':query||filter!=='all'?'试试其他名称或筛选条件。':'微软 首次同步成功后，你的游戏会出现在这里。'} action={hiddenCount===games.length&&games.length?<button className="secondary" onClick={openDisplayManager}>管理展示</button>:undefined}/>;}
