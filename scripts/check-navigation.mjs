@@ -181,7 +181,9 @@ try{
       assert.ok(refresh.dx<1&&refresh.dy<1,'Mobile refresh icon is centered both ways');
     }
     const statsBeforeHiding=await page.locator('.stats').innerText();
-    assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['heatmap','recent','showcases','top','stats']);
+    assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['heatmap','recent','showcases','dusty','top','stats']);
+    assert.equal(await page.locator('.dusty-preview').count(),1,'Dusty preview belongs after achievements-gap showcase');
+    assert.equal(await page.locator('.dusty-preview .dust-card').count(),0,'Non-Xbox fixtures must not invent official missing-visibility games');
     assert.equal(await page.locator('.ah-preview-grid .ah-preview-cell').count(),30,'Overview shows only 30 days');
     assert.equal(await page.locator('.ah-preview-weekdays span').count(),7,'Overview has explicit Monday-Sunday weekday labels');
     assert.equal(await page.locator('.ah-preview-axis').count(),0,'Overview omits explanatory direction text');
