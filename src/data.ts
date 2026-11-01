@@ -19,7 +19,7 @@ export function safeImage(v:unknown):string {
   if(typeof window!=='undefined'&&u.origin==='https://sonder98.github.io'&&
      window.location.origin!==u.origin&&u.pathname.startsWith('/xbox-playlog-pages/media/')){
    const filename=u.pathname.slice('/xbox-playlog-pages/media/'.length);
-   if(/^[a-f0-9]{32}-\\d+\\.webp$/.test(filename))
+   if(/^[a-f0-9]{32}-\d+\.webp$/.test(filename))
     return new URL(import.meta.env.BASE_URL+'media/'+filename,window.location.origin).href;
   }
   return u.href;
