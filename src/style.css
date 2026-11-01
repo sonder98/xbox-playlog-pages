@@ -2368,7 +2368,9 @@ footer .dot {
 }
 .ah-podium-rail::-webkit-scrollbar {display:none;}
 .ah-podium {
- --podium-focus:0;
+ --podium-lift:0px;
+ --podium-opacity:.68;
+ --podium-scale:.91;
  box-sizing:border-box;
  flex:0 0 var(--podium-width);
  width:var(--podium-width);
@@ -2386,7 +2388,7 @@ footer .dot {
  scroll-snap-align:center;
  cursor:pointer;
  text-align:center;
- opacity:calc(.68 + var(--podium-focus) * .32);
+ opacity:var(--podium-opacity);
  filter:drop-shadow(0 7px 8px rgba(0,0,0,.45));
  transition:filter .2s ease,opacity .15s linear;
 }
@@ -2418,7 +2420,7 @@ footer .dot {
  z-index:2;
  padding-bottom:12px;
  box-sizing:border-box;
- transform:scale(calc(.91 + var(--podium-focus) * .09));
+ transform:scale(var(--podium-scale));
  transform-origin:bottom center;
 }
 .ah-podium-rank {
@@ -2445,7 +2447,7 @@ footer .dot {
  flex:0 0 auto;
  position:relative;
  width:100%;
- height:calc(69px + var(--podium-focus) * 28px);
+ height:calc(69px + var(--podium-lift));
  min-height:0;
  display:flex;
  align-items:center;
@@ -2510,7 +2512,7 @@ footer .dot {
  .ah-podium {height:202px;padding-inline:2px;}
  .ah-podium-award {height:76px;flex-basis:76px;}
  .ah-podium-award .ah-showcase-art {height:57px;max-width:107px;}
- .ah-podium-plinth {height:calc(68px + var(--podium-focus) * 25px);padding-inline:5px;}
+ .ah-podium-plinth {height:calc(68px + var(--podium-lift));padding-inline:5px;}
  .ah-podium-name {font-size:10.5px;}
  .ah-podium-game {font-size:9.5px;}
  .ah-podium-meta {font-size:8.5px;}
