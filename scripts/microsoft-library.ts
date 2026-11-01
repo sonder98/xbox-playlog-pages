@@ -126,7 +126,7 @@ export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:st
  if(typeof summary.currentGamerscore==='number'&&summary.currentGamerscore!==old.score)return 'scoreChanged';
  return 'reused';
 }
-export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string}={}){
+export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string;forcePlaytimeSweep?:boolean}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
  // Sustained pacing, no retries against permissions/security errors. 429 stops this scan.
  const request:typeof fetch=async(input,init)=>{await pause(1050);return (options.request||fetch)(input,init);};
@@ -149,7 +149,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  audit.fullRefresh=refreshCatalogToday(options.previous?.at,audit.at);
  const statsSamples:PlaytimeSample[]=[];
  const sampleMinutes=(id:string,value:number|null)=>{if(value!==null&&Number.isSafeInteger(value)&&value>=0)statsSamples.push({id,minutes:value,at:options.now||new Date().toISOString()});};
- const sweepPlaytime=boundaryPlaytimeSweep(audit.at);
+ const sweepPlaytime=options.forcePlaytimeSweep===true||boundaryPlaytimeSweep(audit.at);
  const pagesFor=async(id:string,version:string,possible=false,legacy=false,earned=false,unlockedOnly=false)=>{
   const pages:any[]=[];const result=await collectPages(async token=>{
    const params=new URLSearchParams(legacy?{earned:String(earned)}:{contractVersion:version,possibleOnly:String(possible),unlockedOnly:String(unlockedOnly)});if(token)params.set('continuationToken',token);
