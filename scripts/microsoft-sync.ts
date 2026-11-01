@@ -20,7 +20,8 @@ if(fresh?.source==='Xbox'&&Date.now()-Date.parse(fresh.at)<20*60_000){
 const began=Date.now();
 const result=await scanMicrosoft(session.config,{previous:saved?.record,expectedOwner:session.state.owner,progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
 const scanSeconds=Math.round((Date.now()-began)/1000);
-console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,failed:result.audit.failed}));
+// Only aggregate counts: no XUID, game names, credentials, private snapshots or timestamps.
+console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed}));
 if(result.audit.failed||result.audit.interrupted||result.audit.historySourcesFailed)throw Error('微软同步未完整完成。');
 const artworkStarted=Date.now();
 const artwork=await australianArtwork(result.record,fetch,previous[0]);
