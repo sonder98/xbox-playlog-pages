@@ -48,7 +48,7 @@ test('permission failures preserve previous title records; 429 interrupts withou
   const u=new URL(String(input));if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
   if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
   if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
-  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',titleHistory:{visible:true},achievement:{totalAchievements:2,currentAchievements:1}}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',titleHistory:{visible:true,lastTimePlayed:'2026-11-01T06:00:00Z'},achievement:{totalAchievements:2,currentAchievements:1}}]});
   reads++;return Response.json({error:'do not print me'},{status:429});
  };
  const result=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old,game('missing')])});
