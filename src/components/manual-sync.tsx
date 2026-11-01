@@ -139,7 +139,7 @@ export function ManualSyncDialog({onClose,onUpdated,onPhase,lastAt}:{
   )}
   {error&&<p className="inline-error" role="alert">{error}</p>}
   <div className="manual-sync-links"><a href={workflow} target="_blank" rel="noreferrer">在 GitHub Actions 手动运行 <ArrowUpRight size={15}/></a>
-   {known&&<button className="text-button" onClick={disconnect}>移除此设备授权</button>}</div>
+   {(known||error.includes('密码不匹配'))&&<button className="text-button" onClick={disconnect}>移除此设备授权</button>}</div>
   <p className="note"><ShieldCheck size={14} aria-hidden="true"/> 同步可能需要数分钟。关闭弹窗不会取消 GitHub 的任务，再次打开仍可检查进度。GitHub 定时同步独立运行。</p>
  </Modal>;
 }
