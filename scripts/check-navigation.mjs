@@ -72,8 +72,37 @@ try{
       await page.locator('input[type="password"]').fill(password);
       await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
     }
+    async function switchMainTab(name){
+      if(mobile){
+        await page.mouse.wheel(0,130);
+        await page.waitForFunction(()=>document.querySelector('.mobile-nav')?.classList.contains('is-visible'));
+      }
+      await page.getByRole('button',{name,exact:true}).click();
+    }
     await unlock();
     await page.locator('.game-card').first().waitFor();
+    if(mobile){
+      const mobileBar=page.getByRole('navigation',{name:'主导航'});
+      assert.equal(await mobileBar.locator('button').count(),4,'Mobile navigation retains four tabs');
+      assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).pointerEvents),'none',
+        'Bottom navigation starts hidden and cannot intercept touches');
+      assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).opacity),'0',
+        'Bottom navigation is initially transparent');
+      await page.mouse.wheel(0,240);
+      await page.waitForFunction(()=>document.querySelector('.mobile-nav')?.classList.contains('is-visible'));
+      assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).pointerEvents),'auto',
+        'Vertical page movement reveals the navigation for tapping');
+      await page.waitForFunction(()=>!document.querySelector('.mobile-nav')?.classList.contains('is-visible'),
+        {timeout:4000});
+      assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).pointerEvents),'none',
+        'Navigation automatically hides again when scrolling stops');
+      await switchMainTab('游戏库');
+      await page.locator('.toolbar').waitFor();
+      assert.equal(await page.locator('.mobile-nav.is-visible').count(),0,'Switching tabs hides the nav again');
+      await switchMainTab('概览');
+      await page.locator('[data-overview-section="recent"]').waitFor();
+      console.log('Mobile: PASS four bottom tabs hidden initially, reveal on scroll, auto-hide and navigate');
+    }
     const firstSpan=page.locator('.game-card').first().locator('.game-time-span');
     assert.equal(await firstSpan.innerText(),'时间跨度：1.0天','Games show time between earliest and latest unlocked achievements');
     assert.equal(await page.locator('.game-card .game-time-span').count(),5,'Overview recent games all display achievement time spans');
@@ -569,7 +598,7 @@ try{
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
     await page.getByRole('dialog',{name:'游戏库显示管理',exact:true}).waitFor({state:'hidden'});
     assert.equal(await page.locator('.game-card[data-game-id="101"]').count(),0);
-    await page.getByRole('button',{name:'概览',exact:true}).click();
+    await switchMainTab('概览');
     assert.equal(await page.locator('.stats').innerText(),statsBeforeHiding,'Hiding never changes aggregate statistics');
     assert.equal(await page.locator('.game-card[data-game-id="101"]').count(),0);
     activeEnvelope=await encryptVault(await decryptVault(envelope,password),password);
@@ -622,9 +651,9 @@ try{
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
     await page.locator('.game-card[data-game-id="101"]').waitFor({state:'detached'});
     assert.equal(await page.locator('.game-card').count(),9,'Manual hiding applies to remaining official-visible games');
-    await page.getByRole('button',{name:'概览',exact:true}).click();
+    await switchMainTab('概览');
     assert.equal(await page.locator('.stats').innerText(),statsBeforeHiding,'Official and local hiding never change totals');
-    await page.getByRole('button',{name:'游戏库',exact:true}).click();
+    await switchMainTab('游戏库');
     await manageDisplay();
     await page.getByRole('button',{name:'全部展示',exact:true}).click();
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();

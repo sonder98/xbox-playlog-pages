@@ -15,6 +15,50 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
  const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState(false),[busy,setBusy]=useState(false),[progress]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState('recent'),[filter,setFilter]=useState('all');
  const [hiddenIds,setHiddenIds]=useState<string[]>([]),[manageDisplay,setManageDisplay]=useState(false),[draftHidden,setDraftHidden]=useState<string[]>([]),[displayQuery,setDisplayQuery]=useState(''),[onlyHidden,setOnlyHidden]=useState(false),[savingDisplay,setSavingDisplay]=useState(false),[displayError,setDisplayError]=useState('');
  const {tab,navigate:setTab,back,gameId,dayId,showcase,gapShowcase,openGame,openAchievementDay,openAchievementShowcase,openAchievementGapShowcase,changeAchievementDay}=usePageNavigation();
+ const [mobileNavVisible,setMobileNavVisible]=useState(false);
+ const mobileNavHideTimer=useRef<number|undefined>(undefined);
+ useEffect(()=>{
+  let touchStartX=0,touchStartY=0,lastScrollY=window.scrollY;
+  const showOnMovement=()=>{
+   if(!window.matchMedia('(max-width:700px)').matches)return;
+   setMobileNavVisible(true);
+   window.clearTimeout(mobileNavHideTimer.current);
+   mobileNavHideTimer.current=window.setTimeout(()=>setMobileNavVisible(false),1700);
+  };
+  const onScroll=()=>{
+   const y=window.scrollY;
+   if(Math.abs(y-lastScrollY)>1){lastScrollY=y;showOnMovement();}
+  };
+  const onTouchStart=(event:TouchEvent)=>{
+   if(event.touches.length!==1)return;
+   touchStartX=event.touches[0].clientX;
+   touchStartY=event.touches[0].clientY;
+  };
+  const onTouchMove=(event:TouchEvent)=>{
+   if(event.touches.length!==1)return;
+   const dx=event.touches[0].clientX-touchStartX;
+   const dy=event.touches[0].clientY-touchStartY;
+   if(Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx))showOnMovement();
+  };
+  const onWheel=(event:WheelEvent)=>{
+   if(Math.abs(event.deltaY)>5&&Math.abs(event.deltaY)>Math.abs(event.deltaX))showOnMovement();
+  };
+  window.addEventListener('scroll',onScroll,{passive:true});
+  window.addEventListener('touchstart',onTouchStart,{passive:true});
+  window.addEventListener('touchmove',onTouchMove,{passive:true});
+  window.addEventListener('wheel',onWheel,{passive:true});
+  return ()=>{
+   window.removeEventListener('scroll',onScroll);
+   window.removeEventListener('touchstart',onTouchStart);
+   window.removeEventListener('touchmove',onTouchMove);
+   window.removeEventListener('wheel',onWheel);
+   window.clearTimeout(mobileNavHideTimer.current);
+  };
+ },[]);
+ useEffect(()=>{
+  setMobileNavVisible(false);
+  window.clearTimeout(mobileNavHideTimer.current);
+ },[tab,gameId,dayId,showcase,gapShowcase]);
  const input=useRef<HTMLInputElement>(null);const current=records[0],games=current?.games||[],prev=records[1];const selected=games.find(g=>g.id===gameId&&officialGameVisible(g,current?.source||'')&&!hiddenIds.includes(g.id));const delta=current?compareRecords(current,prev):null;
  useEffect(()=>{api('/api/records').then(async d=>{try{const preferences=await api('/api/display-preferences');setHiddenIds(preferences.hiddenGameIds);}catch(e){setError((e as Error).message);}setRecords(d.records);}).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
  const hiddenSet=new Set(hiddenIds);
@@ -66,7 +110,7 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
    <div className="display-manager-footer"><button className="secondary" disabled={savingDisplay} onClick={()=>setManageDisplay(false)}>取消</button><button className="primary" disabled={savingDisplay} onClick={saveDisplay}>{savingDisplay?'保存中…':'保存展示设置'}</button></div>
  </Modal>}
  {selected&&<GameDetail game={selected} onClose={back}/>}
- <nav className="mobile-nav" aria-label="主导航">{nav.map(([id,label,Icon])=><button key={id} onClick={()=>setTab(id)} aria-current={tab===id?'page':undefined}><Icon size={21}/><span>{label}</span></button>)}</nav>
+ <nav className={'mobile-nav'+(mobileNavVisible?' is-visible':'')} aria-label="主导航">{nav.map(([id,label,Icon])=><button key={id} onClick={event=>{event.currentTarget.blur();setTab(id);}} aria-current={tab===id?'page':undefined}><Icon size={21}/><span>{label}</span></button>)}</nav>
 
  </div>;
  function renderGames(list:Game[]){return list.length?<div className="game-cards">{list.map((g,index)=><GameCard key={g.id} game={g} priority={index<2} onOpen={()=>loadAchievements(g)}/>)}</div>:<Empty title={loading?'正在读取记录…':hiddenCount===games.length&&games.length?'所有游戏已隐藏':query||filter!=='all'?'没有匹配的游戏':'游戏故事，从连接开始'} text={hiddenCount===games.length&&games.length?'打开管理展示，勾选想重新展示的游戏。':query||filter!=='all'?'试试其他名称或筛选条件。':'微软 首次同步成功后，你的游戏会出现在这里。'} action={hiddenCount===games.length&&games.length?<button className="secondary" onClick={openDisplayManager}>管理展示</button>:undefined}/>;}
