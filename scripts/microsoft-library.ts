@@ -58,7 +58,7 @@ export function catalogGroups(bundle:CatalogBundle|undefined,game:Game):Achievem
  if(map.size!==game.achievements.length)return;
  return validateGroups(catalog.data.groups.map(g=>({...g,achievementIds:g.achievementIds.map(id=>map.get(id)!)})),game.achievements,game.total,game.earned);
 }
-export type ScanAudit={version:1;at:string;titlePages:number;achievementHistoryPages:number;historySourcesFailed:number;historyTitlesAdded:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;fullRefresh:boolean;reusedDetails:number;detailedReads:number;statsReads:number;statsSkipped:number;failed:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number;matchedAchievementDates:number};};
+export type ScanAudit={version:1;at:string;titlePages:number;achievementHistoryPages:number;historySourcesFailed:number;historyTitlesAdded:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;fullRefresh:boolean;reusedDetails:number;detailedReads:number;statsReads:number;statsSkipped:number;reuseReasons:Partial<Record<DetailDecision,number>>;failed:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number;matchedAchievementDates:number};};
 export function compareLibrary(games:Game[],prior?:RecordData,aliases=new Map<string,string[]>(),awardNames=new Map<string,Map<string,string>>()){
  const out={matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0};
  const choices=new Map(games.map(g=>{const names=new Set([g.name,...(aliases.get(g.id)||[])].map(normalizedName));return [g.id,(prior?.games||[]).filter(p=>names.has(normalizedName(p.name)))];}));
@@ -101,6 +101,30 @@ export function shouldReadPlaytime(lastPlayed:string|null,oldMinutes:number|null
  const played=lastPlayed?Date.parse(lastPlayed):NaN;
  return oldMinutes===null || (Number.isFinite(played) && Date.parse(at)-played<7*86400_000);
 }
+/** Decide whether the previous COMPLETE catalog is safe to reuse.
+ * Xbox omits currentGamerscore on some title summaries, and can change the textual
+ * timestamp precision without changing the actual last-played instant.
+ * The total and earned counts are mandatory: absent ones must trigger a fresh read. */
+export type DetailDecision='newGame'|'incompleteCache'|'dailyRefresh'|'playedAgain'|'missingSummary'|'totalChanged'|'earnedChanged'|'scoreChanged'|'reused';
+export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:string|null,fullRefresh:boolean):DetailDecision {
+ if(!old)return 'newGame';
+ const awards=old.achievements||[],groups=old.groups||[];
+ if(!awards.length||awards.length!==old.total||(old.groupStatus==='verified'&&!groups.some(g=>g.kind==='base')))return 'incompleteCache';
+ if(fullRefresh)return 'dailyRefresh';
+ const oldTime=old.lastPlayed?Date.parse(old.lastPlayed):NaN;
+ const newTime=lastPlayed?Date.parse(lastPlayed):NaN;
+ const sameTime=old.lastPlayed===lastPlayed||
+  (Number.isFinite(oldTime)&&Number.isFinite(newTime)&&oldTime===newTime);
+ if(!sameTime)return 'playedAgain';
+ if(typeof summary?.totalAchievements!=='number'||summary.totalAchievements<=0||
+    typeof summary?.currentAchievements!=='number'||summary.currentAchievements<0||
+    summary.currentAchievements>summary.totalAchievements)return 'missingSummary';
+ if(summary.totalAchievements!==old.total)return 'totalChanged';
+ if(summary.currentAchievements!==old.earned)return 'earnedChanged';
+ // Gamerscore is optional in Xbox history responses. Missing != changed.
+ if(typeof summary.currentGamerscore==='number'&&summary.currentGamerscore!==old.score)return 'scoreChanged';
+ return 'reused';
+}
 export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
  // Sustained pacing, no retries against permissions/security errors. 429 stops this scan.
@@ -120,7 +144,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  // Display policy: explicit visible=true is the only showable Xbox state.
  // Missing flags remain unknown in the archive, but are hidden in UI and on later syncs.
  const games=normalizeTitles({titles:titles.filter(t=>!options.onlyIds||options.onlyIds.has(String(t.titleId))||!prior.has(String(t.titleId)))});
- const audit:ScanAudit={version:1,at:options.now||new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,fullRefresh:false,reusedDetails:0,detailedReads:0,statsReads:0,statsSkipped:0,failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
+ const audit:ScanAudit={version:1,at:options.now||new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,fullRefresh:false,reusedDetails:0,detailedReads:0,statsReads:0,statsSkipped:0,reuseReasons:{},failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
  audit.fullRefresh=refreshCatalogToday(options.previous?.at,audit.at);
  const pagesFor=async(id:string,version:string,possible=false,legacy=false,earned=false)=>{
   const pages:any[]=[];const result=await collectPages(async token=>{
@@ -149,10 +173,10 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
   try{
    const title=titles.find(t=>String(t.titleId)===game.id),summary=title?.achievement;
    const lastPlayed=title?.titleHistory?.lastTimePlayed||null;
-   const oldAchievements=old?.achievements||[],oldGroups=old?.groups||[];
-   const cacheComplete=oldAchievements.length>0&&oldAchievements.length===old?.total&&(old?.groupStatus!=='verified'||oldGroups.some(g=>g.kind==='base'));
-   const unchanged=!!old&&cacheComplete&&!audit.fullRefresh&&old.lastPlayed===lastPlayed&&summary?.totalAchievements>0&&summary.totalAchievements===old.total&&summary.currentAchievements===old.earned&&summary.currentGamerscore===old.score;
-   if(unchanged){
+   const decision=detailCacheDecision(old,summary,lastPlayed,audit.fullRefresh);
+   audit.reuseReasons[decision]=(audit.reuseReasons[decision]||0)+1;
+   if(decision==='reused'){
+    const oldAchievements=old!.achievements||[],oldGroups=old!.groups||[];
     let minutes=old.minutes;
     if(shouldReadPlaytime(lastPlayed,old.minutes,audit.at)){
      minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id)??old.minutes;
