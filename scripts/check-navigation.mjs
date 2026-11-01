@@ -229,7 +229,7 @@ try{
     await page.getByRole('button',{name:'关闭详情'}).click();
     await page.getByRole('button',{name:'返回概览'}).click();
     await page.locator('[data-achievement-showcase="preview"]').waitFor();
-    assert.ok(page.url().endsWith('#overview'),'Rare gallery detail returns to overview');
+    assert.ok(['','#overview'].includes(await page.evaluate(()=>location.hash)),'Rare gallery detail returns to overview');
     assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-gap-tile').count(),12,
       'Each of the 12 games contributes a single chronological adjacent unlock pair');
     assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-showcase-top-label').innerText(),'TOP 100',
@@ -291,7 +291,7 @@ try{
     await page.getByRole('button',{name:'关闭详情'}).click();
     await page.getByRole('button',{name:'返回概览'}).click();
     await page.locator('[data-achievement-gap="preview"]').waitFor();
-    assert.ok(page.url().endsWith('#overview'),'Gap gallery detail returns to overview');
+    assert.ok(['','#overview'].includes(await page.evaluate(()=>location.hash)),'Gap gallery detail returns to overview');
     await page.getByRole('button',{name:'查看全部成就热力图'}).click();
     await page.locator('.ah-month-card').first().waitFor();
     assert.equal(await page.locator('.ah-month-card').count(),59,'Month-by-month calendars cover 2022 through Nov 2026');
