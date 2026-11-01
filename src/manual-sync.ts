@@ -25,10 +25,25 @@ export async function dispatchXboxSync(token:string,requestId:string,request:typ
   });
  }catch{throw Error('无法连接 GitHub API，请检查网络或在 GitHub Actions 中手动运行。');}
  if(!response.ok){
-  if(response.status===401)throw Error('GitHub 令牌无效或已过期，请重新绑定。');
-  if(response.status===403)throw Error('无法触发同步：令牌需对 xbox-playlog-pages 拥有 Actions: Read and write 权限；也可能达到 GitHub API 限流。');
-  if(response.status===404)throw Error('找不到同步工作流，请确认令牌绑定的是 sonder98/xbox-playlog-pages。');
-  if(response.status===422)throw Error('GitHub 拒绝调度请求，请检查 main 分支的同步工作流。');
+  // The GitHub error body is public diagnostic text, not an OAuth credential.
+  // Do not echo arbitrary server strings, which could accidentally include secrets.
+  let message='';
+  try{
+   const error=await response.json() as {message?:unknown};
+   if(typeof error.message==='string')message=error.message.toLowerCase();
+  }catch{/* GitHub or an intermediary may return an empty/non-JSON body. */}
+  if(response.status===401)throw Error('GitHub 拒绝了身份验证（401）。请检查令牌是否复制完整、已到期或被撤销。');
+  if(response.status===403){
+   if(response.headers.get('x-ratelimit-remaining')==='0'||/rate limit|abuse detection/.test(message)){
+    throw Error('GitHub API 暂时限制请求（403 · Rate limit）。请稍后重试，不需要重新创建令牌。');
+   }
+   if(/resource not accessible by personal access token|insufficient permission|permission|forbidden/.test(message)){
+    throw Error('GitHub 返回 403：Resource not accessible by personal access token。请打开 GitHub → Fine-grained tokens → 该令牌，检查 Resource owner 为 sonder98，Repository access 包含 xbox-playlog-pages，Repository permissions → Actions 为 Read and write。若这三项均正确，可能是 GitHub 对该令牌的限制。');
+   }
+   throw Error('GitHub 返回 403（拒绝访问），当前未能判定是权限配置、账号策略还是 API 限流。请先检查令牌的资源所有者、仓库范围及 Actions: Read and write；无需立即重新生成令牌。');
+  }
+  if(response.status===404)throw Error('GitHub 返回 404。请核对令牌的仓库授权范围，以及 main 分支的 sync.yml 工作流。');
+  if(response.status===422)throw Error('GitHub 返回 422：工作流提交格式或 main 分支不符合要求。');
   throw Error('GitHub 未接受同步请求（HTTP '+response.status+'）。');
  }
 }
