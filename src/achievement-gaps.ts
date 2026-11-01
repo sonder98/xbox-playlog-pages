@@ -15,7 +15,7 @@ export type AchievementGap={
 
 /** Adjacent unlocks within each game, never the first and last unlock unless adjacent.
  * Missing timestamps or locked entries are not eligible; exact ties have zero gap. */
-export function longestAchievementGaps(games:Game[],limit=50):AchievementGap[]{
+export function longestAchievementGaps(games:Game[],limit=100):AchievementGap[]{
  const gaps:AchievementGap[]=[];
  for(const game of games){
   const ordered=(game.achievements||[])
