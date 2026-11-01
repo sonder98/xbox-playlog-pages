@@ -3,7 +3,7 @@ const pages=['overview','library','history','settings','achievements'] as const;
 export type PageTab=typeof pages[number];
 function route(){
  const [page,section,id]=location.hash.slice(1).split('/');
- return {tab:pages.includes(page as PageTab)?page as PageTab:'overview' as PageTab,gameId:section==='game'?id||null:null,dayId:page==='achievements'&&section==='day'&&/^\d{4}-\d{2}-\d{2}$/.test(id||'')?id:null};
+ return {tab:pages.includes(page as PageTab)?page as PageTab:'overview' as PageTab,gameId:section==='game'?id||null:null,dayId:page==='achievements'&&section==='day'&&/^\d{4}-\d{2}-\d{2}$/.test(id||'')?id:null,showcase:page==='achievements'&&section==='showcase'};
 }
 export function usePageNavigation(){
  const [current,setCurrent]=useState(route);
@@ -22,9 +22,10 @@ export function usePageNavigation(){
   history.pushState({playlog:true,depth:(old?.depth||0)+1,scrollY:hash.includes('/game/')?window.scrollY:0},'',hash);
   setCurrent(route());
  }
- function navigate(next:PageTab){if(next!==current.tab||current.gameId)push('#'+next);}
+ function navigate(next:PageTab){if(next!==current.tab||current.gameId||current.dayId||current.showcase)push('#'+next);}
  function openGame(id:string){push('#'+current.tab+'/game/'+id);}
  function openAchievementDay(day:string){push('#achievements/day/'+day);}
+ function openAchievementShowcase(){push('#achievements/showcase');}
  // Adjacent-day browsing replaces the current day entry so Back returns to the heatmap,
  // not a trail of dates visited with the arrow controls.
  function changeAchievementDay(day:string){
@@ -35,5 +36,5 @@ export function usePageNavigation(){
   if(history.state?.playlog&&history.state.depth>0)history.back();
   else {history.replaceState({playlog:true,depth:0,scrollY:0},'',current.gameId?'#'+current.tab:'#overview');setCurrent(route());}
  }
- return {...current,navigate,back,openGame,openAchievementDay,changeAchievementDay};
+ return {...current,navigate,back,openGame,openAchievementDay,openAchievementShowcase,changeAchievementDay};
 }
