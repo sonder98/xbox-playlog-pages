@@ -211,10 +211,25 @@ try{
     assert.equal(await page.locator('.ah-podium[data-rarity-tier="ultra"]').count(),12,'Ultra rare awards remain distinct');
     assert.equal(await page.locator('.ah-podium[data-rarity-tier="rare"]').count(),12,'Rare awards retain gilt');
     const metal=await page.locator('.ah-podium-plinth').first().evaluate(el=>({
-      background:getComputedStyle(el).backgroundImage,cap:getComputedStyle(el,'::before').borderRadius
+      background:getComputedStyle(el).backgroundImage,
+      rim:el.querySelector('.ah-podium-rim'),
+      rimShape:getComputedStyle(el.querySelector('.ah-podium-rim')).borderRadius,
+      rimReflection:getComputedStyle(el.querySelector('.ah-podium-rim'),'::before').backgroundImage,
+      yaw:getComputedStyle(el).transform,
+      tone:getComputedStyle(el).borderLeftColor
     }));
-    assert.ok(metal.background.includes('gradient'),'Short podium uses brushed metallic shading');
-    assert.equal(metal.cap,'50%','Podium top is an elliptical metal surface');
+    assert.ok(metal.background.includes('gradient'),'Podium has real graphite metallic surface reflections');
+    assert.equal(metal.rimShape,'50%','Metal top is a three-dimensional elliptical disk');
+    assert.ok(metal.rimReflection.includes('gradient'),'Top disk includes recessed specular reflections');
+    assert.ok(metal.tone!=='rgb(192, 137, 61)','Podium is cool-toned graphite, not the old copper frame');
+    const perspective=await page.locator('.ah-podium').evaluateAll(nodes=>nodes.slice(0,3).map(el=>({
+      yaw:el.style.getPropertyValue('--podium-yaw'),
+      focus:Number(el.style.getPropertyValue('--podium-focus')),
+      brightness:Number(el.style.getPropertyValue('--podium-brightness'))
+    })));
+    assert.ok(perspective[0].focus>perspective[1].focus,'Center podium has stronger focused illumination');
+    assert.ok(perspective[0].brightness>perspective[1].brightness,'Flanking awards recede into cool shadow');
+    assert.ok(perspective[1].yaw.includes('deg'),'Side podium has dynamic perspective yaw');
     await page.getByRole('button',{name:'查看稀有成就展柜详情'}).click();
     await page.locator('[data-achievement-showcase="detail"]').waitFor();
     assert.ok(page.url().endsWith('#achievements/showcase'),'Rarity detail supports a deep link');
