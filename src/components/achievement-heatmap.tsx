@@ -97,7 +97,6 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
    </div>
   :<p className="ah-showcase-empty">暂时没有可用于排名的已解锁成就，等待官方稀有度数据更新。</p>}
   {items.length>0&&<div className="ah-showcase-foot">
-   <span>解锁率越低，成就越稀有</span>
    <div className="ah-showcase-rail-actions">
     <button type="button" aria-label="向左滚动展柜" onClick={()=>rail.current?.scrollBy({left:-420,behavior:'smooth'})}><ChevronLeft size={17}/></button>
     <button type="button" aria-label="向右滚动展柜" onClick={()=>rail.current?.scrollBy({left:420,behavior:'smooth'})}><ChevronRight size={17}/></button>
