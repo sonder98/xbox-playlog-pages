@@ -10,6 +10,12 @@ export type RareAchievement={
  time:number|null;
 };
 
+/** Display tier for the original Xbox rarity percentage, not the showcase rank. */
+export function achievementRarityTier(rarity:number|null):'common'|'rare'|'ultra'{
+ if(rarity===null||!Number.isFinite(rarity)||rarity<0||rarity>100)return 'common';
+ return rarity<1?'ultra':rarity<10?'rare':'common';
+}
+
 export function rareAchievementTop(games:Game[],limit=50):RareAchievement[]{
  const ranked:RareAchievement[]=[];
  for(const game of games){

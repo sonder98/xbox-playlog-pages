@@ -5,7 +5,7 @@ import {GamerscoreIcon} from './gamerscore-icon';
 import {AchievementSortControl} from './achievement-sort-control';
 import {sortAchievements,type AchievementSort} from '../achievement-sort';
 import {adjacentDay,buildActivity,calendarMonth,dayLabel,heatLevel,recentCalendar,recentDays,type Activity,type UnlockEvent} from '../achievement-activity';
-import {rareAchievementTop,type RareAchievement} from '../rare-achievements';
+import {rareAchievementTop,achievementRarityTier,type RareAchievement} from '../rare-achievements';
 
 const fmt=(n:number)=>n.toLocaleString('zh-CN');
 const time=(value:number)=>new Date(value).toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',hour12:false});
@@ -13,8 +13,10 @@ const fullTime=(value:number)=>new Date(value).toLocaleString('zh-CN',{timeZone:
 function Art({src,alt='',className}:{src?:string;alt?:string;className:string}){
  const [broken,setBroken]=useState(false),[artRatio,setArtRatio]=useState<number|null>(null);
  useEffect(()=>{setBroken(false);setArtRatio(null);},[src]);
- const artwork=className==='ah-achievement-art'||className==='ah-showcase-art';
- const square=className==='ah-achievement-art'&&artRatio!==null&&artRatio<1.35;
+ const tokens=className.split(' ');
+ const isAchievement=tokens.includes('ah-achievement-art');
+ const artwork=isAchievement||tokens.includes('ah-showcase-art');
+ const square=isAchievement&&artRatio!==null&&artRatio<1.35;
  return <span className={className+(square?' ah-art-square':'')}
   style={artwork&&artRatio?{aspectRatio:String(artRatio)}:undefined}>
   {src&&!broken?<img src={src} alt={alt} loading="lazy"
@@ -79,9 +81,14 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
   </div>
   {items.length?
    <div className="ah-showcase-rail" role="region" aria-label="稀有成就 TOP 50 图片，横向滚动查看" tabIndex={0} ref={rail}>
-    {items.map((item,i)=><span key={item.key} className="ah-showcase-tile" title={`第 ${i+1} 名 · ${item.achievement.name} · ${item.achievement.rarity}% · ${item.game.name}`}>
-     <Art src={item.achievement.cachedImage||item.achievement.image} alt={item.achievement.name} className="ah-showcase-art"/>
-    </span>)}
+    {items.map((item,i)=>{
+     const tier=achievementRarityTier(item.achievement.rarity);
+     return <span key={item.key} className="ah-showcase-tile" data-rarity-tier={tier}
+       title={`第 ${i+1} 名 · ${item.achievement.name} · ${item.achievement.rarity}% · ${item.game.name}`}>
+      <Art src={item.achievement.cachedImage||item.achievement.image} alt={item.achievement.name}
+       className={'ah-showcase-art ah-rarity-'+tier+(tier!=='common'?' ah-rarity-gold':'')}/>
+     </span>;
+    })}
    </div>
   :<p className="ah-showcase-empty">暂时没有可用于排名的已解锁成就，等待官方稀有度数据更新。</p>}
   {items.length>0&&<div className="ah-showcase-foot">
@@ -127,11 +134,15 @@ function Sheet({day,activity,minDay='2022-01-01',onChangeDay,onClose,onDetail}:{
 }
 function DayCard({event,onGame,rank,showFullDate=false}:{event:Pick<UnlockEvent,'achievement'|'game'> & {time:number|null};onGame:(id:string)=>void;rank?:number;showFullDate?:boolean}){
  const a=event.achievement,g=event.game,rare=a.rarity!==null&&a.rarity<10;
+ const tier=rank!==undefined?achievementRarityTier(a.rarity):null;
  const group=g.groupStatus==='verified'?g.groups?.find(v=>v.achievementIds.includes(a.id)):undefined;
- return <article className="ah-achievement-card" data-achievement-id={a.id} data-game-id={g.id}>
+ return <article className={'ah-achievement-card'+(tier?' ah-showcase-card ah-showcase-card-'+tier:'')}
+  data-rarity-tier={tier??undefined} data-achievement-id={a.id} data-game-id={g.id}>
   <div className="ah-achievement-primary">
    {rank===undefined?<Art src={a.cachedImage||a.image} className="ah-achievement-art"/>:
-    <div className="ah-showcase-ranked-art"><Art src={a.cachedImage||a.image} className="ah-achievement-art" alt={a.name}/><span className={'ah-showcase-rank'+(rank<=3?' is-top':'')}>#{String(rank).padStart(2,'0')}</span></div>}
+    <div className="ah-showcase-ranked-art"><Art src={a.cachedImage||a.image}
+     className={'ah-achievement-art ah-rarity-'+tier+(tier!=='common'?' ah-rarity-gold':'')} alt={a.name}/>
+     <span className={'ah-showcase-rank'+(rank<=3?' is-top':'')}>#{String(rank).padStart(2,'0')}</span></div>}
    <div className="ah-achievement-main">
     <div className="ah-achievement-heading"><h3>{a.name}</h3>{event.time===null?<span className="ah-unlock-unknown">解锁时间未知</span>:<time dateTime={a.unlockedAt||undefined}>{showFullDate?fullTime(event.time):time(event.time)}</time>}</div>
     {a.description&&<p className="ah-achievement-desc">{a.description}</p>}
