@@ -2205,7 +2205,7 @@ footer .dot {
 .ah-showcase-tile {display:block;flex:0 0 auto;scroll-snap-align:start;}
 .ah-showcase-art {display:grid;place-items:center;flex:none;height:88px;width:auto;aspect-ratio:16/9;max-width:240px;min-width:62px;overflow:hidden;border-radius:11px;background:var(--surface-hover);border:1px solid rgba(255,255,255,.13);color:var(--text-muted);}
 .ah-showcase-art img {display:block;height:100%;width:100%;object-fit:contain;object-position:center;}
-.ah-showcase-foot {display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:33px;margin-top:5px;color:var(--text-muted);font-size:11px;}
+.ah-showcase-foot {display:flex;align-items:center;justify-content:flex-end;gap:12px;min-height:33px;margin-top:5px;color:var(--text-muted);font-size:11px;}
 .ah-showcase-rail-actions {display:flex;align-items:center;gap:6px;}
 .ah-showcase-rail-actions button {width:32px;height:32px;display:grid;place-items:center;background:var(--surface-raised);border-radius:50%;color:var(--text-secondary);}
 .ah-showcase-rail-actions button:hover,.ah-showcase-rail-actions button:focus-visible {color:var(--accent);background:var(--surface-hover);}
@@ -2502,7 +2502,7 @@ footer .dot {
 .ah-gap-achievement-condition {
  align-self:stretch;
  min-width:0;
- text-align:left;
+ text-align:center;
  padding-top:8px;
  margin-top:1px;
  border-top:1px solid rgba(255,255,255,.07);
@@ -2519,6 +2519,31 @@ footer .dot {
  line-height:1.5;
  overflow-wrap:anywhere;
 }
+.ah-gap-side-meta {
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ flex-wrap:wrap;
+ gap:3px 7px;
+ width:100%;
+ min-width:0;
+ margin-top:auto;
+ text-align:center;
+}
+.ah-gap-side .ah-gap-side-meta time {margin-top:0;}
+.ah-gap-side-rarity {
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ gap:3px;
+ flex:0 0 auto;
+ white-space:nowrap;
+ color:var(--text-secondary);
+ font-size:10px;
+ font-variant-numeric:tabular-nums;
+}
+.ah-gap-side-rarity.is-rare {color:#f3cc77;}
+.ah-gap-side-rarity svg {flex:0 0 auto;}
 @media(max-width:700px){
  .ah-showcase-tile {gap:5px;}
  .ah-showcase-rarity-value {font-size:10.5px;}
