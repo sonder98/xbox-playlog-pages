@@ -23,13 +23,17 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
  const [mobileNavVisible,setMobileNavVisible]=useState(false);
  const mobileNavHideTimer=useRef<number|undefined>(undefined);
  const ignoreMobileScrollUntil=useRef(0);
+ const mobileNavKeepUntil=useRef(0);
  useEffect(()=>{
   let touchStartX=0,touchStartY=0,lastScrollY=window.scrollY;
   const showOnMovement=()=>{
    if(!window.matchMedia('(max-width:700px)').matches)return;
    setMobileNavVisible(true);
    window.clearTimeout(mobileNavHideTimer.current);
-   mobileNavHideTimer.current=window.setTimeout(()=>setMobileNavVisible(false),1000);
+   // Scrolling still auto-hides after 1 second, unless a recent tab tap
+   // has guaranteed a longer 1.5-second visibility window.
+   const remaining=mobileNavKeepUntil.current-performance.now();
+   mobileNavHideTimer.current=window.setTimeout(()=>setMobileNavVisible(false),Math.max(1000,remaining));
   };
   const onScroll=()=>{
    const y=window.scrollY;
@@ -67,6 +71,9 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
  useEffect(()=>{
   // Route restoration uses programmatic scrolling; only user movement should reveal tabs.
   ignoreMobileScrollUntil.current=performance.now()+350;
+  // A bottom-tab tap deliberately keeps navigation on screen after the
+  // route changes. Other route transitions still hide it immediately.
+  if(performance.now()<mobileNavKeepUntil.current)return;
   setMobileNavVisible(false);
   window.clearTimeout(mobileNavHideTimer.current);
  },[tab,gameId,dayId,showcase,gapShowcase]);
@@ -137,8 +144,15 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
  <nav className={'mobile-nav'+(mobileNavVisible?' is-visible':'')} aria-label="主导航">{nav.map(([id,label,Icon])=><button key={id} onClick={event=>{
    event.currentTarget.blur();
    ignoreMobileScrollUntil.current=performance.now()+350;
-   setMobileNavVisible(false);
+   mobileNavKeepUntil.current=performance.now()+1500;
+   setMobileNavVisible(true);
    window.clearTimeout(mobileNavHideTimer.current);
+   // Each tap restarts the visibility window, even when selecting the
+   // already-active tab. This timer is shared with the scroll logic.
+   mobileNavHideTimer.current=window.setTimeout(()=>{
+    mobileNavKeepUntil.current=0;
+    setMobileNavVisible(false);
+   },1500);
    setTab(id);
   }} aria-current={tab===id?'page':undefined}><Icon size={21}/><span>{label}</span></button>)}</nav>
 
