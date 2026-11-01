@@ -20,8 +20,9 @@
 
 ## 正式链路
 
-1. `.github/workflows/sync.yml`：UTC 00/30 分定时触发（北京时间 00/30 分），恢复受加密保护的微软授权状态，运行 `scripts/microsoft-sync.ts`，提交 `public/vault.json`、`public/status.json`，显式派发 `pages.yml`。
-2. `.github/workflows/pages.yml`：npm test → TypeScript/Vite 构建 → 浏览器导航检查 → GitHub Pages 部署。bot 推送快照不会自动触发 push workflow，所以需要显式派发。
+1. `.github/workflows/sync.yml`：UTC 11/41 分尽力定时触发，恢复受加密保护的微软授权状态、最新加密快照及公共素材，运行 `scripts/microsoft-sync.ts`，将加密快照与公共图片归档上传到 GitHub Release `playlog-live`，显式派发 `pages.yml`。**不再反复提交大体积随机密文到 Git**。
+2. `.github/workflows/pages.yml`：从 Release 恢复最新加密快照，校验 Actions 图片缓存与 Release 素材清单（缺失则解压公共图片归档），npm test → 构建 → 浏览器导航检查 → GitHub Pages 部署。初期 Git 里的旧加密快照仅作为 Release 尚未建立时的兜底。
+3. `.github/workflows/ci.yml`：PR 单测、构建及 Playwright（不使用真实 Xbox 凭据、不进行正式部署）。
 3. `.github/workflows/microsoft-shadow.yml`：手动首次／重授权、compare、repair；不将候选快照直接发布为正式网站数据。
 
 ### 增量同步优化（2026-11-01）
@@ -30,7 +31,7 @@
 
 - 每轮刷新游戏历史及相关摘要。
 - 新游戏、当前摘要发生改变（最后游玩时间、成就总量、已解锁量、积分）或没有完整旧成就目录的游戏读取全量成就。
-- 无变化且有完整目录时复用旧成就明细；`groupStatus=unavailable` 的游戏也可以复用，避免反复补查未变的目录。
+- 无变化且有完整目录时复用旧成就明细；`groupStatus=unavailable` 的游戏也可以复用。缺失必要官方成就数量摘要但最后游玩时间未变时，先比对微软的已解锁成就 ID，一致则复用（`verifiedEarned`）；有新增则完整拉取。尚未解锁的新增 DLC 在每日全量目录刷新时发现。
 - 对最后游玩时间在近 7 天内、或者旧时长缺失的游戏继续查 MinutesPlayed；更早的未变游戏复用旧时长。
 - 每个 UTC 自然日首次进入 **02:00–02:59** 窗口时执行全量目录刷新，更新稀有度、补查未验证分组；防止永久缓存使稀有度/分组过时。若该时段没有任何运行，会延后到下一次符合条件的窗口。
 - 官方请求仍固定限速 1.05 秒一次，429、401 属于中止错误。不要为了提速直接删除限流。
@@ -50,7 +51,7 @@
 - 轮换密码可使用临时 `NEW_APP_PASSWORD`；请勿直接丢弃旧密码导致快照无法解锁。
 - 不打印、不下载、不转发真实 `auth.json`、`candidate.json`、刷新令牌、XUID、网站密码或明文游戏快照。
 - 修改、合并、重跑正式工作流后应检查 GitHub Actions，确认同步及 Pages 均成功。
-- 由同步工作流自动提交的快照可能与代码推送竞争，`sync.yml` 已带有最新 `main` 重新获取和失败重试逻辑。
+- 最新加密快照和公共 WebP 素材存于 GitHub Release `playlog-live`，通过 `scripts/live-assets.mjs` 恢复/发布。保持加密，绝不上传令牌。同步和 Pages 共用并发组，避免新旧资源交错。首次验证 release 上传和部署成功前不要清理原 Git 快照。已经存在的仓库 Git 历史不会因为停止未来提交自动缩小，不要未经备份强推重写历史。
 
 ## 前端定位
 
@@ -84,3 +85,9 @@ npm run build
 正式上线除了测试通过，还要检查 `Sync Xbox records`、`Deploy Playlog` 的结论和网站主要交互，尤其是 `REANIMAL` 与 `WUCHANG: Fallen Feathers` 封面、Mythic／Full、成就分组、热力图日详情、移动端滚动。
 
 涉及微软首次授权请参照最新 `MICROSOFT_SETUP.md`，勿要求用户粘贴真实刷新令牌。
+
+## 2026-11-01 Mythic / 可靠性修复
+
+- Compact Mythic cover 使用 `object-fit:cover` 并 `display:block`，使图片铺满宝石外框；详情封面保持不裁切，并保留外框底部装饰不被剪断。增加非严格 1:1 图片在桌面和移动端的边缘回归测试。
+- 定时任务从 GitHub 高负荷的 00/30 分改至 11/41 分；GitHub cron 本身仍不提供准点 SLA。若需要严格半小时，应另接可靠外部调度器。
+- GitHub Release 发布流程首次上线需核对 `Sync Xbox records`、Release 资产清单（`vault.json`、`status.json`、`media-index.txt`、`playlog-media.tar.gz`）与 Pages 最终渲染，不成功时不要删除原加密快照。
