@@ -2633,7 +2633,6 @@ footer .dot {
    contain letterboxes inside the fixed 1:1 jewel. Only the small Mythic tile
    uses cover; non-Mythic artwork and widescreen detail keep their original fit. */
 .game-cover > .cover-artwork { display:block; }
-.game-cover.completion-frame:not(.detail-cover) { overflow:hidden; }
 .game-cover.completion-frame:not(.detail-cover) > .cover-artwork {
   display:block;
   width:100%;
