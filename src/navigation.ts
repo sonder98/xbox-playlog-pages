@@ -1,5 +1,5 @@
 import {useEffect,useLayoutEffect,useState} from 'react';
-const pages=['overview','library','history','settings','achievements'] as const;
+const pages=['overview','library','history','settings','achievements','dusty'] as const;
 export type PageTab=typeof pages[number];
 function route(){
  const [page,section,id]=location.hash.slice(1).split('/');

@@ -114,3 +114,11 @@ npm run build
 - `appendPlaytimeSamples` 把任何跨午夜、多日间隔的新增分钟都归到**前一条有效采样**的北京时间日期，旧 `crossDay` 数据在下一轮加密快照更新时一次性迁入对应的前一天，并清空旧桶；后续读写保持幂等。若中间漏掉多轮同步可能高估前一天，不假装准确追溯。
 - 成就热力图 **Sheet 半屏弹层** 每游戏“X 个 · Y 小时”，小时取 `dailyGameMinutes(playtimeLedger, day, titleId)`；没有采样显示“— 小时”。**不要修改完整日期成就页**。
 - `RecentGamesRail` 显示“全部成就完成度 % · 累计时长 h”，仅概览卡片，缺失 Xbox 时长显示破折号。构建与手机桌面回归验证。
+
+ 
+### 吃灰游戏交接（2026-11-01）
+- 31 款 Xbox 官方缺少 `visible` 布尔字段的游戏进入「吃灰游戏」候选；取 `lastPlayed` 与最后有效 `unlockedAt` 中较晚日期，按 Asia/Shanghai 自然日差降序。无有效时间戳则不排名。
+- 概览 TOP 5 放在「间隔最久成就」之后，`#dusty` 为完整排序列表，无新增底部导航入口。相关文件：`src/dusty-games.ts`、`src/components/dusty-games.tsx`、`src/navigation.ts`、`src/dashboard.tsx`、`src/style.css`。
+- `scripts/fixed-pc-metascores.ts` 保存人工核对过的 29 条固定 PC Metacritic 0–100 分，**键是 HMAC-SHA256(titleId, MICROSOFT_STATE_KEY).slice(0,32)** 而不是公开 Title ID，防止泄露非展示游戏清单；`scripts/microsoft-sync.ts` 的快速与完整路径都在 `publishSnapshot` 时生成 `metacriticScores` 并存入 AES-GCM 加密快照。解锁后 `src/vault.ts` 提供 `pcMetascoresForDisplay()`。完整备份含该映射。
+- 特别注意：Volcano Princess、PlateUp! 为 M tbd，保持无评分。Crimson Desert Enhanced 暂用原版 PC 77 分并附备注；《巫师 3》Remastered 使用独立 2026 PC 分数。评分为人工快照，不随常规 Xbox 同步更新；若重设 MICROSOFT_STATE_KEY 需要迁移 HMAC 映射。
+- 临时 RSA 加密库存清单导出工作流已删除，不要把私有 Title ID、完整清单或任何认证密钥写入公开库。验证新快照是否包含分数使用汇总数量日志或私有解密环境，不打印标题/ID。

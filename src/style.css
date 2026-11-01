@@ -2678,3 +2678,50 @@ footer .dot {
  .recent-game-progress strong {font-size:11px;}
  .recent-game-hours {font-size:9.5px;}
 }
+
+/* Dusty games: private officially-unclassified titles, preview TOP 5 and full ranking. */
+.dusty-preview{margin-top:18px;}
+.dusty-section-icon{color:var(--accent);}
+.dusty-rail{display:flex;align-items:stretch;gap:13px;max-width:100%;overflow-x:auto;scroll-snap-type:x proximity;overscroll-behavior-inline:contain;padding:5px 3px 15px;scrollbar-width:thin;scrollbar-color:#444 transparent;}
+.dust-card{position:relative;flex:0 0 172px;width:172px;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:9px;text-align:left;background:var(--surface-raised);border:1px solid var(--border);border-radius:18px;padding:10px;scroll-snap-align:start;}
+.dust-card:hover,.dust-card:focus-visible{border-color:rgba(199,255,46,.55);background:var(--surface-hover);}
+.dust-cover{width:100%;aspect-ratio:1;display:block;overflow:hidden;border-radius:12px;}
+.dust-cover .game-cover,.dust-detail-cover .game-cover{height:100%;width:100%;border-radius:inherit;}
+.dust-cover .cover-artwork,.dust-detail-cover .cover-artwork{height:100%;width:100%;object-fit:contain;}
+.dust-rank{position:absolute;top:16px;left:16px;padding:3px 7px;border-radius:7px;background:rgba(11,11,11,.79);font-size:10px;font-weight:750;letter-spacing:.5px;}
+.dust-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;min-height:2.7em;overflow:hidden;overflow-wrap:anywhere;font-weight:650;font-size:13px;line-height:1.35;}
+.dust-days{display:flex;align-items:baseline;gap:5px;color:var(--accent);font-size:13px;font-weight:500;white-space:nowrap;}
+.dust-days strong{font-size:22px;line-height:1.2;font-weight:700;letter-spacing:-.5px;}
+.dust-bottom{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-top:auto;border-top:1px solid var(--border);padding-top:11px;min-width:0;}
+.dust-bottom>small{color:var(--text-muted);font-size:10px;white-space:nowrap;}
+.dust-score{display:inline-flex;align-items:baseline;gap:3px;font-size:12px;font-weight:750;white-space:nowrap;color:var(--text-muted);}
+.dust-score.has-score{color:var(--accent);}
+.dust-score strong{font-size:17px;font-variant-numeric:tabular-nums;}
+.dust-score small{font-size:9px;font-weight:600;color:var(--text-secondary);}
+.dust-detail-list{display:flex;flex-direction:column;gap:10px;margin:18px 0 30px;}
+.dust-detail-row{display:flex;align-items:center;gap:14px;min-width:0;border:1px solid var(--border);background:var(--surface-raised);border-radius:18px;padding:12px;}
+.dust-detail-rank{flex:0 0 27px;color:var(--text-muted);font-size:12px;font-weight:700;text-align:center;}
+.dust-detail-cover{width:70px;height:70px;flex:0 0 70px;border-radius:12px;overflow:hidden;}
+.dust-detail-body{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;}
+.dust-detail-body>strong{font-size:15px;font-weight:650;overflow-wrap:anywhere;line-height:1.35;}
+.dust-detail-body>small{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);}
+.dust-detail-note{color:var(--text-muted);font-size:10px;}
+.dust-detail-numbers{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:0 0 auto;}
+.dust-detail-numbers>span:first-child{color:var(--text-secondary);font-size:12px;}
+.dust-detail-numbers>span:first-child b{color:var(--accent);font-size:24px;font-variant-numeric:tabular-nums;}
+.dusty-detail .ah-footnote{margin-bottom:25px;}
+@media(max-width:700px){
+ .dusty-preview{margin-top:14px;}
+ .dusty-rail{gap:10px;padding-bottom:12px;}
+ .dust-card{flex-basis:145px;width:145px;padding:8px;border-radius:15px;gap:8px;}
+ .dust-cover{border-radius:10px;}
+ .dust-title{font-size:12px;}
+ .dust-days strong{font-size:20px;}
+ .dust-bottom>small{font-size:9px;}
+ .dust-detail-row{gap:9px;padding:9px;border-radius:14px;}
+ .dust-detail-rank{flex-basis:20px;font-size:10px;}
+ .dust-detail-cover{width:54px;height:54px;flex-basis:54px;border-radius:9px;}
+ .dust-detail-body>strong{font-size:12px;}
+ .dust-detail-body>small{font-size:10px;}
+ .dust-detail-numbers>span:first-child b{font-size:19px;}
+}
