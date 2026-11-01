@@ -91,3 +91,11 @@ npm run build
 - Compact Mythic cover 使用 `object-fit:cover` 并 `display:block`，使图片铺满宝石外框；详情封面保持不裁切，并保留外框底部装饰不被剪断。增加非严格 1:1 图片在桌面和移动端的边缘回归测试。
 - 定时任务先从 GitHub 高负荷的 00/30 分改至 11/41 分，发现三个计划时间未触发后重新登记为 17/47 分；GitHub cron 本身仍不提供准点 SLA。若需要严格半小时，应另接可靠外部调度器。
 - GitHub Release 发布流程首次上线需核对 `Sync Xbox records`、Release 资产清单（`vault.json`、`status.json`、`media-index.txt`、`playlog-media.tar.gz`）与 Pages 最终渲染，不成功时不要删除原加密快照。
+
+### 2026-11-01 网页手动同步
+
+- src/manual-sync.ts：调用 GitHub Actions workflow_dispatch 并按 request_id 从公开状态 API 定位本轮 Sync 与 Pages 工作流；不会把其他 push/schedule 当作本轮触发。
+- src/components/manual-sync.tsx：首次授权和一键触发、进度轮询、成功后刷新已解锁快照、会话内恢复查询；没有服务端 GitHub 凭据。
+- src/vault.ts：浏览器本地 GitHub fine-grained PAT 用 APP_PASSWORD 进行 PBKDF2/AES-GCM 加密。令牌只提交至 api.github.com。撤销本机授权与 GitHub 端令牌失效是两个操作。
+- sync.yml 与 pages.yml 使用可选 workflow_dispatch.inputs.request_id，运行标题包含 UUID，sync 派发 Pages 时安全传递请求 ID。仅网页手动同步需要 fine-grained token 的 Actions:write（限定本仓库）。
+- tests/manual-sync.test.ts 与 scripts/check-navigation.mjs 使用模拟 API / 假令牌回归。不要在测试中引入真令牌或微软授权。
