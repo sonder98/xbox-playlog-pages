@@ -196,6 +196,36 @@ try{
     await page.getByRole('button',{name:'关闭详情'}).click();
     await page.getByRole('button',{name:'返回热力图'}).click();
     await page.locator('[data-achievement-showcase="preview"]').waitFor();
+    assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-gap-tile').count(),12,
+      'Each of the 12 games contributes a single chronological adjacent unlock pair');
+    assert.equal(await page.locator('.ah-gap-tile-duration').first().innerText(),'间隔 1.0 天',
+      'Gap previews show one-decimal elapsed days');
+    const pairArtwork=await page.locator('.ah-gap-tile').first().evaluate(card=>{
+      const older=card.querySelector('.ah-gap-image-back').getBoundingClientRect();
+      const newer=card.querySelector('.ah-gap-image-front').getBoundingClientRect();
+      return {olderLeft:older.left,olderRight:older.right,newerLeft:newer.left,newerTop:newer.top,olderTop:older.top};
+    });
+    assert.ok(pairArtwork.newerLeft>pairArtwork.olderLeft && pairArtwork.newerLeft<pairArtwork.olderRight,
+      'The two achievement pictures overlap but the earlier picture remains visible');
+    assert.ok(pairArtwork.newerTop>pairArtwork.olderTop,'Later award overlaps at a lower layer position');
+    await page.getByRole('button',{name:'向右滚动间隔成就展柜'}).click();
+    await page.waitForFunction(()=>document.querySelector('.ah-gap-rail')?.scrollLeft>60);
+    await page.getByRole('button',{name:'查看间隔最久成就详情'}).click();
+    await page.locator('[data-achievement-gap="detail"]').waitFor();
+    assert.ok(page.url().endsWith('#achievements/gaps'),'Interval detail is deep-linkable');
+    assert.equal(await page.locator('.ah-gap-detail-card').count(),12,'Detail shows all chronological gap pairs');
+    assert.deepEqual(await page.locator('.ah-gap-detail-card').first().locator('[data-gap-side]').evaluateAll(nodes=>nodes.map(node=>node.dataset.gapSide)),
+      ['earlier','later'],'Detail renders chronologically ordered achievements on two sides');
+    assert.equal(await page.locator('.ah-gap-detail-duration strong').first().innerText(),'1.0',
+      'Detail uses decimal day units');
+    assert.equal(await page.locator('.ah-gap-detail-art.ah-rarity-gold').count(),24,
+      'Both earned achievement images keep existing flowing gold rarity frames');
+    await page.locator('.ah-gap-game-link').first().click();
+    await page.getByRole('dialog',{name:/游戏详情/}).waitFor();
+    await page.getByRole('button',{name:'关闭详情'}).click();
+    await page.getByRole('button',{name:'返回热力图'}).click();
+    await page.locator('[data-achievement-gap="preview"]').waitFor();
+
 
     const yearNav=page.getByRole('navigation',{name:'按年份定位热力图'});
     await yearNav.getByRole('button',{name:'2024'}).click();
