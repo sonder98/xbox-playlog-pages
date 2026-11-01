@@ -2188,7 +2188,7 @@ footer .dot {
 .game-card .game-last-played,.game-card .game-time-span {display:inline-block;white-space:nowrap;}
 .game-card .game-time-span {font-variant-numeric:tabular-nums;color:var(--text-muted);}
 
-/* TOP 50 Xbox rarity showcase. Thumbnails preserve the source image ratio. */
+/* Xbox rarity showcase. Thumbnails preserve the source image ratio. */
 .ah-showcase {background:var(--surface);border:1px solid rgba(255,255,255,.07);border-radius:22px;padding:19px 19px 12px;margin:0 0 24px;min-width:0;overflow:hidden;}
 .ah-showcase-heading,.ah-showcase-title-group {display:flex;align-items:center;gap:12px;min-width:0;}
 .ah-showcase-heading {justify-content:space-between;margin-bottom:17px;}
@@ -2472,4 +2472,55 @@ footer .dot {
 }
 @media(prefers-reduced-motion:reduce){
  .ah-gap-tile {transition:none;}
+}
+
+
+/* TOP 100 rarity showcase: percentage belongs to each original-ratio achievement thumbnail. */
+.ah-showcase-tile {
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+ justify-content:flex-start;
+ gap:7px;
+}
+.ah-showcase-rarity-value {
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ gap:5px;
+ width:100%;
+ min-height:20px;
+ color:var(--text-secondary);
+ font-size:11px;
+ font-variant-numeric:tabular-nums;
+ white-space:nowrap;
+}
+.ah-showcase-rarity-value strong {font-weight:650;}
+.ah-showcase-rarity-value.is-rare {color:#f3cc77;}
+
+/* Pair detail: complete unlock conditions, never clipped or silently truncated. */
+.ah-gap-achievement-condition {
+ align-self:stretch;
+ min-width:0;
+ text-align:left;
+ padding-top:8px;
+ margin-top:1px;
+ border-top:1px solid rgba(255,255,255,.07);
+ color:var(--text-secondary);
+ font-size:11px;
+ line-height:1.55;
+ overflow-wrap:anywhere;
+ white-space:normal;
+}
+.ah-gap-side time {
+ display:block;
+ max-width:100%;
+ white-space:normal;
+ line-height:1.5;
+ overflow-wrap:anywhere;
+}
+@media(max-width:700px){
+ .ah-showcase-tile {gap:5px;}
+ .ah-showcase-rarity-value {font-size:10.5px;}
+ .ah-gap-achievement-condition {font-size:10.5px;line-height:1.5;}
 }
