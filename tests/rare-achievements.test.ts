@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {rareAchievementTop} from '../src/rare-achievements.ts';
+import {rareAchievementTop,achievementRarityTier} from '../src/rare-achievements.ts';
 import type {Achievement,Game} from '../src/data.ts';
 
 const sampleGame=(id:string,name=id):Game=>({id,name,image:'',devices:[],lastPlayed:null,minutes:0,earned:1,total:1,score:10,maxScore:10});
@@ -36,4 +36,11 @@ test('the showcase caps at 50 entries and uses game+achievement composite keys',
  assert.ok(items.every((item,i)=>i===0||item.achievement.rarity!>=items[i-1].achievement.rarity!));
  assert.equal(rareAchievementTop(games,0).length,0);
  assert.deepEqual(rareAchievementTop([]),[]);
+});
+
+test('Xbox rarity frame tiers follow strict 10% and 1% thresholds',()=>{
+ for(const [percentage,tier] of [
+  [0,'ultra'],[0.99,'ultra'],[1,'rare'],[9.99,'rare'],
+  [10,'common'],[100,'common'],[null,'common'],[-1,'common'],[101,'common'],[NaN,'common']
+ ] as const)assert.equal(achievementRarityTier(percentage),tier);
 });
