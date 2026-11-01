@@ -102,9 +102,15 @@ npm run build
 
 ### 从 2026-11-01 起按日记录游戏时长
 
-- `src/playtime-ledger.ts`：加密 vault 顶层 `playtimeLedger`，包含 `version`、`timeZone:Asia/Shanghai`、`since:2026-11-01`、`latest`（每游戏最新**真实测量**）、`days`（当日两次真实测量的正增量）、`crossDay`（跨日区间无法确认归属的正增量）、`corrections`（时长回退次数）。仅作为未来功能的数据基础，不更改当前界面。
+- `src/playtime-ledger.ts`：加密 vault 顶层 `playtimeLedger`，包含 `version`、`timeZone:Asia/Shanghai`、`since:2026-11-01`、`latest`（每游戏最新**真实测量**）、`days`（当日两次真实测量的正增量）、`crossDay`（旧版兼容字段，内容自动归并到前一天并清空）、`corrections`（时长回退次数）。仅作为未来功能的数据基础，不更改当前界面。
 - `scripts/microsoft-library.ts`：扫描额外返回 `statsSamples`，只记录通过 Xbox `MinutesPlayed` 接口**实际成功获得**的时长与采样时间；复用旧值不形成样本。北京时间 23:40–23:59/00:00–00:12（或 GitHub 专门 cron 强制）对非隐藏的普通 Xbox 游戏全面刷新游戏时长，其他时间保留原近期游戏优先策略。旧 Xbox360 不可用的时长不凭空推断。
 - `scripts/microsoft-sync.ts`、`scripts/snapshot.ts`：合并真实采样差值进入持久 `playtimeLedger`，与每次新快照一起 AES-GCM 加密并写入 GitHub Release 的 `vault.json`；快速复用已有快照时保持已有账本不变。**账本不随最近 30 次快照裁剪**。
-- 时区固定北京时间，未来 UI 不可简单地把跨日间隔都计入结束日期，也不能把 Xbox 缓存读数等同实时游玩。部分数据只能称“采样估计”，以前的数据不能准确追溯。
+- 时区固定北京时间，跨日区间按照用户约定统一归入上一次有效采样日，也不能把 Xbox 缓存读数等同实时游玩。部分数据只能称“采样估计”，以前的数据不能准确追溯。
 - 自动 cron 通常北京时间每小时 17、47 分，UTC 15:00 的整小时被北京时间 23:42 专用采样替换（`42 15 * * *`），UTC 16:02 增加次日零点基线（`2 16 * * *`）；GitHub cron 不提供准点保障。专用 cron 运行时将 `PLAYTIME_FORCE_SWEEP=true` 传给 Xbox 同步。
 - `tests/playtime-ledger.test.ts` 检验北京时间日期、午夜边界、跨日未归属、回退、重复读数、旧快照兼容。新增字段无敏感信息输出到公共 Actions 日志；全部账本只在用户密码加密快照中。
+
+### 2026-11-01 前日归属及 UI 限定
+
+- `appendPlaytimeSamples` 把任何跨午夜、多日间隔的新增分钟都归到**前一条有效采样**的北京时间日期，旧 `crossDay` 数据在下一轮加密快照更新时一次性迁入对应的前一天，并清空旧桶；后续读写保持幂等。若中间漏掉多轮同步可能高估前一天，不假装准确追溯。
+- 成就热力图 **Sheet 半屏弹层** 每游戏“X 个 · Y 小时”，小时取 `dailyGameMinutes(playtimeLedger, day, titleId)`；没有采样显示“— 小时”。**不要修改完整日期成就页**。
+- `RecentGamesRail` 显示“全部成就完成度 % · 累计时长 h”，仅概览卡片，缺失 Xbox 时长显示破折号。构建与手机桌面回归验证。
