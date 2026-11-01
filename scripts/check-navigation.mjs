@@ -167,11 +167,29 @@ try{
     assert.ok(Math.abs(wideFrame.ratio-16/9)<.04,'Wide Xbox art keeps its source proportions');
     assert.equal(firstFrame.fit,'contain','Square showcase art is not cropped');
     assert.equal(wideFrame.fit,'contain','Wide showcase art is not cropped');
+    const goldFrame=page.locator('.ah-showcase-art.ah-rarity-gold').first();
+    const foil=await goldFrame.evaluate(el=>{
+      const style=getComputedStyle(el),highlight=getComputedStyle(el,'::after');
+      return {border:style.borderTopWidth,background:style.backgroundImage,shine:highlight.animationName};
+    });
+    assert.equal(foil.border,'2px','Rare achievement has a refined gold outline');
+    assert.ok(foil.background.includes('gradient'),'Gold frame uses a layered metallic finish');
+    assert.ok(foil.shine.includes('ah-foil-orbit'),'Gold shine animates around the art frame');
+    assert.equal(await page.locator('.ah-showcase-tile[data-rarity-tier="ultra"]').count(),12,'Below 1 percent is ultra rare');
+    assert.equal(await page.locator('.ah-showcase-tile[data-rarity-tier="rare"]').count(),12,'Under 10 percent gets the rare gold frame');
+
     await page.getByRole('button',{name:'查看稀有成就展柜详情'}).click();
     await page.locator('[data-achievement-showcase="detail"]').waitFor();
     assert.ok(page.url().endsWith('#achievements/showcase'),'Rarity detail supports a deep link');
     assert.equal(await page.locator('.ah-showcase-detail .ah-achievement-card').count(),24,'Rarity detail shows the same ranked items');
     assert.equal(await page.locator('.ah-showcase-rank').first().innerText(),'#01','Showcase cards are rank numbered');
+    assert.equal(await page.locator('.ah-showcase-detail .ah-achievement-card[data-rarity-tier="ultra"]').count(),12,'Detail cards retain the ultra rarity finish');
+    assert.equal(await page.locator('.ah-showcase-detail .ah-achievement-card[data-rarity-tier="rare"]').count(),12,'Detail cards retain their gold rarity frames');
+    const detailFoil=await page.locator('.ah-showcase-detail .ah-achievement-art.ah-rarity-gold').first().evaluate(el=>
+      ({fit:getComputedStyle(el.querySelector('img')).objectFit,shine:getComputedStyle(el,'::after').animationName}));
+    assert.equal(detailFoil.fit,'contain','Detail gilt never crops achievement art');
+    assert.ok(detailFoil.shine.includes('ah-foil-orbit'),'Detail also has animated border shimmer');
+
     assert.ok((await page.locator('.ah-showcase-detail .ah-achievement-meta').first().innerText()).includes('0%'),'Rarest eligible item is ranked first');
     await page.locator('.ah-showcase-detail .ah-game-source').first().click();
     await page.getByRole('dialog',{name:/游戏详情/}).waitFor();
