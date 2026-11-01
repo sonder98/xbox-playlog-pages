@@ -151,15 +151,21 @@ try{
     assert.equal(await page.locator('.ah-overview-stats').count(),0,'Old four stat blocks are removed');
     assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-tile').count(),24,'Showcase previews each eligible earned achievement in one horizontal rail');
     await page.locator('.ah-showcase-art img').first().waitFor();
-    await page.waitForFunction(()=>document.querySelectorAll('.ah-showcase-art img')[1]?.naturalWidth>0);
-    const artworks=await page.locator('.ah-showcase-art').evaluateAll(els=>els.slice(0,2).map(el=>{
-      const rect=el.getBoundingClientRect();
-      const image=el.querySelector('img');
-      return {ratio:rect.width/rect.height,sourceRatio:image.naturalWidth/image.naturalHeight,fit:getComputedStyle(image).objectFit};
-    }));
-    assert.ok(Math.abs(artworks[0].ratio-1)<.04,'Square Xbox art remains square');
-    assert.ok(Math.abs(artworks[1].ratio-16/9)<.04,'Wide Xbox art keeps its source proportions');
-    assert.ok(artworks.every(x=>x.fit==='contain'),'Showcase art is never cropped');
+    const wideArt=page.locator('.ah-showcase-art').filter({has:page.locator('img[src*="wide.svg"]')}).first();
+    await wideArt.scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>document.querySelector('.ah-showcase-art img[src*="wide.svg"]')?.naturalWidth>0);
+    const firstFrame=await page.locator('.ah-showcase-art').first().evaluate(el=>{
+      const rect=el.getBoundingClientRect(),img=el.querySelector('img');
+      return {ratio:rect.width/rect.height,fit:getComputedStyle(img).objectFit};
+    });
+    const wideFrame=await wideArt.evaluate(el=>{
+      const rect=el.getBoundingClientRect(),img=el.querySelector('img');
+      return {ratio:rect.width/rect.height,fit:getComputedStyle(img).objectFit};
+    });
+    assert.ok(Math.abs(firstFrame.ratio-1)<.04,'Square Xbox art remains square');
+    assert.ok(Math.abs(wideFrame.ratio-16/9)<.04,'Wide Xbox art keeps its source proportions');
+    assert.equal(firstFrame.fit,'contain','Square showcase art is not cropped');
+    assert.equal(wideFrame.fit,'contain','Wide showcase art is not cropped');
     await page.getByRole('button',{name:'查看稀有成就展柜详情'}).click();
     await page.locator('[data-achievement-showcase="detail"]').waitFor();
     assert.ok(page.url().endsWith('#achievements/showcase'),'Rarity detail supports a deep link');
