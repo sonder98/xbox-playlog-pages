@@ -50,14 +50,15 @@ test('fractional gaps retain actual milliseconds and display one decimal day',()
  assert.equal(formattedGapDays(0.04),'0.0');
 });
 
-test('TOP 50 limit uses unique composite identities',()=>{
+test('TOP 100 limit uses unique composite identities',()=>{
  const games=Array.from({length:6},(_,i)=>{
   const g=makeGame(String(i));
   g.achievements=Array.from({length:20},(_,j)=>award('a'+j,day(j+1+i)));
   return g;
  });
  const items=longestAchievementGaps(games);
- assert.equal(items.length,50);
+ assert.equal(items.length,100);
  assert.equal(new Set(items.map(i=>i.key)).size,50);
+ assert.equal(longestAchievementGaps(games,50).length,50,'Custom shorter ranking remains supported');
  assert.deepEqual(longestAchievementGaps(games,0),[]);
 });
