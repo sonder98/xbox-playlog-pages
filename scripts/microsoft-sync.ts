@@ -14,7 +14,7 @@ const existing=fs.existsSync('public/vault.json')?await readVault(JSON.parse(fs.
 const previous=existing.records;
 const ledger=existing.playtimeLedger;
 const fresh=saved?.record?.games?.some((g:any)=>g.cachedImage)&&Date.now()-Date.parse(saved.record.at)<20*60_000?saved.record:previous[0];
-if(fresh?.source==='Xbox'&&!boundaryPlaytimeSweep(new Date().toISOString())&&process.env.PLAYTIME_FORCE_SWEEP!=='true'&&Date.now()-Date.parse(fresh.at)<20*60_000){
+if(ledger&&fresh?.source==='Xbox'&&!boundaryPlaytimeSweep(new Date().toISOString())&&process.env.PLAYTIME_FORCE_SWEEP!=='true'&&Date.now()-Date.parse(fresh.at)<20*60_000){
  const artwork=await australianArtwork(fresh,fetch,previous[0]);
  console.log('快速快照澳区横幅覆盖：'+JSON.stringify(artwork));
  await cacheRecordImages(fresh);
