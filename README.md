@@ -22,20 +22,22 @@
 
 | 文件 | 职责 | 触发 |
 | --- | --- | --- |
-| `.github/workflows/sync.yml` | Xbox 正式同步、加密快照、素材缓存 | 每小时 00/30 分 UTC（排队可能延迟）；同步代码变化或手动触发 |
-| `.github/workflows/pages.yml` | 测试、构建、浏览器导航检查、GitHub Pages 部署 | 前端／工作流／快照推送或手动触发 |
+| `.github/workflows/sync.yml` | Xbox 正式同步、加密快照、素材缓存 | 每小时 11/41 分 UTC（GitHub 定时任务不保证准点）；同步代码变化或手动触发 |
+| `.github/workflows/pages.yml` | 测试、构建、浏览器导航检查、GitHub Pages 部署 | 前端／工作流修改，或正式同步完成后的手动派发 |
 | `.github/workflows/microsoft-shadow.yml` | 人工授权、compare 与 repair 工具 | 仅手动触发 |
 
-同步任务运行 `scripts/microsoft-sync.ts`：恢复 **GitHub Actions 加密私有缓存**，续期 Microsoft OAuth → Xbox 用户令牌 → XSTS，读取游戏历史、成就及必要时长；查询澳大利亚区商店素材；转换缓存图片；用应用密码加密记录并发布 `public/vault.json`、`public/status.json`。使用 GitHub Actions cache 保存授权状态及图片，自动部署时不会把明文账户数据放进仓库。
+同步任务运行 `scripts/microsoft-sync.ts`：恢复 **GitHub Actions 加密私有缓存**，续期 Microsoft OAuth → Xbox 用户令牌 → XSTS，读取游戏历史、成就及必要时长；查询澳大利亚区商店素材，缓存 WebP 并在 runner 上加密记录。
+
+`scripts/live-assets.mjs` 将 **已加密** 的 `vault.json`、`status.json` 发布到 GitHub Release `playlog-live`，同时维护公共 WebP 素材归档和文件大小校验清单。正式同步不再向 Git 提交随机密文；Pages 构建从 Release 恢复最新数据，素材缓存丢失时从归档恢复。首次启用 Release 前，仓库中旧的加密快照保留为迁移兜底；不要在新发布链路验证成功前删除该文件。所有授权凭证仍只放在加密私有缓存中，绝不进入 Release、Git 或 Pages。
 
 增量策略（2026-11-01 更新）：
 
 1. 每轮检查 Xbox 官方游戏列表、成就数、已解锁数、玩家积分和最近游玩时间；新增或变化的游戏重新读取完整成就目录。
-2. 已有完整目录且游戏总成就数、已解锁数和最近游玩时间未变化时复用成就明细；仅在官方提供积分摘要时校验积分，时间戳按真实时刻比较（忽略文本格式或小数位精度差异）。缺少必要的成就数量摘要则重新读取。
+2. 已有完整目录且总成就数、已解锁数与最近游玩时间未变化时复用明细；积分摘要缺失不影响复用。缺少成就数量摘要但最近游玩时间未变时，先向官方拉取一次 **已解锁成就 ID** 校验：不变则复用，有新增则完整重查；新增但尚未解锁的 DLC 总量由每日全量刷新发现。
 3. 最近 **7 天**玩过的游戏及没有有效时长记录的游戏仍查询最新 MinutesPlayed；其他未变化游戏复用旧时长。历史游戏重新游玩后，其最近游玩时间变化将触发完整读取。
 4. 北京时间约 **10:00–11:00** 对应的第一个成功同步窗口执行每日完整目录刷新，重新获取稀有度并尝试验证缺失分组。由于 GitHub 任务可能延迟，该窗口并非精确执行时间。
 5. 仍保留 Xbox 请求间隔约 1.05 秒和 HTTP 429 中止保护，不以并发冲刺突破限流。
-6. 日志输出 `微软扫描统计`（全量／增量、复用成就数、明细读取数、时长读取／跳过数、耗时），以及脱敏的 `reuseReasons` 聚合计数：新增、缓存不完整、每日全量、再次游玩、缺失必要摘要、总数变化、解锁数变化、积分变化和成功复用。不会输出游戏名、账号、令牌或快照内容。
+6. 运行日志会区分 `reused`、`verifiedEarned`（已解锁 ID 校验后复用）与 `missingSummary`（校验未通过并全量读取）；日志输出 `微软扫描统计`（全量／增量、复用成就数、明细读取数、时长读取／跳过数、耗时），以及脱敏的 `reuseReasons` 聚合计数：新增、缓存不完整、每日全量、再次游玩、缺失必要摘要、总数变化、解锁数变化、积分变化和成功复用。不会输出游戏名、账号、令牌或快照内容。
 
 > 首次同步、每日完整刷新和大量新游戏加入时仍可能较慢；半小时增量运行主要减少无变化游戏的重复调用。线上速度以最新 GitHub Actions 运行记录为准。
 
@@ -66,7 +68,7 @@ npm run dev
 | 代码 | 作用 |
 | --- | --- |
 | `scripts/microsoft-library.ts` | 游戏历史合并、成就明细、分组、缓存复用、时长、增量统计 |
-| `scripts/microsoft-sync.ts` | 正式同步入口、加密、发布 |
+| `scripts/microsoft-sync.ts` | 正式同步入口与加密 |\n| `scripts/live-assets.mjs` | GitHub Release 加密快照发布、WebP 持久归档与 Pages 恢复 |
 | `scripts/microsoft-artwork.ts` | 澳大利亚区游戏封面／详情横幅 |
 | `scripts/image-cache.ts` | WebP 预处理与缓存 |
 | `src/dashboard.tsx` | 概览／游戏库／热力图路由／设置 |
@@ -83,4 +85,4 @@ npm run dev
 - 同步慢：先看 `Sync Xbox records` 日志中的 `fullRefresh`、`reusedDetails`、`detailedReads`、`statsReads`、`scanSeconds`；每日全量刷新会比半小时增量慢。
 - 封面缺失：先检查澳区商店数据匹配、`ProductKind`、`ImagePurpose`、图片源是否允许访问，以及图片缓存是否回退微软原图。
 - 成就分组未知：不要根据积分或数量猜测本体／DLC，等待官方有效分组或唯一可验证的目录补充分组。
-- GitHub Pages 未更新：检查 `Deploy Playlog` 是否成功；由 bot 提交的快照不会自动触发 push workflow，`sync.yml` 会显式派发部署。
+- GitHub Pages 未更新：检查 `Sync Xbox records` 是否成功发布 Release，再核对 `Deploy Playlog`；同步工作流显式派发 Pages，不依赖 Git 密文提交。GitHub Actions cron 是尽力触发，超过半小时未跑不表示数据遗失，可手动派发同步。

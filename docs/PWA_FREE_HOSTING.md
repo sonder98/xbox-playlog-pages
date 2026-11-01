@@ -11,7 +11,7 @@
 
 1. 先使用免费平台提供的 HTTPS 二级域名测试中国大陆手机不开 VPN 时的访问。**先测试，不能保证免费域名在国内长期可用。**
 2. 外部主域名根路径部署时，Vite 构建设置环境变量 `PLAYLOG_BASE=/`；GitHub Pages 不设置此变量，继续使用 `/xbox-playlog-pages/`。
-3. **不能仅在托管平台直接导入 GitHub 仓库就算迁移完成**：现有 Xbox 图片缓存位于 GitHub Actions 的 `public/media` 缓存中，并没有全部提交进 Git 仓库。新域名下的旧快照图像地址会自动重映射到新域名的 `/media/`，因此镜像部署时必须连同 Actions 恢复的 `public/media` 一起发布，否则可能出现大量空图。
+3. **不能仅在托管平台直接导入 GitHub 仓库就算迁移完成**：现有 Xbox 图片缓存位于 GitHub Actions 的 `public/media` 缓存中，且有 GitHub Release `playlog-live` 的公共 WebP 压缩归档备份；并没有全部提交进 Git 仓库。新域名下的旧快照图像地址会自动重映射到新域名的 `/media/`，因此镜像部署时必须连同 Actions 缓存或 Release 恢复的 `public/media` 一起发布，否则可能出现大量空图。
 4. 只有配置了与既有 GitHub Actions 同步任务衔接的镜像发布流程，才能保持现有半小时定时更新能力。
 5. 所有新平台访问密钥应只保存在 GitHub Actions Secrets 中，**不要通过聊天粘贴、不要提交仓库**。
 
@@ -23,3 +23,9 @@
 - 免费域名在中国大陆的可用性存在网络地区差异，不能代替真实手机测试。
 
 阶段二的账号创建和平台授权必须由用户亲自完成；当前未创建外部托管项目，网站仍部署于 GitHub Pages。
+
+## Release 素材持久化说明
+
+- `playlog-live` 是公开发布渠道：仅包含和 Pages 同样可访问的 AES-GCM 加密 `vault.json` 与公开 WebP 图片，没有 OAuth 凭证、明文数据或账户密钥。
+- `media-index.txt`（文件名与字节数）校验 Actions 图片缓存是否完整；不完整时从 `playlog-media.tar.gz` 重建后再部署，避免缓存淘汰导致大量空图。
+- Git 仓库中原本的加密快照暂留作初次发布兜底，但每次定时同步不再提交更新快照，避免仓库持续膨胀。

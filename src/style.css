@@ -2627,3 +2627,16 @@ footer .dot {
  .ah-month-played-cover {width:38px;height:38px;flex-basis:38px;}
  .ah-month-played-name {font-size:11.5px;}
 }
+
+/* A Mythic jewel frame must touch the visible compact cover on all four sides.
+   The native image may be slightly non-square (Cyberpunk 2077 is an example):
+   contain letterboxes inside the fixed 1:1 jewel. Only the small Mythic tile
+   uses cover; non-Mythic artwork and widescreen detail keep their original fit. */
+.game-cover > .cover-artwork { display:block; }
+.game-cover.completion-frame:not(.detail-cover) > .cover-artwork {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:8px;
+}

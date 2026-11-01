@@ -59,7 +59,8 @@ try{
     await page.route('https://covers.example.test/**',route=>{
       const original=route.request().url().endsWith('original.svg'),medium=route.request().url().endsWith('medium.svg');
       const wide=route.request().url().endsWith('/wide.svg');
-      const width=original?1920:medium?480:wide?160:64,height=wide?90:width;
+      // Slightly rectangular originals simulate the Cyberpunk 2077 Mythic frame gap.
+      const width=original?1920:medium?480:wide?160:64,height=wide?90:original?1800:width;
       return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#789"/></svg>`});
     });
     await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
@@ -440,7 +441,16 @@ try{
       return {width:rect.width,height:rect.height,fit:getComputedStyle(image).objectFit,source:image.currentSrc,naturalHeight:image.naturalHeight};
     });
     assert.ok(Math.abs(cover.width/cover.height-1)<.03,'Artwork uses a square frame');
-    assert.equal(cover.fit,'contain','Artwork must remain uncropped');
+    assert.equal(cover.fit,'cover','Mythic game covers must meet the border without letterboxing');
+     const mythicEdges=await page.locator('.recent-game-card .completion-frame').first().evaluate(frame=>{
+       const image=frame.querySelector('.cover-artwork'),outer=frame.getBoundingClientRect(),inner=image.getBoundingClientRect();
+       const border=parseFloat(getComputedStyle(frame).borderTopWidth);
+       return {top:inner.top-outer.top,left:inner.left-outer.left,right:outer.right-inner.right,bottom:outer.bottom-inner.bottom,border};
+     });
+     for(const edge of ['top','left','right','bottom'])
+       assert.ok(Math.abs(mythicEdges[edge]-mythicEdges.border)<1.1,
+         'Mythic '+edge+' edge touches the inner border (no black padding or baseline gap)');
+
     assert.ok(cover.source.endsWith('original.svg'),'Screen density must select the matching artwork');
     assert.ok(cover.naturalHeight>=cover.height*(mobile?3:2),'Artwork must have enough real pixels');
     await page.route('**/medium.svg',route=>route.abort());

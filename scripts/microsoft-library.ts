@@ -105,7 +105,7 @@ export function shouldReadPlaytime(lastPlayed:string|null,oldMinutes:number|null
  * Xbox omits currentGamerscore on some title summaries, and can change the textual
  * timestamp precision without changing the actual last-played instant.
  * The total and earned counts are mandatory: absent ones must trigger a fresh read. */
-export type DetailDecision='newGame'|'incompleteCache'|'dailyRefresh'|'playedAgain'|'missingSummary'|'totalChanged'|'earnedChanged'|'scoreChanged'|'reused';
+export type DetailDecision='newGame'|'incompleteCache'|'dailyRefresh'|'playedAgain'|'missingSummary'|'totalChanged'|'earnedChanged'|'scoreChanged'|'reused'|'verifiedEarned';
 export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:string|null,fullRefresh:boolean):DetailDecision {
  if(!old)return 'newGame';
  const awards=old.achievements||[],groups=old.groups||[];
@@ -146,9 +146,9 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  const games=normalizeTitles({titles:titles.filter(t=>!options.onlyIds||options.onlyIds.has(String(t.titleId))||!prior.has(String(t.titleId)))});
  const audit:ScanAudit={version:1,at:options.now||new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,fullRefresh:false,reusedDetails:0,detailedReads:0,statsReads:0,statsSkipped:0,reuseReasons:{},failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
  audit.fullRefresh=refreshCatalogToday(options.previous?.at,audit.at);
- const pagesFor=async(id:string,version:string,possible=false,legacy=false,earned=false)=>{
+ const pagesFor=async(id:string,version:string,possible=false,legacy=false,earned=false,unlockedOnly=false)=>{
   const pages:any[]=[];const result=await collectPages(async token=>{
-   const params=new URLSearchParams(legacy?{earned:String(earned)}:{contractVersion:version,possibleOnly:String(possible)});if(token)params.set('continuationToken',token);
+   const params=new URLSearchParams(legacy?{earned:String(earned)}:{contractVersion:version,possibleOnly:String(possible),unlockedOnly:String(unlockedOnly)});if(token)params.set('continuationToken',token);
    const page=await provider.call(`/player/${legacy?'legacy-achievements':'achievements'}/${id}?${params}`);pages.push(page);return page;
   },'achievements');
   const raw=result.values.filter(a=>a.achievementType!=='Challenge'&&a.type!=='Challenge');
@@ -173,9 +173,26 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
   try{
    const title=titles.find(t=>String(t.titleId)===game.id),summary=title?.achievement;
    const lastPlayed=title?.titleHistory?.lastTimePlayed||null;
-   const decision=detailCacheDecision(old,summary,lastPlayed,audit.fullRefresh);
+   let decision=detailCacheDecision(old,summary,lastPlayed,audit.fullRefresh);
+   // The title-history API occasionally omits mandatory counters (86 titles in
+   // a production scan). Check earned IDs with ONE small official request instead
+   // of fetching the full catalog and rarity/groups several times every 30m.
+   // New earned IDs force a full read. Unlocked-but-unchanged catalogs are
+   // refreshed during the daily full scan to detect unearned DLC additions.
+   if(decision==='missingSummary'&&old){
+    const isLegacy=titles.find(t=>String(t.titleId)===game.id)?.devices?.some((d:any)=>/xbox\s*360/i.test(String(d)))||summary?.sourceVersion===1;
+    try{
+     const probe=isLegacy?await pagesFor(game.id,'1',false,true,true):
+      await pagesFor(game.id,'6',false,false,false,true);
+     const awards=probe.raw.map(achievement);
+     const priorEarned=(old.achievements||[]).filter(a=>a.unlocked).map(a=>a.id).sort();
+     const freshEarned=awards.filter(a=>a.unlocked).map(a=>a.id).sort();
+     if(awards.length===freshEarned.length&&JSON.stringify(priorEarned)===JSON.stringify(freshEarned))
+      decision='verifiedEarned';
+    }catch(error){if(fatal(error))throw error;/* Unknown probe contract: full fetch below. */}
+   }
    audit.reuseReasons[decision]=(audit.reuseReasons[decision]||0)+1;
-   if(decision==='reused'){
+   if(decision==='reused'||decision==='verifiedEarned'){
     const cached=old!,oldAchievements=cached.achievements||[],oldGroups=cached.groups||[];
     let minutes=cached.minutes;
     if(shouldReadPlaytime(lastPlayed,cached.minutes,audit.at)){

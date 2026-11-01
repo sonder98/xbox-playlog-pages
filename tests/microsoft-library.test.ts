@@ -211,6 +211,38 @@ test('incremental cache does not refetch unchanged unverified achievements or ol
  assert.equal(r.games.find(g=>g.id==='2')?.minutes,99);
 });
 
+test('missing summary falls back to an earned-only Xbox probe and detects newly earned IDs',async()=>{
+ const at='2026-11-01T01:30:00.000Z',previous='2026-07-01T00:00:00.000Z';
+ const original={...game('1'),lastPlayed:previous,officialHidden:false};
+ let changed=false;const calls:string[]=[];
+ const request:typeof fetch=async input=>{
+  const u=new URL(String(input));
+  if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});
+  if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
+  if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',titleHistory:{visible:true,lastTimePlayed:previous},achievement:{}}]});
+  if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});
+  if(u.hostname==='userstats.xboxlive.com')return Response.json({statlistscollection:[{stats:[{name:'MinutesPlayed',value:42}]}]});
+  calls.push(u.toString());
+  if(u.searchParams.get('unlockedOnly')==='true')
+   return Response.json({achievements:[{id:'1',name:'Award 1',progressState:'Achieved'},...(changed?[{id:'2',name:'Award 2',progressState:'Achieved'}]:[])]});
+  return Response.json({achievements:[{id:'1',name:'Award 1',progressState:'Achieved',gamerscore:10},{id:'2',name:'Award 2',progressState:changed?'Achieved':'NotStarted',gamerscore:10}],completion:[{titleId:'1',groups:{base:{groupType:'BaseGame',achievementIds:['1','2']}}}]});
+ };
+ const fast=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([original]),now:at});
+ assert.equal(fast.audit.reusedDetails,1);
+ assert.equal(fast.audit.detailedReads,0);
+ assert.equal(fast.audit.statsSkipped,1);
+ assert.deepEqual(fast.audit.reuseReasons,{verifiedEarned:1});
+ assert.equal(calls.length,1,'Only the earned-only check is needed for an unchanged dormant title');
+ assert.ok(calls[0].includes('unlockedOnly=true'));
+ changed=true;calls.length=0;
+ const refreshed=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([original]),now:at});
+ assert.equal(refreshed.audit.reusedDetails,0);
+ assert.equal(refreshed.audit.detailedReads,1);
+ assert.equal(refreshed.audit.reuseReasons.missingSummary,1);
+ assert.ok(calls.some(url=>url.includes('unlockedOnly=true')),'New earned achievements force a complete catalog refresh');
+});
 test('cached catalogs reuse missing-score summaries and real identical last-played timestamps',()=>{
  const old={...game(),lastPlayed:'2026-10-26T11:24:30.000Z'};
  const good={totalAchievements:2,currentAchievements:1};
