@@ -80,7 +80,7 @@ try{
       await page.getByRole('button',{name,exact:true}).click();
     }
     await unlock();
-    await page.locator('.game-card').first().waitFor();
+    await page.locator('.recent-game-card').first().waitFor();
     if(mobile){
       const mobileBar=page.getByRole('navigation',{name:'主导航'});
       assert.equal(await mobileBar.locator('button').count(),4,'Mobile navigation retains four tabs');
@@ -103,9 +103,15 @@ try{
       await page.locator('[data-overview-section="recent"]').waitFor();
       console.log('Mobile: PASS four bottom tabs hidden initially, reveal on scroll, auto-hide and navigate');
     }
-    const firstSpan=page.locator('.game-card').first().locator('.game-time-span');
-    assert.equal(await firstSpan.innerText(),'时间跨度：1.0天','Games show time between earliest and latest unlocked achievements');
-    assert.equal(await page.locator('.game-card .game-time-span').count(),5,'Overview recent games all display achievement time spans');
+    const recent=page.locator('[data-overview-section="recent"]');
+    assert.equal(await recent.locator('.recent-game-card').count(),10,'Overview renders ten latest games in one horizontal rail');
+    assert.equal(await recent.locator('.game-card').count(),0,'Recent games are not the old multi-line list');
+    assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-title').innerText(),'Test Game 0');
+    assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-progress strong').innerText(),'50%',
+      'Combined base + DLC progress displays 2 / 4 = 50%, not base-only Mythic 100%');
+    assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-progress-track').getAttribute('aria-valuenow'),'50');
+    assert.equal(await recent.locator('.recent-games-rail').evaluate(el=>getComputedStyle(el).overflowX),'auto',
+      'Recent games scroll as one cover-first horizontal row');
     if(mobile){
       const refresh=await page.locator('.title-row .overview-refresh').evaluate(button=>{
         const a=button.getBoundingClientRect(),b=button.querySelector('svg').getBoundingClientRect();
@@ -119,6 +125,10 @@ try{
     assert.equal(await page.locator('.ah-preview-grid .ah-preview-cell').count(),30,'Overview shows only 30 days');
     assert.equal(await page.locator('.ah-preview-weekdays span').count(),7,'Overview has explicit Monday-Sunday weekday labels');
     assert.equal(await page.locator('.ah-preview-axis').count(),0,'Overview omits explanatory direction text');
+    assert.equal(await page.locator('[data-overview-section="heatmap"] .ah-month-played').count(),1,
+      'Overview heatmap has the monthly played section beneath its calendar');
+    assert.equal(await page.locator('[data-overview-section="heatmap"] .ah-month-played-title').innerText(),'本月在玩 0 款',
+      'November has no confirmed playing records in the example, so no games are invented');
     const previewDot=await page.locator('.ah-preview-cell .ah-dot').first().evaluate(el=>{
       const button=el.parentElement.getBoundingClientRect(),dot=el.getBoundingClientRect();
       return {ratio:dot.width/dot.height,relative:dot.width/button.width,radius:getComputedStyle(el).borderRadius};
@@ -296,6 +306,17 @@ try{
     await page.locator('.ah-month-card').first().waitFor();
     assert.equal(await page.locator('.ah-month-card').count(),59,'Month-by-month calendars cover 2022 through Nov 2026');
     assert.equal(await page.locator('.ah-month-card').first().getByRole('heading').innerText(),'2026 年 11 月');
+    assert.equal(await page.locator('.ah-month-card .ah-month-played').count(),59,
+      'Every monthly achievement calendar includes its own played-games list');
+    assert.equal(await page.locator('.ah-month-card[data-month="11"][data-year="2026"] .ah-month-played-game').count(),0,
+      'November correctly has no dated Xbox play activity in the test data');
+    assert.equal(await page.locator('.ah-month-card[data-month="10"][data-year="2026"] .ah-month-played-game').count(),12,
+      'October combines lastPlayed evidence and unlocked achievements across all twelve games');
+    assert.equal(await page.locator('.ah-month-card[data-month="10"][data-year="2026"] .ah-month-played-game .ah-month-played-cover').count(),12,
+      'Monthly played rows each include their own square game cover');
+    await page.locator('.ah-month-card[data-month="10"][data-year="2026"] .ah-month-played-game').first().click();
+    await page.getByRole('dialog',{name:/游戏详情/}).waitFor();
+    await page.getByRole('button',{name:'关闭详情'}).click();
     const monthDot=await page.locator('.ah-month-card .ah-cell .ah-dot').first().evaluate(el=>{
       const box=el.getBoundingClientRect(),button=el.parentElement.getBoundingClientRect();
       return {ratio:box.width/box.height,width:button.width,relative:box.width/button.width,radius:getComputedStyle(el).borderRadius};
@@ -376,7 +397,7 @@ try{
     await page.locator('.ah-month-calendar').first().waitFor();
     assert.equal(await page.locator('.ah-cell.is-selected').count(),1,'Selected calendar date persists after returning');
     await page.getByRole('button',{name:/返回概览/}).click();
-    await page.locator('.game-card').first().waitFor();
+    await page.locator('.recent-game-card').first().waitFor();
     console.log((mobile?'Mobile':'Desktop')+': PASS circular dots, sticky year anchors, sheet date stepping, chronological/rarity sort and artwork fit');
     assert.equal(await page.locator('.top-card').count(),5);
     assert.equal(await page.locator('.top-card .completion-ornament').count(),5);
@@ -389,9 +410,9 @@ try{
     await page.getByRole('dialog').waitFor({state:'hidden'});
     console.log((mobile?'Mobile':'Desktop')+': PASS overview order, five illustrated Mythic cards, horizontal rail navigation and persistent close after long scroll');
 
-    await page.locator('.game-card .game-cover img').first().waitFor();
-    await page.waitForFunction(()=>{const img=document.querySelector('.game-card .game-cover img');return img?.complete&&img.naturalWidth>0;});
-    const cover=await page.locator('.game-card .game-cover').first().evaluate(el=>{
+    await page.locator('.recent-game-card .game-cover img').first().waitFor();
+    await page.waitForFunction(()=>{const img=document.querySelector('.recent-game-card .game-cover img');return img?.complete&&img.naturalWidth>0;});
+    const cover=await page.locator('.recent-game-card .game-cover').first().evaluate(el=>{
       const rect=el.getBoundingClientRect();
       const image=el.querySelector('img');
       return {width:rect.width,height:rect.height,fit:getComputedStyle(image).objectFit,source:image.currentSrc,naturalHeight:image.naturalHeight};
@@ -403,7 +424,7 @@ try{
     await page.route('**/medium.svg',route=>route.abort());
     await page.route('**/original.svg',route=>route.abort());
     await unlock();
-    await page.waitForFunction(()=>document.querySelector('.game-card .game-cover img')?.currentSrc.endsWith('square.svg'));
+    await page.waitForFunction(()=>document.querySelector('.recent-game-card .game-cover img')?.currentSrc.endsWith('square.svg'));
     await page.unroute('**/medium.svg');await page.unroute('**/original.svg');
     // Cached display variants avoid original artwork; a missing mirror still has the upstream fallback.
     await page.route('**/cached-*.svg',route=>{
@@ -414,8 +435,8 @@ try{
     for(const game of cachePayload.records[0].games){game.cachedImage='https://covers.example.test/cached-480.svg';game.cachedImageLarge='https://covers.example.test/cached-1600.svg';for(const a of game.achievements||[])a.cachedImage='https://covers.example.test/cached-award.svg';}
     activeEnvelope=await encryptVault(cachePayload,password);
     await unlock();
-    await page.waitForFunction(()=>document.querySelector('.game-card .game-cover img')?.currentSrc.endsWith('cached-480.svg'));
-    await page.locator('.game-card').first().click();
+    await page.waitForFunction(()=>document.querySelector('.recent-game-card .game-cover img')?.currentSrc.endsWith('cached-480.svg'));
+    await page.locator('.recent-game-card').first().click();
     await page.waitForFunction(()=>document.querySelector('.detail-cover .cover-artwork')?.currentSrc.endsWith('cached-1600.svg'));
     const hero=await page.locator('.detail-cover').evaluate(el=>{const r=el.getBoundingClientRect();return {ratio:r.width/r.height,fallback:!!el.querySelector('.detail-backdrop'),fit:getComputedStyle(el.querySelector('.cover-artwork')).objectFit};});
     assert.ok(hero.ratio>1.7&&hero.ratio<1.85,'Detail cover must be widescreen');
@@ -425,7 +446,7 @@ try{
     await page.getByRole('button',{name:'关闭详情',exact:true}).click();
     await page.route('**/cached-*.svg',route=>route.abort());
     await unlock();
-    await page.waitForFunction(()=>document.querySelector('.game-card .game-cover img')?.currentSrc.endsWith('original.svg'));
+    await page.waitForFunction(()=>document.querySelector('.recent-game-card .game-cover img')?.currentSrc.endsWith('original.svg'));
     activeEnvelope=envelope;await unlock();
     console.log((mobile?'Mobile':'Desktop')+': PASS cached list/detail artwork sizes and missing-cache fallback');
     const all=page.getByRole('button',{name:'全部游戏',exact:true});
