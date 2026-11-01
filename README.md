@@ -22,7 +22,7 @@
 
 | 文件 | 职责 | 触发 |
 | --- | --- | --- |
-| `.github/workflows/sync.yml` | Xbox 正式同步、加密快照、素材缓存 | 每小时 17/47 分 UTC（GitHub 定时任务不保证准点）；同步代码变化或手动触发 |
+| `.github/workflows/sync.yml` | Xbox 正式同步、加密快照、素材缓存 | 每小时 17/47 分（北京时间，23 点例外）；23:42 和 00:02 北京时间每日采样；同步代码变化或手动触发 |
 | `.github/workflows/pages.yml` | 测试、构建、浏览器导航检查、GitHub Pages 部署 | 前端／工作流修改，或正式同步完成后的手动派发 |
 | `.github/workflows/microsoft-shadow.yml` | 人工授权、compare 与 repair 工具 | 仅手动触发 |
 
@@ -68,7 +68,8 @@ npm run dev
 | 代码 | 作用 |
 | --- | --- |
 | `scripts/microsoft-library.ts` | 游戏历史合并、成就明细、分组、缓存复用、时长、增量统计 |
-| `scripts/microsoft-sync.ts` | 正式同步入口与加密 |\n| `scripts/live-assets.mjs` | GitHub Release 加密快照发布、WebP 持久归档与 Pages 恢复 |
+| `scripts/microsoft-sync.ts` | 正式同步入口与加密 |
+| `scripts/live-assets.mjs` | GitHub Release 加密快照发布、WebP 持久归档与 Pages 恢复 |
 | `scripts/microsoft-artwork.ts` | 澳大利亚区游戏封面／详情横幅 |
 | `scripts/image-cache.ts` | WebP 预处理与缓存 |
 | `src/dashboard.tsx` | 概览／游戏库／热力图路由／设置 |
@@ -92,3 +93,12 @@ npm run dev
 解锁后点击右上角「立即同步」（手机端是刷新图标）。首次使用需到 GitHub 创建仅对 sonder98/xbox-playlog-pages 有效的 fine-grained personal access token，Repository permissions 中仅将 Actions 设置为 Read and write。粘贴进网页后点击「保存授权并立即同步」，此后再点击刷新图标即可直接发起同步。进度包括 GitHub 排队、Xbox 数据读取、Pages 部署，成功后网页会自动载入最新快照。未授权时仍可直接访问 GitHub Actions 手动运行。
 
 此令牌由 APP_PASSWORD 加密，仅存在当前浏览器的 localStorage，浏览器仅将其直接发送给 api.github.com；从不将令牌放进源码、站点文件或日志。可以在弹窗「移除此设备授权」删除本机令牌；彻底撤销须去 GitHub 账户设置删除该 token。不同浏览器需要分别授权，切勿将令牌发送给他人或粘贴到聊天中。
+
+## 每日游戏时长采样（自 2026-11-01 起）
+
+- **仅存储，当前不增加 UI 展示**。按 `Asia/Shanghai`（北京时间）自然日、Xbox 游戏 Title ID 保存累计分钟的采样差值，位于加密 `vault.json` 的顶层 `playtimeLedger`（`version:1`）。账本独立于仅保存 30 条的普通快照，未来可用于每日总时长、按游戏日历和趋势图。
+- **来源与精度**：微软 `MinutesPlayed` 是游戏的累计时长，不提供可靠的逐日逐小时原始轨迹。只采用当轮真正请求 Xbox 返回的时长，不把复用的旧时长当成新测量。同一天两次有效读数之间的正增长记在 `days[YYYY-MM-DD][titleId]`；跨午夜或中断多日的正增长存放在 `crossDay[from..to]`，不臆断归属。时长回退只记录修正次数，绝不计算负时长。
+- 2026-11-01 开始首次真实采样时建立各游戏的基线。**开始采样之前的当天时长无法可靠回填**。新增的游戏如果没有先前基线，第一次读取也只用于建立基线。Xbox 数据更新可能延后，日统计属于“采样估计”，不能宣称逐分钟精确。
+- **同步时间（北京时间）**：通常每小时 17、47 分；23 点改为 **23:42** 进行全游戏时长采样，并在次日 **00:02** 采集新一天基线；00 点后仍保留 00:17/00:47 的普通同步。对应 UTC 的专用 cron 为 `42 15 * * *`、`2 16 * * *`。午夜强制刷新历史上跳过的未近期游玩游戏的累计时长，防止跨天变化长期缺席。
+- GitHub Actions 的定时任务不保证准点，Xbox 服务器提供的数据也可能延迟，任何漏触发期间的增长会保留在跨日未归属数据而不是误记；网页「立即同步」仍可人工补采样。
+- 网页原有 **完整备份 JSON** 会包含 `playtimeLedger`，但会以明文导出，请妥善保管。旧加密快照可继续解锁；不需要手动数据迁移。
