@@ -1,9 +1,11 @@
 import {useEffect,useLayoutEffect,useState} from 'react';
-const pages=['overview','library','history','settings','achievements','dusty'] as const;
+const pages=['overview','library','achievements','manage','dusty'] as const;
 export type PageTab=typeof pages[number];
 function route(){
  const [page,section,id]=location.hash.slice(1).split('/');
- return {tab:pages.includes(page as PageTab)?page as PageTab:'overview' as PageTab,gameId:section==='game'?id||null:null,dayId:page==='achievements'&&section==='day'&&/^\d{4}-\d{2}-\d{2}$/.test(id||'')?id:null,showcase:page==='achievements'&&section==='showcase',gapShowcase:page==='achievements'&&section==='gaps'};
+ // Older #history and #settings bookmarks now open the combined fourth tab.
+ const normalized=page==='history'||page==='settings'?'manage':page;
+ return {tab:pages.includes(normalized as PageTab)?normalized as PageTab:'overview' as PageTab,gameId:section==='game'?id||null:null,dayId:page==='achievements'&&section==='day'&&/^\d{4}-\d{2}-\d{2}$/.test(id||'')?id:null,showcase:page==='achievements'&&section==='showcase',gapShowcase:page==='achievements'&&section==='gaps'};
 }
 export function usePageNavigation(){
  const [current,setCurrent]=useState(route);
