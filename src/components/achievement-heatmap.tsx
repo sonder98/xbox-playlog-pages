@@ -97,6 +97,7 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
     element.style.setProperty('--podium-scale',(.9+focus*.1).toFixed(4));
     element.style.setProperty('--podium-opacity',(.63+focus*.37).toFixed(4));
     element.style.setProperty('--podium-focus',focus.toFixed(4));
+    element.style.setProperty('--podium-brightness',(.72+focus*.28).toFixed(4));
     element.style.setProperty('--podium-yaw',yaw.toFixed(2)+'deg');
     if(distance<least){least=distance;closest=i;}
    }
@@ -144,6 +145,7 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
        className="ah-podium" aria-pressed={activeIndex===i}
        style={{'--podium-lift':i===0?'22px':'0px','--podium-opacity':i===0?1:.63,
         '--podium-scale':i===0?1:.9,'--podium-focus':i===0?1:0,
+        '--podium-brightness':i===0?1:.72,
         '--podium-yaw':'0deg'} as CSSProperties}
        onClick={()=>activeRef.current===i?onOpen():scrollToIndex(i)}
        aria-label={`第 ${i+1} 名：${item.achievement.name}，${item.game.name}，稀有度 ${item.achievement.rarity}%`}
