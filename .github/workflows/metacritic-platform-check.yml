@@ -1,0 +1,32 @@
+name: Check M PC and Xbox score coverage
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/metacritic-platform-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - name: Check platform preference tests and types
+        run: |
+          npm test
+          npx tsc --noEmit
+      - name: Restore encrypted Xbox snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/live-assets.mjs restore-snapshot
+      - name: Report private Metascore coverage in aggregate only
+        env:
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
+        run: node --experimental-strip-types scripts/metacritic-platform-coverage.ts
