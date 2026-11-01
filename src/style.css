@@ -2235,15 +2235,17 @@ footer .dot {
 }
 
 
-/* Showcase finish: understated gray for standard Xbox awards, animated gilt for rarity below 10%.
+/* Shared Xbox achievement finish in showcase, daily unlocks, and game details: gray or animated gilt.
    The foil is masked to the frame only; artwork keeps its native aspect ratio and object-fit:contain. */
 .ah-showcase-art.ah-rarity-common,
-.ah-showcase-detail .ah-achievement-art.ah-rarity-common {
+.ah-achievement-art.ah-rarity-common,
+.game-detail .achievement-image.ah-rarity-common {
  border:1px solid rgba(232,237,242,.29);
  box-shadow:inset 0 0 0 1px rgba(0,0,0,.24),0 1px 3px rgba(0,0,0,.2);
 }
 .ah-showcase-art.ah-rarity-gold,
-.ah-showcase-detail .ah-achievement-art.ah-rarity-gold {
+.ah-achievement-art.ah-rarity-gold,
+.game-detail .achievement-image.ah-rarity-gold {
  position:relative;
  isolation:isolate;
  border:2px solid transparent;
@@ -2258,7 +2260,8 @@ footer .dot {
  initial-value:0deg;
 }
 .ah-showcase-art.ah-rarity-gold::after,
-.ah-showcase-detail .ah-achievement-art.ah-rarity-gold::after {
+.ah-achievement-art.ah-rarity-gold::after,
+.game-detail .achievement-image.ah-rarity-gold::after {
  content:"";
  position:absolute;
  z-index:2;
@@ -2280,14 +2283,16 @@ footer .dot {
 }
 @keyframes ah-foil-orbit {to{--ah-foil-angle:360deg;}}
 .ah-showcase-art.ah-rarity-ultra,
-.ah-showcase-detail .ah-achievement-art.ah-rarity-ultra {
+.ah-achievement-art.ah-rarity-ultra,
+.game-detail .achievement-image.ah-rarity-ultra {
  background:
   linear-gradient(#191711,#191711) padding-box,
   linear-gradient(140deg,#fff9cc 0%,#edc668 24%,#be862b 50%,#fff2b5 74%,#c59435 100%) border-box;
  box-shadow:0 0 0 1px rgba(255,228,158,.28),0 0 19px rgba(235,181,63,.30),0 5px 16px rgba(0,0,0,.25);
 }
 .ah-showcase-art.ah-rarity-ultra::after,
-.ah-showcase-detail .ah-achievement-art.ah-rarity-ultra::after {animation-duration:4.3s;}
+.ah-achievement-art.ah-rarity-ultra::after,
+.game-detail .achievement-image.ah-rarity-ultra::after {animation-duration:4.3s;}
 .ah-showcase-detail .ah-showcase-card-rare {
  background:linear-gradient(110deg,rgba(185,138,55,.055),transparent 62%),var(--surface);
 }
@@ -2312,5 +2317,17 @@ footer .dot {
 }
 @media(prefers-reduced-motion:reduce){
  .ah-showcase-art.ah-rarity-gold::after,
- .ah-showcase-detail .ah-achievement-art.ah-rarity-gold::after {animation:none;}
+ .ah-achievement-art.ah-rarity-gold::after,
+ .game-detail .achievement-image.ah-rarity-gold::after {animation:none;}
 }
+
+/* A restrained warm undertone accompanies gilded artwork outside the ranking screen. */
+.ah-day-detail .ah-achievement-card[data-rarity-tier="rare"],
+.game-detail .achievement[data-frame-tier="rare"] {
+ background:linear-gradient(105deg,rgba(185,138,55,.055),transparent 62%),var(--surface);
+}
+.ah-day-detail .ah-achievement-card[data-rarity-tier="ultra"],
+.game-detail .achievement[data-frame-tier="ultra"] {
+ background:linear-gradient(105deg,rgba(224,172,75,.085),transparent 62%),var(--surface);
+}
+.game-detail .achievement-rarity.rare {color:#f3cc77;}
