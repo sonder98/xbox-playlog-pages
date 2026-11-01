@@ -127,7 +127,7 @@ try{
     assert.equal(await page.locator('.ah-preview-axis').count(),0,'Overview omits explanatory direction text');
     assert.equal(await page.locator('[data-overview-section="heatmap"] .ah-month-played').count(),1,
       'Overview heatmap has the monthly played section beneath its calendar');
-    assert.equal(await page.locator('[data-overview-section="heatmap"] .ah-month-played-title').innerText(),'本月在玩 0 款',
+    assert.equal((await page.locator('[data-overview-section="heatmap"] .ah-month-played-title').innerText()).replace(/\s+/g,' ').trim(),'本月在玩 0 款',
       'November has no confirmed playing records in the example, so no games are invented');
     const previewDot=await page.locator('.ah-preview-cell .ah-dot').first().evaluate(el=>{
       const button=el.parentElement.getBoundingClientRect(),dot=el.getBoundingClientRect();
