@@ -1,6 +1,8 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {ArrowLeft,ArrowRight,ChevronLeft,ChevronRight,Gem,Trophy} from 'lucide-react';
-import type {Game} from '../data';
+import {ArrowLeft,ArrowRight,ChevronLeft,ChevronRight,Gamepad2,Gem,Trophy} from 'lucide-react';
+import type {Game,RecordData} from '../data';
+import {GameCover} from './game';
+import {monthlyPlayedGames,type MonthlyPlayed} from '../monthly-played';
 import {GamerscoreIcon} from './gamerscore-icon';
 import {AchievementSortControl} from './achievement-sort-control';
 import {sortAchievements,type AchievementSort} from '../achievement-sort';
@@ -27,7 +29,20 @@ function Art({src,alt='',className}:{src?:string;alt?:string;className:string}){
  </span>;
 }
 const weekdays=['一','二','三','四','五','六','日'];
-function Calendar({activity,year,month,selected,onSelect}:{activity:Activity;year:number;month:number;selected:string|null;onSelect:(day:string,button:HTMLButtonElement)=>void}){
+function MonthPlayedList({month,played,onOpenGame}:{month:string;played:MonthlyPlayed;onOpenGame:(id:string)=>void}){
+ const games=played.get(month)||[];
+ return <div className="ah-month-played" data-played-month={month}>
+  <div className="ah-month-played-title"><span><Gamepad2 size={15} aria-hidden="true"/>本月在玩</span><small>{games.length} 款</small></div>
+  {games.length?<div className="ah-month-played-list">{games.map(game=>
+   <button type="button" className="ah-month-played-game" key={game.id} data-game-id={game.id}
+    aria-label={'查看 '+game.name+' 游戏详情'} onClick={()=>onOpenGame(game.id)}>
+    <span className="ah-month-played-cover"><GameCover game={game}/></span>
+    <span className="ah-month-played-name">{game.name}</span>
+    <ChevronRight size={16} aria-hidden="true"/>
+   </button>)}</div>:<p className="ah-month-played-empty">暂无可确认的游玩记录</p>}
+ </div>;
+}
+function Calendar({activity,year,month,selected,played,onSelect,onOpenGame}:{activity:Activity;year:number;month:number;selected:string|null;played:MonthlyPlayed;onSelect:(day:string,button:HTMLButtonElement)=>void;onOpenGame:(id:string)=>void}){
  const calendar=useMemo(()=>calendarMonth(year,month,activity.today),[year,month,activity.today]);
  const monthEvents=calendar.days.reduce((sum,d)=>sum+(d.day?activity.byDay.get(d.day)?.events.length||0:0),0);
  return <section className="ah-month-card" data-year={year} data-month={month} aria-label={year+' 年 '+month+' 月'}>
@@ -45,10 +60,12 @@ function Calendar({activity,year,month,selected,onSelect}:{activity:Activity;yea
       onClick={e=>onSelect(d.day!,e.currentTarget)}><span className={'ah-dot ah-level-'+heatLevel(count)} aria-hidden="true">{Number(d.day.slice(-2))}</span></button>;
    })}
   </div>
+  <MonthPlayedList month={year+'-'+String(month).padStart(2,'0')} played={played} onOpenGame={onOpenGame}/>
  </section>;
 }
-export function AchievementPreview({games,onOpen,onOpenDay}:{games:Game[];onOpen:()=>void;onOpenDay:(day:string)=>void}){
+export function AchievementPreview({games,records=[],onOpen,onOpenDay,onOpenGame}:{games:Game[];records?:RecordData[];onOpen:()=>void;onOpenDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
  const activity=useMemo(()=>buildActivity(games),[games]);
+ const played=useMemo(()=>monthlyPlayedGames(games,records,activity),[games,records,activity]);
  const days=recentDays(activity),calendar=recentCalendar(activity);
  const [sheetDay,setSheetDay]=useState<string|null>(null);
  const count=days.reduce((sum,d)=>sum+d.count,0),active=days.filter(d=>d.count>0).length;
@@ -66,6 +83,7 @@ export function AchievementPreview({games,onOpen,onOpenDay}:{games:Game[];onOpen
      aria-label={dayLabel(d.day)+'，解锁 '+d.count+' 个成就'}
      onClick={()=>setSheetDay(d.day!)}><span aria-hidden="true" className={'ah-dot ah-level-'+heatLevel(d.count)}>{Number(d.day.slice(-2))}</span></button>:<span className="ah-preview-placeholder" key={'pad-'+i} aria-hidden="true"/>)}
   </div>
+  <MonthPlayedList month={activity.today.slice(0,7)} played={played} onOpenGame={onOpenGame}/>
   <button className="ah-preview-footer" type="button" onClick={onOpen}><span>解锁 {fmt(count)} 个 · 活跃 {active} 天</span><ArrowRight size={17}/></button>
   {sheetDay&&<Sheet day={sheetDay} activity={activity} minDay={days[0].day} onChangeDay={setSheetDay} onClose={()=>setSheetDay(null)} onDetail={()=>{const day=sheetDay;setSheetDay(null);onOpenDay(day);}}/>}
  </section>;
@@ -172,8 +190,9 @@ function DayCard({event,onGame,rank,showFullDate=false}:{event:Pick<UnlockEvent,
   </button>
  </article>;
 }
-export function AchievementJourney({games,dayId,showcase,gapShowcase,onBack,onOpenDay,onChangeDay,onOpenGame}:{games:Game[];dayId:string|null;showcase:boolean;gapShowcase:boolean;onBack:()=>void;onOpenDay:(day:string)=>void;onChangeDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
+export function AchievementJourney({games,records=[],dayId,showcase,gapShowcase,onBack,onOpenDay,onChangeDay,onOpenGame}:{games:Game[];records?:RecordData[];dayId:string|null;showcase:boolean;gapShowcase:boolean;onBack:()=>void;onOpenDay:(day:string)=>void;onChangeDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
  const activity=useMemo(()=>buildActivity(games),[games]);
+ const played=useMemo(()=>monthlyPlayedGames(games,records,activity),[games,records,activity]);
  const rare=useMemo(()=>rareAchievementTop(games),[games]);
  const gaps=useMemo(()=>longestAchievementGaps(games),[games]);
  const [selected,setSelected]=useState<string|null>(null);
@@ -233,7 +252,7 @@ export function AchievementJourney({games,dayId,showcase,gapShowcase,onBack,onOp
    className={activeYear===y?'is-active':''} aria-current={activeYear===y?'location':undefined} aria-controls={'ah-year-'+y}
    onClick={()=>{setActiveYear(y);document.getElementById('ah-year-'+y)?.scrollIntoView({behavior:'smooth',block:'start'});}}>{y}</button>)}</nav>
   <div className="ah-month-list">{months.map(({year,month},index)=><div key={year+'-'+month} id={index===0||months[index-1].year!==year?'ah-year-'+year:undefined}>
-   <Calendar activity={activity} year={year} month={month} selected={selected} onSelect={selectDay}/>
+   <Calendar activity={activity} year={year} month={month} selected={selected} played={played} onSelect={selectDay} onOpenGame={onOpenGame}/>
   </div>)}</div>
   {!activity.total&&<p className="ah-empty-day">尚无带有效解锁时间的成就。完成 Xbox 同步后会自动显示。</p>}
   <p className="ah-footnote">统计来自已展示游戏中带解锁时间的成就；没有解锁时间的记录无法归入具体日期。时间采用北京时间。</p>
