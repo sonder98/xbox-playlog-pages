@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowLeft,ArrowRight,ChevronLeft,ChevronRight,Gamepad2,Gem,Trophy} from 'lucide-react';
 import type {Game,RecordData} from '../data';
+import {dailyGameMinutes,type DailyPlaytimeLedger} from '../playtime-ledger';
 import {GameCover} from './game';
 import {monthlyPlayedGames,type MonthlyPlayed} from '../monthly-played';
 import {GamerscoreIcon} from './gamerscore-icon';
@@ -12,6 +13,7 @@ import {longestAchievementGaps} from '../achievement-gaps';
 import {AchievementGapRail,AchievementGapDetails} from './achievement-gap-showcase';
 
 const fmt=(n:number)=>n.toLocaleString('zh-CN');
+const fmtDailyHours=(minutes:number|null)=>minutes===null?'— 小时':(minutes/60).toLocaleString('zh-CN',{maximumFractionDigits:2})+' 小时';
 const time=(value:number)=>new Date(value).toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',hour12:false});
 const fullTime=(value:number)=>new Date(value).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
 function Art({src,alt='',className}:{src?:string;alt?:string;className:string}){
@@ -63,7 +65,7 @@ function Calendar({activity,year,month,selected,played,onSelect,onOpenGame}:{act
   <MonthPlayedList month={year+'-'+String(month).padStart(2,'0')} played={played} onOpenGame={onOpenGame}/>
  </section>;
 }
-export function AchievementPreview({games,records=[],onOpen,onOpenDay,onOpenGame}:{games:Game[];records?:RecordData[];onOpen:()=>void;onOpenDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
+export function AchievementPreview({games,records=[],playtimeLedger,onOpen,onOpenDay,onOpenGame}:{games:Game[];records?:RecordData[];playtimeLedger?:DailyPlaytimeLedger|null;onOpen:()=>void;onOpenDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
  const activity=useMemo(()=>buildActivity(games),[games]);
  const played=useMemo(()=>monthlyPlayedGames(games,records,activity),[games,records,activity]);
  const days=recentDays(activity),calendar=recentCalendar(activity);
@@ -85,7 +87,7 @@ export function AchievementPreview({games,records=[],onOpen,onOpenDay,onOpenGame
   </div>
   <MonthPlayedList month={activity.today.slice(0,7)} played={played} onOpenGame={onOpenGame}/>
   <button className="ah-preview-footer" type="button" onClick={onOpen}><span>解锁 {fmt(count)} 个 · 活跃 {active} 天</span><ArrowRight size={17}/></button>
-  {sheetDay&&<Sheet day={sheetDay} activity={activity} minDay={days[0].day} onChangeDay={setSheetDay} onClose={()=>setSheetDay(null)} onDetail={()=>{const day=sheetDay;setSheetDay(null);onOpenDay(day);}}/>}
+  {sheetDay&&<Sheet day={sheetDay} activity={activity} playtimeLedger={playtimeLedger} minDay={days[0].day} onChangeDay={setSheetDay} onClose={()=>setSheetDay(null)} onDetail={()=>{const day=sheetDay;setSheetDay(null);onOpenDay(day);}}/>}
  </section>;
 }
 /** Image-only carousel. The images determine their own width after loading and are never cropped. */
@@ -133,7 +135,7 @@ export function AchievementShowcases({games,onOpenRare,onOpenGap}:{games:Game[];
  </section>;
 }
 
-function Sheet({day,activity,minDay='2022-01-01',onChangeDay,onClose,onDetail}:{day:string;activity:Activity;minDay?:string;onChangeDay:(day:string)=>void;onClose:()=>void;onDetail:()=>void}){
+function Sheet({day,activity,playtimeLedger,minDay='2022-01-01',onChangeDay,onClose,onDetail}:{day:string;activity:Activity;playtimeLedger?:DailyPlaytimeLedger|null;minDay?:string;onChangeDay:(day:string)=>void;onClose:()=>void;onDetail:()=>void}){
  const prev=adjacentDay(day,-1),next=adjacentDay(day,1);
  const bucket=activity.byDay.get(day),games=bucket?.games||[],count=bucket?.events.length||0;
  const handle=useRef<HTMLElement|null>(null),touchY=useRef<number|null>(null);
@@ -156,7 +158,7 @@ function Sheet({day,activity,minDay='2022-01-01',onChangeDay,onClose,onDetail}:{
     <button type="button" className="ah-sheet-date-arrow" aria-label={'后一天 '+dayLabel(next)} title="后一天" disabled={next>activity.today} onClick={()=>onChangeDay(next)}><ChevronRight size={20} aria-hidden="true"/></button>
    </header>
    <div className="ah-sheet-games">
-    {games.length?games.slice(0,3).map(({game,count:num})=><div className="ah-sheet-game" key={game.id}><Art src={game.cachedImage||game.image} className="ah-mini-art"/><span>{game.name}</span><b>{num} 个</b></div>):<p className="ah-no-activity">这一天没有解锁成就</p>}
+    {games.length?games.slice(0,3).map(({game,count:num})=><div className="ah-sheet-game" key={game.id}><Art src={game.cachedImage||game.image} className="ah-mini-art"/><span>{game.name}</span><span className="ah-sheet-game-count"><b>{num} 个</b><small className="ah-sheet-game-hours">· {fmtDailyHours(dailyGameMinutes(playtimeLedger,day,game.id))}</small></span></div>):<p className="ah-no-activity">这一天没有解锁成就</p>}
     {games.length>3&&<p className="ah-more-games">另有 {games.length-3} 款游戏，共 {games.slice(3).reduce((s,g)=>s+g.count,0)} 个成就</p>}
    </div>
    <div className="ah-sheet-total"><strong>{fmt(count)}</strong><span>个成就 · {games.length} 款游戏</span></div>
@@ -190,7 +192,7 @@ function DayCard({event,onGame,rank,showFullDate=false}:{event:Pick<UnlockEvent,
   </button>
  </article>;
 }
-export function AchievementJourney({games,records=[],dayId,showcase,gapShowcase,onBack,onOpenDay,onChangeDay,onOpenGame}:{games:Game[];records?:RecordData[];dayId:string|null;showcase:boolean;gapShowcase:boolean;onBack:()=>void;onOpenDay:(day:string)=>void;onChangeDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
+export function AchievementJourney({games,records=[],playtimeLedger,dayId,showcase,gapShowcase,onBack,onOpenDay,onChangeDay,onOpenGame}:{games:Game[];records?:RecordData[];playtimeLedger?:DailyPlaytimeLedger|null;dayId:string|null;showcase:boolean;gapShowcase:boolean;onBack:()=>void;onOpenDay:(day:string)=>void;onChangeDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
  const activity=useMemo(()=>buildActivity(games),[games]);
  const played=useMemo(()=>monthlyPlayedGames(games,records,activity),[games,records,activity]);
  const rare=useMemo(()=>rareAchievementTop(games),[games]);
@@ -256,6 +258,6 @@ export function AchievementJourney({games,records=[],dayId,showcase,gapShowcase,
   </div>)}</div>
   {!activity.total&&<p className="ah-empty-day">尚无带有效解锁时间的成就。完成 Xbox 同步后会自动显示。</p>}
   <p className="ah-footnote">统计来自已展示游戏中带解锁时间的成就；没有解锁时间的记录无法归入具体日期。时间采用北京时间。</p>
-  {sheetDay&&<Sheet day={sheetDay} activity={activity} onChangeDay={day=>{setSelected(day);setSheetDay(day);}} onClose={closeSheet} onDetail={()=>{setSheetDay(null);onOpenDay(sheetDay);}}/>}
+  {sheetDay&&<Sheet day={sheetDay} activity={activity} playtimeLedger={playtimeLedger} onChangeDay={day=>{setSelected(day);setSheetDay(day);}} onClose={closeSheet} onDetail={()=>{setSheetDay(null);onOpenDay(sheetDay);}}/>}
  </section>;
 }

@@ -1,8 +1,8 @@
 /** Privacy-preserving daily playtime sampling. This lives INSIDE the encrypted vault.
  * Xbox MinutesPlayed is cumulative, not a timestamped per-session play log.
- * We only assign positive differences to a calendar day when BOTH measured
- * endpoints are on that same day in Asia/Shanghai. Cross-midnight differences
- * are preserved separately rather than invented as exact daily playtime. */
+ * Each positive difference is assigned to the PREVIOUS sample's calendar
+ * day in Asia/Shanghai, including intervals crossing midnight. This is
+ * a deliberate estimate, not a Microsoft per-day activity record. */
 export const PLAYTIME_TIME_ZONE='Asia/Shanghai' as const;
 export const PLAYTIME_SINCE='2026-11-01';
 export type PlaytimeSample={id:string;minutes:number;at:string};
@@ -13,7 +13,6 @@ export type DailyPlaytimeLedger={
  crossDay:Record<string,Record<string,number>>;
  corrections:Record<string,number>;
 };
-const dayPattern=/^\d{4}-\d{2}-\d{2}$/;
 const key=(date:string,id:string)=>date+'|'+id;
 export function shanghaiDate(at:string):string{
  const time=Date.parse(at);
@@ -43,6 +42,17 @@ function validLedger(value:unknown):value is DailyPlaytimeLedger{
 export function appendPlaytimeSamples(existing:unknown,samples:PlaytimeSample[]):DailyPlaytimeLedger{
  if(existing!==undefined&&!validLedger(existing))throw Error('加密历史中的每日游玩时长账本格式无效，已停止覆盖。');
  const ledger:DailyPlaytimeLedger=existing?structuredClone(existing as DailyPlaytimeLedger):emptyPlaytimeLedger();
+ // Migrate any cross-day minutes already stored by the previous algorithm.
+ // Clearing the legacy buckets makes the migration idempotent.
+ for(const [interval,gameTotals] of Object.entries(ledger.crossDay)){
+  const previousDate=interval.split('..')[0];
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(previousDate))continue;
+  const daily=ledger.days[previousDate]??={};
+  for(const [id,minutes] of Object.entries(gameTotals)){
+   if(Number.isSafeInteger(minutes)&&minutes>0)daily[id]=(daily[id]??0)+minutes;
+  }
+  delete ledger.crossDay[interval];
+ }
  for(const sample of samples){
   const {id,minutes,at}=sample;
   if(!/^\d{1,15}$/.test(id)||!Number.isSafeInteger(minutes)||minutes<0)continue;
@@ -54,7 +64,7 @@ export function appendPlaytimeSamples(existing:unknown,samples:PlaytimeSample[])
    const delta=minutes-previous.minutes;
    if(delta>0){
     const oldDate=shanghaiDate(previous.at);
-    const target=oldDate===date?(ledger.days[date]??={}):(ledger.crossDay[oldDate+'..'+date]??={});
+    const target=ledger.days[oldDate]??={};
     target[id]=(target[id]??0)+delta;
    }else if(delta<0)ledger.corrections[key(date,id)]=(ledger.corrections[key(date,id)]??0)+1;
   }
@@ -62,4 +72,10 @@ export function appendPlaytimeSamples(existing:unknown,samples:PlaytimeSample[])
   ledger.days[date]??={};
  }
  return ledger;
+}
+
+/** A missing measured increase is unknown, not zero minutes of playtime. */
+export function dailyGameMinutes(ledger:DailyPlaytimeLedger|null|undefined,day:string,id:string):number|null{
+ const value=ledger?.days[day]?.[id];
+ return typeof value==='number'&&Number.isFinite(value)?value:null;
 }

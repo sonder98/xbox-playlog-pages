@@ -164,6 +164,12 @@ try{
     assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-progress strong').innerText(),'50%',
       'Combined base + DLC progress displays 2 / 4 = 50%, not base-only Mythic 100%');
     assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-progress-track').getAttribute('aria-valuenow'),'50');
+    assert.equal((await recent.locator('.recent-game-card').first().locator('.recent-game-hours').innerText()).trim(),'· 1 h',
+      'Recently played cards append cumulative hours directly after 50% without moving completion');
+    assert.equal(await recent.locator('.recent-game-card .recent-game-hours').count(),10,
+      'Every recent game, including unmeasured ones, has a consistent time slot');
+    assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-progress').evaluate(el=>getComputedStyle(el).display),'flex',
+      'Completion percentage and lifetime hours share one compact row');
     assert.equal(await recent.locator('.recent-games-rail').evaluate(el=>getComputedStyle(el).overflowX),'auto',
       'Recent games scroll as one cover-first horizontal row');
     if(mobile){
@@ -207,6 +213,12 @@ try{
     });
     assert.ok(placement.gamesBottom<placement.summaryTop,'Per-game summary is above overall totals');
     assert.ok(placement.iconWidth>=50,'Game artwork is visibly larger in day sheet');
+    assert.equal(await overviewSheet.locator('.ah-sheet-game-count').count(),3,
+      'Only the date half-sheet shows per-game completion followed by hours');
+    assert.equal((await overviewSheet.locator('.ah-sheet-game-count').first().innerText()).replace(/\s+/g,' ').trim(),'1 个 · — 小时',
+      'Pre-November day cannot invent game-play hours, but shows an explicit unknown slot');
+    assert.equal(await page.locator('.ah-day-detail .ah-sheet-game-hours').count(),0,
+      'Full day details never add the new hour label');
     const headerGeometry=await overviewSheet.evaluate(el=>{
       const header=el.querySelector('.ah-sheet-heading'),date=header.querySelector('strong');
       const arrows=[...header.querySelectorAll('.ah-sheet-date-arrow')];

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {appendPlaytimeSamples,boundaryPlaytimeSweep,emptyPlaytimeLedger,shanghaiDate,PLAYTIME_SINCE} from '../src/playtime-ledger.ts';
+import {appendPlaytimeSamples,boundaryPlaytimeSweep,emptyPlaytimeLedger,dailyGameMinutes,shanghaiDate,PLAYTIME_SINCE} from '../src/playtime-ledger.ts';
 import {compactPayload,expandPayload} from '../src/record-payload.ts';
 
 const first='2026-11-01T11:03:00.000Z'; // 19:03 Beijing time
@@ -24,11 +24,14 @@ test('one game can gain minutes on a day without losing per-game identity',()=>{
  assert.equal(b.latest['10'].minutes,141);
  assert.equal(b.timeZone,'Asia/Shanghai');
 });
-test('cross-midnight gains remain separately unallocated, never attributed to the next day',()=>{
+test('cross-midnight gains are assigned to the PREVIOUS Beijing date',()=>{
  let a=appendPlaytimeSamples(undefined,[{id:'10',minutes:400,at:'2026-11-01T15:51:00Z'}]);
  a=appendPlaytimeSamples(a,[{id:'10',minutes:435,at:'2026-11-01T16:13:00Z'}]);
  assert.equal(a.days['2026-11-02']['10'],undefined);
- assert.equal(a.crossDay['2026-11-01..2026-11-02']['10'],35);
+ assert.equal(a.days['2026-11-01']['10'],35);
+ assert.deepEqual(a.crossDay,{});
+ assert.equal(dailyGameMinutes(a,'2026-11-01','10'),35);
+ assert.equal(dailyGameMinutes(a,'2026-11-02','10'),null);
  a=appendPlaytimeSamples(a,[{id:'10',minutes:441,at:'2026-11-01T16:50:00Z'}]);
  assert.equal(a.days['2026-11-02']['10'],6);
 });
@@ -53,4 +56,19 @@ test('old vault snapshots remain compatible, while entire daily ledger survives 
  assert.deepEqual(expandPayload(compactPayload(value)),value);
  assert.throws(()=>appendPlaytimeSamples({version:8},[]),/账本格式无效/);
  assert.deepEqual(expandPayload(compactPayload({records:[]})),{records:[]});
+});
+
+test('legacy cross-day increments migrate once to earlier date, never double count',()=>{
+ const base=appendPlaytimeSamples(undefined,[{id:'10',minutes:100,at:'2026-11-01T15:51:00Z'}]);
+ base.crossDay['2026-11-01..2026-11-02']={'10':24};
+ const updated=appendPlaytimeSamples(base,[{id:'10',minutes:140,at:'2026-11-01T16:13:00Z'}]);
+ assert.equal(updated.days['2026-11-01']['10'],64);
+ assert.deepEqual(updated.crossDay,{});
+ assert.equal(appendPlaytimeSamples(updated,[]).days['2026-11-01']['10'],64);
+});
+test('multi-day unsampled differences are assigned to the earlier observed day',()=>{
+ const base=appendPlaytimeSamples(undefined,[{id:'11',minutes:300,at:'2026-11-01T08:00:00Z'}]);
+ const next=appendPlaytimeSamples(base,[{id:'11',minutes:345,at:'2026-11-03T08:00:00Z'}]);
+ assert.equal(dailyGameMinutes(next,'2026-11-01','11'),45);
+ assert.equal(dailyGameMinutes(next,'2026-11-03','11'),null);
 });
