@@ -12,7 +12,11 @@ const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" view
  <path d="M172 383h48l22-23 25 25h73" fill="none" stroke="#141414" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 await fs.mkdir('public',{recursive:true});
-for(const [size,name] of [[192,'pwa-192.png'],[512,'pwa-512.png'],[180,'apple-touch-icon.png']] as const){
+// Use versioned filenames for iOS: existing Home Screen shortcuts and Safari cache
+// may continue showing an old icon until the user removes and reinstalls the app.
+// Keep old filenames for clients that have the previous manifest cached.
+for(const [size,name] of [[192,'pwa-192.png'],[512,'pwa-512.png'],[180,'apple-touch-icon.png'],
+ [192,'pwa-192-v2.png'],[512,'pwa-512-v2.png'],[180,'apple-touch-icon-v2.png']] as const){
  await sharp(Buffer.from(svg)).resize(size,size).png().toFile('public/'+name);
 }
-console.log('Generated 192/512px PWA icons and iOS home-screen icon');
+console.log('Generated versioned 192/512px PWA icons and 180px iOS home-screen icon');
