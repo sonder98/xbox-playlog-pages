@@ -6,6 +6,7 @@ import {AchievementSortControl} from './achievement-sort-control';
 import {sortAchievements,type AchievementSort} from '../achievement-sort';
 import type {Game,Achievement} from '../data';
 import {achievementTimeSpan,formatAchievementTimeSpan} from '../achievement-time-span';
+import {achievementRarityTier} from '../rare-achievements';
 
 export const hours=(minutes:number|null)=>minutes===null?'暂无时长':`${(minutes/60).toLocaleString('zh-CN',{maximumFractionDigits:1})} 小时`;
 export const date=(value:string|null)=>value?new Date(value).toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}):'暂无记录';
@@ -72,12 +73,14 @@ export function Modal({title,onClose,children,className=''}:{title:string;onClos
 }
 function AchievementItem({achievement:a}:{achievement:Achievement}){
   const rare=a.rarity!==null&&a.rarity<10;
+  const tier=achievementRarityTier(a.rarity);
+  const frameClass='achievement-image ah-rarity-'+tier+(tier!=='common'?' ah-rarity-gold':'');
   const [attempt,setAttempt]=useState(0);
   useEffect(()=>setAttempt(0),[a.id,a.image,a.cachedImage]);
   const images=[a.cachedImage,a.image].filter((url,index,all):url is string=>!!url&&all.indexOf(url)===index);
   const image=images[attempt];
-  return <article className={'achievement '+(!a.unlocked?'locked':'')} data-achievement-id={a.id}>
-    <span className="achievement-image"><Trophy size={24}/>{image&&<img src={image} alt="" width="160" height="90" loading="lazy" decoding="async" onError={()=>setAttempt(n=>n+1)}/>}</span>
+  return <article className={'achievement '+(!a.unlocked?'locked':'')} data-achievement-id={a.id} data-frame-tier={tier}>
+    <span className={frameClass}><Trophy size={24}/>{image&&<img src={image} alt="" width="160" height="90" loading="lazy" decoding="async" onError={()=>setAttempt(n=>n+1)}/>}</span>
     <div className="achievement-copy">
       <div className="achievement-title-row"><h4>{a.name}</h4>{(a.points??0)>0&&<span className="achievement-points" aria-label={`${a.points} 玩家积分`}><GamerscoreIcon size={14}/><span>{a.points}</span></span>}</div>
       <div className="achievement-description-row">
