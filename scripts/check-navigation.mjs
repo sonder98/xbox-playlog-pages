@@ -150,15 +150,41 @@ try{
     assert.ok(monthDot.relative<.69&&monthDot.relative>.6,'Monthly circles are slightly inset');
     assert.equal(await page.locator('.ah-legend').count(),0,'Full heatmap no longer contains a color legend');
     assert.equal(await page.locator('.ah-overview-stats').count(),0,'Old four stat blocks are removed');
-    assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-podium').count(),24,'Podium stages contain every earned and ranked achievement');
-    assert.equal(await page.locator('.ah-podium-scene').count(),5,'Five engraved podiums per horizontally scrolling scene');
-    assert.equal(await page.locator('.ah-podium-scene').first().locator('.ah-podium').count(),5,'First stage has exactly five podiums');
-    assert.equal(await page.locator('.ah-podium-center').first().getAttribute('data-podium-rank'),'1','Rarest achievement is on the elevated center pedestal');
-    assert.equal(await page.locator('.ah-podium-game').first().count(),1,'Podium includes original game name');
-    assert.equal(await page.locator('.ah-podium-meta').first().count(),1,'Podium includes unlock rate and date');
-    assert.equal(await page.locator('.ah-podium-name').first().count(),1,'Podium includes achievement title');
-    assert.equal(await page.locator('.ah-podium-rail').evaluate(el=>getComputedStyle(el).overflowX),'auto','Podium gallery is horizontally scrollable');
-    assert.equal(await page.locator('.ah-showcase-podium').getByText('Xbox 成就展示厅').count(),0,'Design has no oversized trophy hall headline');
+    assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-podium').count(),24,
+      'The gallery is one continuous sequence of all eligible achievements');
+    assert.equal(await page.locator('.ah-podium-scene').count(),0,'No permanently grouped fixed-height scenes remain');
+    assert.equal(await page.locator('.ah-podium.is-center').getAttribute('data-podium-rank'),'1',
+      'Rank 1 is centered on initial render');
+    assert.equal(await page.locator('.ah-podium').first().locator('.ah-podium-name').count(),1,'Achievement title is engraved');
+    assert.equal(await page.locator('.ah-podium').first().locator('.ah-podium-game').count(),1,'Game name is engraved');
+    assert.equal(await page.locator('.ah-podium').first().locator('.ah-podium-meta').count(),1,'Rarity and date are engraved');
+    assert.equal(await page.locator('.ah-podium-rail').evaluate(el=>getComputedStyle(el).overflowX),'auto','Continuous rail can swipe horizontally');
+    assert.equal(await page.locator('.ah-podium-rail').evaluate(el=>getComputedStyle(el).scrollSnapType),'x mandatory',
+      'Podiums snap to the exact viewport center');
+    const heights=()=>page.locator('.ah-podium').evaluateAll(nodes=>nodes.slice(0,3).map(el=>
+      el.querySelector('.ah-podium-plinth').getBoundingClientRect().height));
+    let stageHeights=await heights();
+    assert.ok(stageHeights[0]>stageHeights[1]+8,'Initial centered cylinder is taller than its neighbor');
+    assert.ok(stageHeights[0]<=102,'Center podium is short, not a tall column');
+    assert.ok(stageHeights[1]<=94,'Flanking cylinders are squat');
+    await page.getByRole('button',{name:'向右滚动展柜'}).click();
+    await page.waitForFunction(()=>document.querySelector('.ah-podium.is-center')?.dataset.podiumRank==='2');
+    await page.waitForFunction(()=>{
+      const rail=document.querySelector('.ah-podium-rail');
+      const node=document.querySelector('.ah-podium.is-center');
+      if(!rail||!node)return false;
+      const a=rail.getBoundingClientRect(),b=node.getBoundingClientRect();
+      return Math.abs((a.left+a.width/2)-(b.left+b.width/2))<2;
+    });
+    stageHeights=await heights();
+    assert.ok(stageHeights[1]>stageHeights[0]+8,'After sliding, rank 2 becomes taller than previous rank 1');
+    assert.ok(stageHeights[1]>stageHeights[2]+8,'New centered rank is taller than the other neighbor');
+    assert.equal((await page.locator('.ah-showcase-foot').innerText()).includes('第 2 / 24 项'),true,
+      'The gallery tracks the current center achievement');
+    await page.getByRole('button',{name:'向左滚动展柜'}).click();
+    await page.waitForFunction(()=>document.querySelector('.ah-podium.is-center')?.dataset.podiumRank==='1');
+    assert.equal(await page.locator('.ah-showcase-podium').getByText('Xbox 成就展示厅').count(),0,
+      'No oversized heading from the concept art');
     const squareArt=page.locator('.ah-showcase-art').filter({has:page.locator('img[src*="square.svg"]')}).first();
     const wideArt=page.locator('.ah-showcase-art').filter({has:page.locator('img[src*="wide.svg"]')}).first();
     await wideArt.scrollIntoViewIfNeeded();
@@ -173,27 +199,22 @@ try{
       const rect=el.getBoundingClientRect(),img=el.querySelector('img');
       return {ratio:rect.width/rect.height,fit:getComputedStyle(img).objectFit};
     });
-    assert.ok(Math.abs(firstFrame.ratio-1)<.04,'Square Xbox podium art remains square');
-    assert.ok(Math.abs(wideFrame.ratio-16/9)<.04,'Wide Xbox podium art preserves source proportions');
-    assert.equal(firstFrame.fit,'contain','Square podium art is not cropped');
-    assert.equal(wideFrame.fit,'contain','Wide podium art is not cropped');
-    const goldFrame=page.locator('.ah-showcase-art.ah-rarity-gold').first();
-    const foil=await goldFrame.evaluate(el=>{
-      const style=getComputedStyle(el),highlight=getComputedStyle(el,'::after');
-      return {border:style.borderTopWidth,background:style.backgroundImage,shine:highlight.animationName};
-    });
-    assert.equal(foil.border,'2px','Rare achievement has the established refined gold outline');
-    assert.ok(foil.background.includes('gradient'),'Gold frame uses a layered metallic finish');
-    assert.ok(foil.shine.includes('ah-foil-orbit'),'Gold shine still animates around artwork');
-    assert.equal(await page.locator('.ah-podium[data-rarity-tier="ultra"]').count(),12,'Below 1 percent has ultra rare podium art');
-    assert.equal(await page.locator('.ah-podium[data-rarity-tier="rare"]').count(),12,'Under 10 percent gets rare gold foil');
+    assert.ok(Math.abs(firstFrame.ratio-1)<.04,'Square Xbox art remains square on its podium');
+    assert.ok(Math.abs(wideFrame.ratio-16/9)<.04,'Wide Xbox art retains original aspect ratio');
+    assert.equal(firstFrame.fit,'contain','Square artwork is not cropped');
+    assert.equal(wideFrame.fit,'contain','Wide artwork is not cropped');
+    const foil=await page.locator('.ah-showcase-art.ah-rarity-gold').first().evaluate(el=>({
+      border:getComputedStyle(el).borderTopWidth,shine:getComputedStyle(el,'::after').animationName
+    }));
+    assert.equal(foil.border,'2px','Rare achievement retains its gold outline');
+    assert.ok(foil.shine.includes('ah-foil-orbit'),'Gold frame retains flowing light');
+    assert.equal(await page.locator('.ah-podium[data-rarity-tier="ultra"]').count(),12,'Ultra rare awards remain distinct');
+    assert.equal(await page.locator('.ah-podium[data-rarity-tier="rare"]').count(),12,'Rare awards retain gilt');
     const metal=await page.locator('.ah-podium-plinth').first().evaluate(el=>({
       background:getComputedStyle(el).backgroundImage,cap:getComputedStyle(el,'::before').borderRadius
     }));
-    assert.ok(metal.background.includes('gradient'),'Podium uses brushed metallic gradients');
-    assert.ok(metal.cap.includes('%'),'Podium has elliptical metal top');
-    await page.getByRole('button',{name:'向右滚动展柜'}).click();
-    await page.waitForFunction(()=>document.querySelector('.ah-podium-rail')?.scrollLeft>50);
+    assert.ok(metal.background.includes('gradient'),'Short podium uses brushed metallic shading');
+    assert.equal(metal.cap,'50%','Podium top is an elliptical metal surface');
     await page.getByRole('button',{name:'查看稀有成就展柜详情'}).click();
     await page.locator('[data-achievement-showcase="detail"]').waitFor();
     assert.ok(page.url().endsWith('#achievements/showcase'),'Rarity detail supports a deep link');
