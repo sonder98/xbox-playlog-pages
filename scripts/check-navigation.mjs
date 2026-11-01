@@ -199,7 +199,7 @@ try{
       assert.ok(refresh.dx<1&&refresh.dy<1,'Mobile refresh icon is centered both ways');
     }
     const statsBeforeHiding=await page.locator('.stats').innerText();
-    assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['heatmap','recent','showcases','dusty','top','stats']);
+    assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['heatmap','recent','showcases','dusty','stats']);
     assert.equal(await page.locator('.dusty-preview').count(),1,'Dusty preview belongs after achievements-gap showcase');
     assert.equal(await page.locator('.dusty-preview .dust-card').count(),0,'Non-Xbox fixtures must not invent official missing-visibility games');
     assert.equal(await page.locator('.ah-preview-grid .ah-preview-cell').count(),30,'Overview shows only 30 days');
@@ -262,10 +262,10 @@ try{
     await overviewSheet.waitFor();
     await page.locator('.ah-sheet-backdrop').click({position:{x:10,y:10}});
     await overviewSheet.waitFor({state:'hidden'});
-    // Both TOP100 galleries now live between Recent Games and the time-played panel.
+    // Both TOP100 galleries and the dusty games preview sit between Recent Games and summary statistics.
     const overviewOrder=await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection));
-    assert.deepEqual(overviewOrder,['heatmap','recent','showcases','dusty','top','stats'],
-      'The achievement cabinets sit immediately after Recent Games on the overview');
+    assert.deepEqual(overviewOrder,['heatmap','recent','showcases','dusty','stats'],
+      'Overview order skips the deleted most-played carousel');
     assert.equal(await page.locator('.ah-home-showcases > .ah-showcase').count(),2,
       'Overview contains exactly two achievement cabinets');
     assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-tile').count(),24,'Showcase previews each eligible earned achievement in one horizontal rail');
@@ -485,16 +485,17 @@ try{
     await page.getByRole('button',{name:/返回概览/}).click();
     await page.locator('.recent-game-card').first().waitFor();
     console.log((mobile?'Mobile':'Desktop')+': PASS circular dots, sticky year anchors, sheet date stepping, chronological/rarity sort and artwork fit');
-    assert.equal(await page.locator('.top-card').count(),5);
-    assert.equal(await page.locator('.top-card .completion-ornament').count(),5);
-    await page.locator('.top-card').last().click();
+    assert.equal(await page.locator('[data-overview-section="top"]').count(),0,'Most-played world section is removed entirely');
+    assert.equal(await page.getByRole('heading',{name:'时光最多的世界'}).count(),0,'No obsolete heading survives');
+    assert.equal(await page.locator('.top-card').count(),0,'No legacy most-played tiles remain');
+    await page.locator('.recent-game-card').first().click();
     await page.getByRole('dialog').waitFor();
     await page.locator('.dialog-body').evaluate(el=>{const spacer=document.createElement('div');spacer.style.height='2000px';el.append(spacer);el.scrollTop=el.scrollHeight;});
     const closeRect=await page.getByRole('button',{name:'关闭详情',exact:true}).boundingBox();
     assert.ok(closeRect&&closeRect.y>=0&&closeRect.y+closeRect.height<(mobile?844:1000),'Close remains visible at the bottom of long details');
     await page.getByRole('button',{name:'关闭详情',exact:true}).click();
     await page.getByRole('dialog').waitFor({state:'hidden'});
-    console.log((mobile?'Mobile':'Desktop')+': PASS overview order, five illustrated Mythic cards, horizontal rail navigation and persistent close after long scroll');
+    console.log((mobile?'Mobile':'Desktop')+': PASS overview order without most-played carousel, recent game detail navigation and persistent close after long scroll');
 
     await page.locator('.recent-game-card .game-cover img').first().waitFor();
     await page.waitForFunction(()=>{const img=document.querySelector('.recent-game-card .game-cover img');return img?.complete&&img.naturalWidth>0;});
