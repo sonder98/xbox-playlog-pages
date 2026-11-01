@@ -17,6 +17,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci --ignore-scripts
+      - run: npm install --no-save --ignore-scripts playwright
       - name: Check platform preference tests and types
         run: |
           npm test
