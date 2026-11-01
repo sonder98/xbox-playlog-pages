@@ -79,7 +79,7 @@ function GapSide({achievement,when,position}:{achievement:Achievement;when:numbe
 
 export function AchievementGapDetails({items,onBack,onGame}:{items:AchievementGap[];onBack:()=>void;onGame:(id:string)=>void}){
  return <section className="ah-page ah-gap-detail" data-achievement-gap="detail">
-  <button type="button" className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回热力图</button>
+  <button type="button" className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回概览</button>
   <div className="ah-intro-block"><span className="eyebrow">ACHIEVEMENT INTERVALS</span>
    <h1>间隔最久成就</h1><p className="ah-intro">那些时隔许久才再次解锁的瞬间 · 按相邻成就间隔由长到短排列</p>
   </div>

@@ -105,6 +105,16 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
  </section>;
 }
 
+/** Both achievement cabinets belong to the overview, immediately after Recent Games. */
+export function AchievementShowcases({games,onOpenRare,onOpenGap}:{games:Game[];onOpenRare:()=>void;onOpenGap:()=>void}){
+ const rare=useMemo(()=>rareAchievementTop(games),[games]);
+ const gaps=useMemo(()=>longestAchievementGaps(games),[games]);
+ return <section className="ah-home-showcases" data-overview-section="showcases" aria-label="成就展柜">
+  <ShowcaseRail items={rare} onOpen={onOpenRare}/>
+  <AchievementGapRail items={gaps} onOpen={onOpenGap}/>
+ </section>;
+}
+
 function Sheet({day,activity,minDay='2022-01-01',onChangeDay,onClose,onDetail}:{day:string;activity:Activity;minDay?:string;onChangeDay:(day:string)=>void;onClose:()=>void;onDetail:()=>void}){
  const prev=adjacentDay(day,-1),next=adjacentDay(day,1);
  const bucket=activity.byDay.get(day),games=bucket?.games||[],count=bucket?.events.length||0;
@@ -162,7 +172,7 @@ function DayCard({event,onGame,rank,showFullDate=false}:{event:Pick<UnlockEvent,
   </button>
  </article>;
 }
-export function AchievementJourney({games,dayId,showcase,gapShowcase,onBack,onOpenDay,onOpenShowcase,onOpenGapShowcase,onChangeDay,onOpenGame}:{games:Game[];dayId:string|null;showcase:boolean;gapShowcase:boolean;onBack:()=>void;onOpenDay:(day:string)=>void;onOpenShowcase:()=>void;onOpenGapShowcase:()=>void;onChangeDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
+export function AchievementJourney({games,dayId,showcase,gapShowcase,onBack,onOpenDay,onChangeDay,onOpenGame}:{games:Game[];dayId:string|null;showcase:boolean;gapShowcase:boolean;onBack:()=>void;onOpenDay:(day:string)=>void;onChangeDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
  const activity=useMemo(()=>buildActivity(games),[games]);
  const rare=useMemo(()=>rareAchievementTop(games),[games]);
  const gaps=useMemo(()=>longestAchievementGaps(games),[games]);
@@ -191,7 +201,7 @@ export function AchievementJourney({games,dayId,showcase,gapShowcase,onBack,onOp
  },[dayId,showcase,gapShowcase,years.join(',')]);
  if(showcase){
   return <section className="ah-page ah-showcase-detail" data-achievement-showcase="detail">
-   <button type="button" className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回热力图</button>
+   <button type="button" className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回概览</button>
    <div className="ah-intro-block"><span className="eyebrow">RARE ACHIEVEMENTS</span><h1>稀有成就展柜</h1>
     <p className="ah-intro">跨游戏 · 按全球玩家解锁率由低到高排列</p></div>
    <div className="ah-showcase-detail-count"><span>已解锁成就</span><strong>TOP {rare.length}</strong></div>
@@ -219,8 +229,6 @@ export function AchievementJourney({games,dayId,showcase,gapShowcase,onBack,onOp
  return <section className="ah-page ah-full-history">
   <button className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回概览</button>
   <div className="ah-intro-block"><h1>成就热力图</h1><p className="ah-intro">从 2022 年起，每次解锁都有迹可循</p></div>
-  <ShowcaseRail items={rare} onOpen={onOpenShowcase}/>
-  <AchievementGapRail items={gaps} onOpen={onOpenGapShowcase}/>
   <nav className="ah-year-jump" aria-label="按年份定位热力图">{years.map(y=><button type="button" key={y}
    className={activeYear===y?'is-active':''} aria-current={activeYear===y?'location':undefined} aria-controls={'ah-year-'+y}
    onClick={()=>{setActiveYear(y);document.getElementById('ah-year-'+y)?.scrollIntoView({behavior:'smooth',block:'start'});}}>{y}</button>)}</nav>
