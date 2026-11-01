@@ -198,7 +198,7 @@ try{
     await page.locator('[data-achievement-showcase="preview"]').waitFor();
     assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-gap-tile').count(),12,
       'Each of the 12 games contributes a single chronological adjacent unlock pair');
-    assert.equal(await page.locator('.ah-gap-tile-duration').first().innerText(),'间隔 1.0 天',
+    assert.equal((await page.locator('.ah-gap-tile-duration').first().innerText()).replace(/\s+/g,' ').trim(),'间隔 1.0 天',
       'Gap previews show one-decimal elapsed days');
     const pairArtwork=await page.locator('.ah-gap-tile').first().evaluate(card=>{
       const older=card.querySelector('.ah-gap-image-back').getBoundingClientRect();
