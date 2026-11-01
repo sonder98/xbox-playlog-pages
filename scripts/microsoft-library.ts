@@ -3,6 +3,7 @@ import {collectPages} from './microsoft-probe.ts';
 import {normalizeTitles,safeImage,type Achievement,type AchievementGroup,type Game,type RecordData} from '../src/data.ts';
 import {validateGroups} from '../src/completion.ts';
 import type {CatalogBundle} from './catalog-cache.ts';
+import {boundaryPlaytimeSweep,type PlaytimeSample} from '../src/playtime-ledger.ts';
 const percent=(value:unknown)=>(typeof value==='number'||typeof value==='string')&&value!==''&&Number.isFinite(Number(value))&&Number(value)>=0&&Number(value)<=100?Number(value):null;
 const timestamp=(value:unknown)=>typeof value==='string'&&Number.isFinite(Date.parse(value))&&Date.parse(value)>=Date.UTC(2005,0,1)?new Date(value).toISOString():null;
 export function achievement(raw:any):Achievement{
@@ -125,7 +126,7 @@ export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:st
  if(typeof summary.currentGamerscore==='number'&&summary.currentGamerscore!==old.score)return 'scoreChanged';
  return 'reused';
 }
-export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string}={}){
+export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string;forcePlaytimeSweep?:boolean}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
  // Sustained pacing, no retries against permissions/security errors. 429 stops this scan.
  const request:typeof fetch=async(input,init)=>{await pause(1050);return (options.request||fetch)(input,init);};
@@ -146,6 +147,9 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  const games=normalizeTitles({titles:titles.filter(t=>!options.onlyIds||options.onlyIds.has(String(t.titleId))||!prior.has(String(t.titleId)))});
  const audit:ScanAudit={version:1,at:options.now||new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,fullRefresh:false,reusedDetails:0,detailedReads:0,statsReads:0,statsSkipped:0,reuseReasons:{},failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
  audit.fullRefresh=refreshCatalogToday(options.previous?.at,audit.at);
+ const statsSamples:PlaytimeSample[]=[];
+ const sampleMinutes=(id:string,value:number|null)=>{if(value!==null&&Number.isSafeInteger(value)&&value>=0)statsSamples.push({id,minutes:value,at:options.now||new Date().toISOString()});};
+ const sweepPlaytime=options.forcePlaytimeSweep===true||boundaryPlaytimeSweep(audit.at);
  const pagesFor=async(id:string,version:string,possible=false,legacy=false,earned=false,unlockedOnly=false)=>{
   const pages:any[]=[];const result=await collectPages(async token=>{
    const params=new URLSearchParams(legacy?{earned:String(earned)}:{contractVersion:version,possibleOnly:String(possible),unlockedOnly:String(unlockedOnly)});if(token)params.set('continuationToken',token);
@@ -195,8 +199,10 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    if(decision==='reused'||decision==='verifiedEarned'){
     const cached=old!,oldAchievements=cached.achievements||[],oldGroups=cached.groups||[];
     let minutes=cached.minutes;
-    if(shouldReadPlaytime(lastPlayed,cached.minutes,audit.at)){
-     minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id)??cached.minutes;
+    if(sweepPlaytime||shouldReadPlaytime(lastPlayed,cached.minutes,audit.at)){
+     const observed=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id);
+     sampleMinutes(game.id,observed);
+     minutes=observed??cached.minutes;
      audit.statsReads++;
     }else audit.statsSkipped++;
     Object.assign(game,{achievements:oldAchievements,groups:oldGroups,groupStatus:cached.groupStatus,earned:cached.earned,total:cached.total,score:cached.score,maxScore:cached.maxScore,minutes,lastPlayed:cached.lastPlayed});
@@ -255,7 +261,10 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    if(awards.some(a=>a.rarity!==null))audit.rarityTitles++;audit.rarityAchievements+=awards.filter(a=>a.rarity!==null).length;
    audit.images+=awards.filter(a=>!!a.image).length;audit.unlockDates+=awards.filter(a=>!!a.unlockedAt).length;
    // Legacy time is explicitly unavailable, unless an earlier direct snapshot has a value.
-   if(version!=='1'){game.minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id);audit.statsReads++;}
+   if(version!=='1'){
+    game.minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id);
+    sampleMinutes(game.id,game.minutes);audit.statsReads++;
+   }
    if(game.minutes!==null)audit.playtimeTitles++;else if(old?.minutes!=null)game.minutes=old.minutes;
   }catch(error){
    audit.failed++;
@@ -269,5 +278,5 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  let aliases=new Map<string,string[]>();if(options.baseline)aliases=await titleAliases(p=>provider.call(p));
  audit.comparison=compareLibrary(games,options.baseline,aliases);
  const record:RecordData={id:crypto.randomUUID(),at:audit.at,source:'Xbox',profile:{xuid:provider.xuid,gamertag:setting('Gamertag')||'Xbox 玩家',avatar:safeImage(setting('GameDisplayPicRaw'))},games,warnings:[...(audit.failed?[`${audit.failed} 个游戏的官方数据尚未完整核对。`]:[]),...(audit.unknownGroups?[`${audit.unknownGroups} 个游戏分组未知。`]:[])]};
- return {record,audit};
+ return {record,audit,statsSamples};
 }

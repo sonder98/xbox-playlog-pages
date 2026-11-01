@@ -20,7 +20,7 @@
 
 ## 正式链路
 
-1. `.github/workflows/sync.yml`：UTC 17/47 分尽力定时触发，恢复受加密保护的微软授权状态、最新加密快照及公共素材，运行 `scripts/microsoft-sync.ts`，将加密快照与公共图片归档上传到 GitHub Release `playlog-live`，显式派发 `pages.yml`。**不再反复提交大体积随机密文到 Git**。
+1. `.github/workflows/sync.yml`：常规 UTC 17/47 分尽力定时触发（UTC 15 点例外），恢复受加密保护的微软授权状态、最新加密快照及公共素材，运行 `scripts/microsoft-sync.ts`，将加密快照与公共图片归档上传到 GitHub Release `playlog-live`，显式派发 `pages.yml`。**不再反复提交大体积随机密文到 Git**。
 2. `.github/workflows/pages.yml`：从 Release 恢复最新加密快照，校验 Actions 图片缓存与 Release 素材清单（缺失则解压公共图片归档），npm test → 构建 → 浏览器导航检查 → GitHub Pages 部署。初期 Git 里的旧加密快照仅作为 Release 尚未建立时的兜底。
 3. `.github/workflows/ci.yml`：PR 单测、构建及 Playwright（不使用真实 Xbox 凭据、不进行正式部署）。
 3. `.github/workflows/microsoft-shadow.yml`：手动首次／重授权、compare、repair；不将候选快照直接发布为正式网站数据。
@@ -99,3 +99,12 @@ npm run build
 - src/vault.ts：浏览器本地 GitHub fine-grained PAT 用 APP_PASSWORD 进行 PBKDF2/AES-GCM 加密。令牌只提交至 api.github.com。撤销本机授权与 GitHub 端令牌失效是两个操作。
 - sync.yml 与 pages.yml 使用可选 workflow_dispatch.inputs.request_id，运行标题包含 UUID，sync 派发 Pages 时安全传递请求 ID。仅网页手动同步需要 fine-grained token 的 Actions:write（限定本仓库）。
 - tests/manual-sync.test.ts 与 scripts/check-navigation.mjs 使用模拟 API / 假令牌回归。不要在测试中引入真令牌或微软授权。
+
+### 从 2026-11-01 起按日记录游戏时长
+
+- `src/playtime-ledger.ts`：加密 vault 顶层 `playtimeLedger`，包含 `version`、`timeZone:Asia/Shanghai`、`since:2026-11-01`、`latest`（每游戏最新**真实测量**）、`days`（当日两次真实测量的正增量）、`crossDay`（跨日区间无法确认归属的正增量）、`corrections`（时长回退次数）。仅作为未来功能的数据基础，不更改当前界面。
+- `scripts/microsoft-library.ts`：扫描额外返回 `statsSamples`，只记录通过 Xbox `MinutesPlayed` 接口**实际成功获得**的时长与采样时间；复用旧值不形成样本。北京时间 23:40–23:59/00:00–00:12（或 GitHub 专门 cron 强制）对非隐藏的普通 Xbox 游戏全面刷新游戏时长，其他时间保留原近期游戏优先策略。旧 Xbox360 不可用的时长不凭空推断。
+- `scripts/microsoft-sync.ts`、`scripts/snapshot.ts`：合并真实采样差值进入持久 `playtimeLedger`，与每次新快照一起 AES-GCM 加密并写入 GitHub Release 的 `vault.json`；快速复用已有快照时保持已有账本不变。**账本不随最近 30 次快照裁剪**。
+- 时区固定北京时间，未来 UI 不可简单地把跨日间隔都计入结束日期，也不能把 Xbox 缓存读数等同实时游玩。部分数据只能称“采样估计”，以前的数据不能准确追溯。
+- 自动 cron 通常北京时间每小时 17、47 分，UTC 15:00 的整小时被北京时间 23:42 专用采样替换（`42 15 * * *`），UTC 16:02 增加次日零点基线（`2 16 * * *`）；GitHub cron 不提供准点保障。专用 cron 运行时将 `PLAYTIME_FORCE_SWEEP=true` 传给 Xbox 同步。
+- `tests/playtime-ledger.test.ts` 检验北京时间日期、午夜边界、跨日未归属、回退、重复读数、旧快照兼容。新增字段无敏感信息输出到公共 Actions 日志；全部账本只在用户密码加密快照中。
