@@ -2,13 +2,15 @@ import type {Game} from '../data';
 import {GameCover} from './game';
 import {overallAchievementPercent} from '../overall-achievement-progress';
 
+export const totalGameHours=(minutes:number|null):string=>minutes===null?'— h':(minutes/60).toLocaleString('zh-CN',{maximumFractionDigits:1})+' h';
+
 export function RecentGamesRail({games,onGame}:{games:Game[];onGame:(id:string)=>void}){
  return games.length?<div className="recent-games-rail" role="region" aria-label="最近游玩的游戏，横向滑动" tabIndex={0}>
   {games.map((game,index)=>{
    const pct=overallAchievementPercent(game);
    return <button type="button" className="recent-game-card" data-game-id={game.id} key={game.id}
     onClick={()=>onGame(game.id)}
-    aria-label={`查看 ${game.name}，全部成就完成度 ${pct===null?'暂无数据':pct+'%'}`}>
+    aria-label={`查看 ${game.name}，全部成就完成度 ${pct===null?'暂无数据':pct+'%'}，累计游玩 ${totalGameHours(game.minutes)}`}>
     <span className="recent-game-cover"><GameCover game={game} priority={index<3}/></span>
     <span className="recent-game-title" title={game.name}>{game.name}</span>
     <span className="recent-game-progress">
@@ -18,6 +20,7 @@ export function RecentGamesRail({games,onGame}:{games:Game[];onGame:(id:string)=
       <span style={{width:(pct??0)+'%'}}/>
      </span>
      <strong>{pct===null?'—':pct+'%'}</strong>
+      <span className="recent-game-hours" title="累计游玩时长">· {totalGameHours(game.minutes)}</span>
     </span>
    </button>;
   })}
