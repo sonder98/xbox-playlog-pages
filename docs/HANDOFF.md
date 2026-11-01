@@ -120,5 +120,5 @@ npm run build
 - 31 款 Xbox 官方缺少 `visible` 布尔字段的游戏进入「吃灰游戏」候选；取 `lastPlayed` 与最后有效 `unlockedAt` 中较晚日期，按 Asia/Shanghai 自然日差降序。无有效时间戳则不排名。
 - 概览 TOP 5 放在「间隔最久成就」之后，`#dusty` 为完整排序列表，无新增底部导航入口。相关文件：`src/dusty-games.ts`、`src/components/dusty-games.tsx`、`src/navigation.ts`、`src/dashboard.tsx`、`src/style.css`。
 - `scripts/fixed-pc-metascores.ts` 保存人工核对过的 29 条固定 PC Metacritic 0–100 分，**键是 HMAC-SHA256(titleId, MICROSOFT_STATE_KEY).slice(0,32)** 而不是公开 Title ID，防止泄露非展示游戏清单；`scripts/microsoft-sync.ts` 的快速与完整路径都在 `publishSnapshot` 时生成 `metacriticScores` 并存入 AES-GCM 加密快照。解锁后 `src/vault.ts` 提供 `pcMetascoresForDisplay()`。完整备份含该映射。
-- 特别注意：Volcano Princess、PlateUp! 为 M tbd，保持无评分。Crimson Desert Enhanced 暂用原版 PC 77 分并附备注；《巫师 3》Remastered 使用独立 2026 PC 分数。评分为人工快照，不随常规 Xbox 同步更新；若重设 MICROSOFT_STATE_KEY 需要迁移 HMAC 映射。
+- 31 款候选中 29 款有人工核验 PC Metascore；另 2 款为 tbd，保持无评分。对于原版和特别版非同一评分的情况，在加密数据中保留版本备注。评分为人工快照，不随常规 Xbox 同步更新；若重设 MICROSOFT_STATE_KEY 需要迁移 HMAC 映射。
 - 临时 RSA 加密库存清单导出工作流已删除，不要把私有 Title ID、完整清单或任何认证密钥写入公开库。验证新快照是否包含分数使用汇总数量日志或私有解密环境，不打印标题/ID。
