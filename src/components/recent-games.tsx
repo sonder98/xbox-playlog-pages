@@ -1,10 +1,6 @@
 import type {Game} from '../data';
 import {GameCover} from './game';
-
-/** Overall Xbox achievement progress includes base-game, DLC and title updates. */
-export function overallAchievementPercent(game:Pick<Game,'earned'|'total'>):number|null{
- return game.total>0?Math.min(100,Math.max(0,Math.round(game.earned/game.total*100))):null;
-}
+import {overallAchievementPercent} from '../overall-achievement-progress';
 
 export function RecentGamesRail({games,onGame}:{games:Game[];onGame:(id:string)=>void}){
  return games.length?<div className="recent-games-rail" role="region" aria-label="最近游玩的游戏，横向滑动" tabIndex={0}>
