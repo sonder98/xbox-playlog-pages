@@ -152,10 +152,24 @@ try{
         'Navigation automatically hides again when scrolling stops');
       await switchMainTab('游戏库');
       await page.locator('.toolbar').waitFor();
-      assert.equal(await page.locator('.mobile-nav.is-visible').count(),0,'Switching tabs hides the nav again');
+      assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
+        'Tapping a tab keeps mobile navigation visible after the route changes');
+      await page.waitForTimeout(750);
+      assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
+        'Bottom nav must remain visible during the 1.5-second post-tap grace period');
+      await mobileBar.getByRole('button',{name:'游戏库',exact:true}).click();
+      await page.waitForTimeout(850);
+      assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
+        'Tapping the current tab restarts the full 1.5-second visibility timer');
+      await page.waitForFunction(()=>!document.querySelector('.mobile-nav')?.classList.contains('is-visible'),
+        {timeout:3000});
+      assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).pointerEvents),'none',
+        'Bottom nav hides again and stops intercepting touches once the grace period expires');
       await switchMainTab('概览');
       await page.locator('[data-overview-section="recent"]').waitFor();
-      console.log('Mobile: PASS four bottom tabs hidden initially, reveal on scroll, auto-hide and navigate');
+      assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
+        'Tab switching back to overview also preserves navigation for 1.5 seconds');
+      console.log('Mobile: PASS four tabs, scroll auto-hide and resettable 1.5-second post-tap navigation visibility');
     }
     // Bottom/sidebar navigation: heatmap is a first-class third tab; the fourth
     // combines previously separate connection/data and snapshot history screens.
