@@ -10,4 +10,36 @@ export async function unlock(secret:string,envelope:unknown){const payload=await
 export function lock(){records=[];password='';}
 export async function api(path:string,body?:any):Promise<any>{if(!password)throw Error('请先解锁游戏档案。');if(path==='/api/records'&&!body)return {records};if(path==='/api/display-preferences'){if(import.meta.env.DEV&&designPreferences){if(body)designPreferences=normalizeDisplayPreferences(body);return designPreferences;}const xuid=records[0]?.profile.xuid;if(!xuid)throw Error('请先读取游戏档案。');return body?saveDisplayPreferences(xuid,password,body,localStorage):readDisplayPreferences(xuid,password,localStorage);}if(path==='/api/records'&&body){const data=validateRecord(body);if(records[0]&&records[0].profile.xuid!==data.profile.xuid)throw Error('导入记录属于另一个 Xbox 账号。');const record={...data,id:crypto.randomUUID(),at:new Date().toISOString()};const existing=localStorage.getItem(localKey);const imported=existing?(await decryptVault(JSON.parse(existing),password)).records:[];localStorage.setItem(localKey,JSON.stringify(await encryptVault({records:[record,...imported]},password)));records=[record,...records];return {record};}throw Error('此功能已迁移到 GitHub 同步任务。');}
 
+
+// Fine-grained GitHub Actions token; encrypted with the same app password in this browser only.
+const syncTokenKey='xbox-playlog-manual-sync-token-v1';
+export async function manualSyncToken():Promise<string|null>{
+ if(!password)throw Error('请先解锁档案。');
+ const saved=localStorage.getItem(syncTokenKey);
+ if(!saved)return null;
+ try{
+  const data=await decryptVault(JSON.parse(saved),password);
+  return typeof data.token==='string'&&data.token.startsWith('github_pat_')?data.token:null;
+ }catch{throw Error('GitHub 授权与当前档案密码不匹配，请移除旧授权后重新绑定。');}
+}
+export async function saveManualSyncToken(token:string):Promise<void>{
+ if(!password)throw Error('请先解锁档案。');
+ if(!/^github_pat_[a-zA-Z0-9_]+$/.test(token.trim()))throw Error('请输入有效的 GitHub fine-grained token（github_pat_ 开头）。');
+ localStorage.setItem(syncTokenKey,JSON.stringify(await encryptVault({token:token.trim()},password)));
+}
+export function clearManualSyncToken(){localStorage.removeItem(syncTokenKey);}
+/** Fetch the newly deployed encrypted archive; leave the old view untouched until validated. */
+export async function refreshCloudRecords():Promise<RecordData[]|null>{
+ if(!password)throw Error('请先解锁档案。');
+ const response=await fetch(import.meta.env.BASE_URL+'vault.json?refresh='+Date.now(),{cache:'no-store'});
+ if(!response.ok)throw Error('还无法从网站获取最新快照。');
+ const envelope=await response.json();
+ const payload=await decryptVault(envelope,password);
+ if(!Array.isArray(payload.records)||typeof payload.records[0]?.at!=='string')throw Error('新快照格式无效。');
+ const nextTime=Date.parse(payload.records[0].at),oldTime=Date.parse(records[0]?.at||'');
+ if(!Number.isFinite(nextTime)||nextTime<=oldTime)return null;
+ await unlock(password,envelope);
+ return records;
+}
+
 export function loadDesignPreview(preview:RecordData[]){if(!import.meta.env.DEV)throw Error('Preview unavailable');records=preview;password='local-preview-only';designPreferences={hiddenGameIds:[]};}
