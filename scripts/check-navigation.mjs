@@ -151,6 +151,13 @@ try{
     assert.equal(await page.locator('.ah-legend').count(),0,'Full heatmap no longer contains a color legend');
     assert.equal(await page.locator('.ah-overview-stats').count(),0,'Old four stat blocks are removed');
     assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-tile').count(),24,'Showcase previews each eligible earned achievement in one horizontal rail');
+    assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-rarity-value').count(),24,
+      'Every rare achievement thumbnail includes its global unlock percentage beneath the picture');
+    assert.equal((await page.locator('.ah-showcase-rarity-value').first().innerText()).trim(),'0%',
+      'Rarest visible achievement displays 0% unlock rate');
+    assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-top-label').innerText(),'TOP 100',
+      'Rarity display shows the expanded TOP 100 capacity');
+
     await page.locator('.ah-showcase-art img').first().waitFor();
     const wideArt=page.locator('.ah-showcase-art').filter({has:page.locator('img[src*="wide.svg"]')}).first();
     await wideArt.scrollIntoViewIfNeeded();
@@ -198,6 +205,9 @@ try{
     await page.locator('[data-achievement-showcase="preview"]').waitFor();
     assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-gap-tile').count(),12,
       'Each of the 12 games contributes a single chronological adjacent unlock pair');
+    assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-showcase-top-label').innerText(),'TOP 100',
+      'Gap preview also uses TOP 100');
+
     assert.equal((await page.locator('.ah-gap-tile-duration').first().innerText()).replace(/\s+/g,' ').trim(),'间隔 1.0 天',
       'Gap previews show one-decimal elapsed days');
     const pairArtwork=await page.locator('.ah-gap-tile').first().evaluate(card=>{
@@ -214,6 +224,15 @@ try{
     await page.locator('[data-achievement-gap="detail"]').waitFor();
     assert.ok(page.url().endsWith('#achievements/gaps'),'Interval detail is deep-linkable');
     assert.equal(await page.locator('.ah-gap-detail-card').count(),12,'Detail shows all chronological gap pairs');
+    assert.equal(await page.locator('.ah-gap-achievement-condition').count(),24,
+      'Both achievements of every time-gap pair display their unlock conditions');
+    assert.equal(await page.locator('.ah-gap-detail-card').first().locator('[data-gap-side="earlier"] .ah-gap-achievement-condition').innerText(),
+      '完成一次挑战。','Earlier achievement keeps its full unlock requirement');
+    assert.equal(await page.locator('.ah-gap-detail-card').first().locator('[data-gap-side="later"] .ah-gap-achievement-condition').innerText(),
+      '完成一次挑战。','Later achievement keeps its full unlock requirement');
+    assert.ok(await page.locator('.ah-gap-detail-card').first().evaluate(el=>el.scrollWidth<=el.clientWidth+1),
+      'Mobile achievement conditions do not cause horizontal overflow');
+
     assert.deepEqual(await page.locator('.ah-gap-detail-card').first().locator('[data-gap-side]').evaluateAll(nodes=>nodes.map(node=>node.dataset.gapSide)),
       ['earlier','later'],'Detail renders chronologically ordered achievements on two sides');
     assert.equal(await page.locator('.ah-gap-detail-duration strong').first().innerText(),'1.0',

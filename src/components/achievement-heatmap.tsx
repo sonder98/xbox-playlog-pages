@@ -77,18 +77,21 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
   <div className="ah-showcase-heading">
    <div className="ah-showcase-title-group">
     <span className="ah-showcase-trophy"><Trophy size={21} aria-hidden="true"/></span>
-    <div><h2>稀有成就展柜 <span className="ah-showcase-top-label">TOP 50</span></h2><p>跨游戏 · 全球解锁率最低的 {items.length} 个已解锁成就</p></div>
+    <div><h2>稀有成就展柜 <span className="ah-showcase-top-label">TOP 100</span></h2><p>跨游戏 · 全球解锁率最低的 {items.length} 个已解锁成就</p></div>
    </div>
    <button type="button" className="ah-showcase-open" onClick={onOpen} disabled={!items.length} title="查看稀有成就展柜" aria-label="查看稀有成就展柜详情"><ChevronRight size={22}/></button>
   </div>
   {items.length?
-   <div className="ah-showcase-rail" role="region" aria-label="稀有成就 TOP 50 图片，横向滚动查看" tabIndex={0} ref={rail}>
+   <div className="ah-showcase-rail" role="region" aria-label="稀有成就 TOP 100 图片与稀有度，横向滚动查看" tabIndex={0} ref={rail}>
     {items.map((item,i)=>{
      const tier=achievementRarityTier(item.achievement.rarity);
      return <span key={item.key} className="ah-showcase-tile" data-rarity-tier={tier}
        title={`第 ${i+1} 名 · ${item.achievement.name} · ${item.achievement.rarity}% · ${item.game.name}`}>
       <Art src={item.achievement.cachedImage||item.achievement.image} alt={item.achievement.name}
        className={'ah-showcase-art ah-rarity-'+tier+(tier!=='common'?' ah-rarity-gold':'')}/>
+      <span className={'ah-showcase-rarity-value'+(tier!=='common'?' is-rare':'')}>
+       <Gem size={12} aria-hidden="true"/><strong>{item.achievement.rarity}%</strong>
+      </span>
      </span>;
     })}
    </div>

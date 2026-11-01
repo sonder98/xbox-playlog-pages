@@ -24,16 +24,17 @@ test('cross-title sorting uses rarity ascending, then latest unlock, then stable
  assert.deepEqual(rareAchievementTop([first,second]).map(x=>x.key),['101:1','100:2','101:2','100:1']);
  assert.deepEqual(rareAchievementTop([second,first]).map(x=>x.key),['101:1','100:2','101:2','100:1']);
 });
-test('the showcase caps at 50 entries and uses game+achievement composite keys',()=>{
+test('the showcase caps at 100 entries and uses game+achievement composite keys',()=>{
  const games=Array.from({length:6},(_,i)=>{
   const g=sampleGame(String(i+1));
-  g.achievements=Array.from({length:13},(_,j)=>award(String(j),((i*13)+j)/10));
+  g.achievements=Array.from({length:22},(_,j)=>award(String(j),((i*22)+j)/10));
   return g;
  });
  const items=rareAchievementTop(games);
- assert.equal(items.length,50);
+ assert.equal(items.length,100);
  assert.equal(new Set(items.map(item=>item.key)).size,50);
  assert.ok(items.every((item,i)=>i===0||item.achievement.rarity!>=items[i-1].achievement.rarity!));
+ assert.equal(rareAchievementTop(games,50).length,50,'Explicit smaller limits still work');
  assert.equal(rareAchievementTop(games,0).length,0);
  assert.deepEqual(rareAchievementTop([]),[]);
 });

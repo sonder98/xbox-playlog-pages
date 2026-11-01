@@ -32,14 +32,14 @@ export function AchievementGapRail({items,onOpen}:{items:AchievementGap[];onOpen
   <div className="ah-showcase-heading">
    <div className="ah-showcase-title-group">
     <span className="ah-showcase-trophy ah-gap-icon"><Clock3 size={21} aria-hidden="true"/></span>
-    <div><h2>间隔最久成就 <span className="ah-showcase-top-label">TOP 50</span></h2>
+    <div><h2>间隔最久成就 <span className="ah-showcase-top-label">TOP 100</span></h2>
      <p>同一游戏中，相邻两次成就解锁的最长间隔</p></div>
    </div>
    <button type="button" className="ah-showcase-open" aria-label="查看间隔最久成就详情"
     disabled={!items.length} onClick={onOpen}><ChevronRight size={22}/></button>
   </div>
   {items.length?
-   <div className="ah-showcase-rail ah-gap-rail" role="region" aria-label="最长相邻成就间隔 TOP 50，横向滑动" tabIndex={0} ref={rail}>
+   <div className="ah-showcase-rail ah-gap-rail" role="region" aria-label="最长相邻成就间隔 TOP 100，横向滑动" tabIndex={0} ref={rail}>
     {items.map((item,index)=><button type="button" className="ah-gap-tile" key={item.key}
       data-gap-rank={index+1} onClick={onOpen}
       aria-label={`第 ${index+1} 名，${item.game.name}，从 ${item.earlier.name} 到 ${item.later.name}，间隔 ${formattedGapDays(item.gapDays)} 天`}>
@@ -68,6 +68,7 @@ function GapSide({achievement,when,position}:{achievement:Achievement;when:numbe
   <span className="ah-gap-side-label">{position==='earlier'?'较早解锁':'随后解锁'}</span>
   <GapArt achievement={achievement} detail/>
   <h3 title={achievement.name}>{achievement.name}</h3>
+  <p className="ah-gap-achievement-condition">{achievement.description?.trim()||'暂无解锁条件说明'}</p>
   <time dateTime={achievement.unlockedAt||undefined}>{timestamp(when)}</time>
  </div>;
 }

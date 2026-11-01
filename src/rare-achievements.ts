@@ -16,7 +16,7 @@ export function achievementRarityTier(rarity:number|null):'common'|'rare'|'ultra
  return rarity<1?'ultra':rarity<10?'rare':'common';
 }
 
-export function rareAchievementTop(games:Game[],limit=50):RareAchievement[]{
+export function rareAchievementTop(games:Game[],limit=100):RareAchievement[]{
  const ranked:RareAchievement[]=[];
  for(const game of games){
   for(const achievement of game.achievements||[]){
