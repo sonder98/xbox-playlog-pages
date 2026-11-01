@@ -58,7 +58,8 @@ try{
     page.on('pageerror',error=>errors.push(error.message));
     await page.route('https://covers.example.test/**',route=>{
       const original=route.request().url().endsWith('original.svg'),medium=route.request().url().endsWith('medium.svg');
-      const width=original?1920:medium?480:url.pathname.endsWith('/wide.svg')?160:64,height=url.pathname.endsWith('/wide.svg')?90:width;
+      const wide=route.request().url().endsWith('/wide.svg');
+      const width=original?1920:medium?480:wide?160:64,height=wide?90:width;
       return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#789"/></svg>`});
     });
     await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
