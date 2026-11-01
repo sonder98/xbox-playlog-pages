@@ -176,15 +176,15 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    const decision=detailCacheDecision(old,summary,lastPlayed,audit.fullRefresh);
    audit.reuseReasons[decision]=(audit.reuseReasons[decision]||0)+1;
    if(decision==='reused'){
-    const oldAchievements=old!.achievements||[],oldGroups=old!.groups||[];
-    let minutes=old.minutes;
-    if(shouldReadPlaytime(lastPlayed,old.minutes,audit.at)){
-     minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id)??old.minutes;
+    const cached=old!,oldAchievements=cached.achievements||[],oldGroups=cached.groups||[];
+    let minutes=cached.minutes;
+    if(shouldReadPlaytime(lastPlayed,cached.minutes,audit.at)){
+     minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id)??cached.minutes;
      audit.statsReads++;
     }else audit.statsSkipped++;
-    Object.assign(game,{achievements:oldAchievements,groups:oldGroups,groupStatus:old.groupStatus,earned:old.earned,total:old.total,score:old.score,maxScore:old.maxScore,minutes,lastPlayed:old.lastPlayed});
+    Object.assign(game,{achievements:oldAchievements,groups:oldGroups,groupStatus:cached.groupStatus,earned:cached.earned,total:cached.total,score:cached.score,maxScore:cached.maxScore,minutes,lastPlayed:cached.lastPlayed});
     audit.complete++;audit.processed++;audit.preserved++;audit.reusedDetails++;audit.rarityTitles+=oldAchievements.some(a=>a.rarity!==null)?1:0;audit.rarityAchievements+=oldAchievements.filter(a=>a.rarity!==null).length;audit.images+=oldAchievements.filter(a=>!!a.image).length;audit.unlockDates+=oldAchievements.filter(a=>!!a.unlockedAt).length;
-    if(old.groupStatus==='verified'){audit.officialBaseGroups++;if(oldGroups.some(g=>g.kind==='dlc'))audit.officialAddonGroups++;}else audit.unknownGroups++;
+    if(cached.groupStatus==='verified'){audit.officialBaseGroups++;if(oldGroups.some(g=>g.kind==='dlc'))audit.officialAddonGroups++;}else audit.unknownGroups++;
     if(game.minutes!==null)audit.playtimeTitles++;options.progress?.(audit.processed,games.length,audit);continue;
    }
    let data:Awaited<ReturnType<typeof pagesFor>>|undefined,version='6';const isLegacy=titles.find(t=>String(t.titleId)===game.id)?.devices?.some((d:any)=>/xbox\s*360/i.test(String(d)))||titles.find(t=>String(t.titleId)===game.id)?.achievement?.sourceVersion===1;
