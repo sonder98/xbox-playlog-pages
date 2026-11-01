@@ -20,7 +20,7 @@
 
 ## 正式链路
 
-1. `.github/workflows/sync.yml`：UTC 11/41 分尽力定时触发，恢复受加密保护的微软授权状态、最新加密快照及公共素材，运行 `scripts/microsoft-sync.ts`，将加密快照与公共图片归档上传到 GitHub Release `playlog-live`，显式派发 `pages.yml`。**不再反复提交大体积随机密文到 Git**。
+1. `.github/workflows/sync.yml`：UTC 17/47 分尽力定时触发，恢复受加密保护的微软授权状态、最新加密快照及公共素材，运行 `scripts/microsoft-sync.ts`，将加密快照与公共图片归档上传到 GitHub Release `playlog-live`，显式派发 `pages.yml`。**不再反复提交大体积随机密文到 Git**。
 2. `.github/workflows/pages.yml`：从 Release 恢复最新加密快照，校验 Actions 图片缓存与 Release 素材清单（缺失则解压公共图片归档），npm test → 构建 → 浏览器导航检查 → GitHub Pages 部署。初期 Git 里的旧加密快照仅作为 Release 尚未建立时的兜底。
 3. `.github/workflows/ci.yml`：PR 单测、构建及 Playwright（不使用真实 Xbox 凭据、不进行正式部署）。
 3. `.github/workflows/microsoft-shadow.yml`：手动首次／重授权、compare、repair；不将候选快照直接发布为正式网站数据。
@@ -89,5 +89,5 @@ npm run build
 ## 2026-11-01 Mythic / 可靠性修复
 
 - Compact Mythic cover 使用 `object-fit:cover` 并 `display:block`，使图片铺满宝石外框；详情封面保持不裁切，并保留外框底部装饰不被剪断。增加非严格 1:1 图片在桌面和移动端的边缘回归测试。
-- 定时任务从 GitHub 高负荷的 00/30 分改至 11/41 分；GitHub cron 本身仍不提供准点 SLA。若需要严格半小时，应另接可靠外部调度器。
+- 定时任务先从 GitHub 高负荷的 00/30 分改至 11/41 分，发现三个计划时间未触发后重新登记为 17/47 分；GitHub cron 本身仍不提供准点 SLA。若需要严格半小时，应另接可靠外部调度器。
 - GitHub Release 发布流程首次上线需核对 `Sync Xbox records`、Release 资产清单（`vault.json`、`status.json`、`media-index.txt`、`playlog-media.tar.gz`）与 Pages 最终渲染，不成功时不要删除原加密快照。
