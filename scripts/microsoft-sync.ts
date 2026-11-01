@@ -17,8 +17,12 @@ if(fresh?.source==='Xbox'&&Date.now()-Date.parse(fresh.at)<20*60_000){
  await cacheRecordImages(fresh);
  await publishSnapshot(fresh,previous.filter((r:any)=>r.id!==fresh.id).slice(0,29),target);console.log('复用刚完成的微软快照。');process.exit(0);
 }
+const cacheBaseline=saved?.record??previous[0];
+const cachedGames=cacheBaseline?.games||[];
+// Counts only: confirm that the prior detail baseline was recovered without logging private data.
+console.log('微软增量缓存基线：'+JSON.stringify({source:saved?.record?'private-cache':previous[0]?'encrypted-vault':'none',games:cachedGames.length,completeCatalogs:cachedGames.filter((g:any)=>Array.isArray(g.achievements)&&g.achievements.length>0&&g.achievements.length===g.total).length}));
 const began=Date.now();
-const result=await scanMicrosoft(session.config,{previous:saved?.record,expectedOwner:session.state.owner,progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
+const result=await scanMicrosoft(session.config,{previous:cacheBaseline,expectedOwner:session.state.owner,progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
 const scanSeconds=Math.round((Date.now()-began)/1000);
 // Only aggregate counts: no XUID, game names, credentials, private snapshots or timestamps.
 console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed}));
