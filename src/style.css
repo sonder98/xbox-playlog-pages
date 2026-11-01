@@ -1271,7 +1271,16 @@ footer .dot {
     border-top:1px solid var(--border);
     padding:8px 8px max(12px,env(safe-area-inset-bottom));
     z-index:30;
-    gap:8px
+    gap:8px;
+    transform:translate3d(0,110%,0);
+    opacity:0;
+    pointer-events:none;
+    transition:transform .25s ease,opacity .2s ease
+  }
+  .mobile-nav.is-visible,.mobile-nav:focus-within {
+    transform:translate3d(0,0,0);
+    opacity:1;
+    pointer-events:auto
   }
   .mobile-nav button {
     display:flex;
