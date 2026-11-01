@@ -1,9 +1,9 @@
-# 游迹：0 元 PWA 试运行
+# XBOX Playlog：0 元 PWA 试运行
 
 ## 阶段一（已在主仓库实现，暂仍运行于 GitHub Pages）
 
 - iPhone Safari 打开现有网站，分享 → 添加到主屏幕 → 作为网页 App 打开。
-- 站点提供 Web App Manifest（standalone）、游迹应用图标、iOS 启动图标。
+- 站点提供 Web App Manifest（standalone）、XBOX Playlog应用图标、iOS 启动图标。
 - Service Worker 只缓存公开网页代码和有限的公开图片；**绝不缓存 vault.json / status.json**。查看最新 Xbox 记录仍需联网。
 - Xbox 同步、解密、密码记住逻辑不变。新增依赖为零，现有 Sharp 在构建时生成 PNG 图标。
 

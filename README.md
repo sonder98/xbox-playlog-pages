@@ -1,4 +1,4 @@
-# 游迹 / Xbox Playlog
+# XBOX Playlog / Xbox Playlog
 
 个人 Xbox 游戏记录、成就、游玩时长与成就热力图。站点：<https://sonder98.github.io/xbox-playlog-pages/>。
 

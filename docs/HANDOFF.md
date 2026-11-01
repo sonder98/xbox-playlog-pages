@@ -1,4 +1,4 @@
-# 游迹 Xbox Playlog 开发交接
+# XBOX Playlog Xbox Playlog 开发交接
 
 更新：2026-11-01。以 GitHub 仓库 `main` 最新代码和 GitHub Actions 运行记录为准，勿照搬早期对话的结论。
 
