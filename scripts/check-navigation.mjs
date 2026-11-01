@@ -115,7 +115,7 @@ try{
       assert.ok(refresh.dx<1&&refresh.dy<1,'Mobile refresh icon is centered both ways');
     }
     const statsBeforeHiding=await page.locator('.stats').innerText();
-    assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['heatmap','recent','top','stats']);
+    assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['heatmap','recent','showcases','top','stats']);
     assert.equal(await page.locator('.ah-preview-grid .ah-preview-cell').count(),30,'Overview shows only 30 days');
     assert.equal(await page.locator('.ah-preview-weekdays span').count(),7,'Overview has explicit Monday-Sunday weekday labels');
     assert.equal(await page.locator('.ah-preview-axis').count(),0,'Overview omits explanatory direction text');
@@ -166,19 +166,12 @@ try{
     await overviewSheet.waitFor();
     await page.locator('.ah-sheet-backdrop').click({position:{x:10,y:10}});
     await overviewSheet.waitFor({state:'hidden'});
-    await page.getByRole('button',{name:'查看全部成就热力图'}).click();
-    await page.locator('.ah-month-card').first().waitFor();
-    assert.equal(await page.locator('.ah-month-card').count(),59,'Month-by-month calendars cover 2022 through Nov 2026');
-    assert.equal(await page.locator('.ah-month-card').first().getByRole('heading').innerText(),'2026 年 11 月');
-    const monthDot=await page.locator('.ah-month-card .ah-cell .ah-dot').first().evaluate(el=>{
-      const box=el.getBoundingClientRect(),button=el.parentElement.getBoundingClientRect();
-      return {ratio:box.width/box.height,width:button.width,relative:box.width/button.width,radius:getComputedStyle(el).borderRadius};
-    });
-    assert.ok(Math.abs(monthDot.ratio-1)<.04&&monthDot.width>=27,'Monthly date tap targets remain touch-friendly');
-    assert.equal(monthDot.radius,'50%','Month heatmap points are circular');
-    assert.ok(monthDot.relative<.69&&monthDot.relative>.6,'Monthly circles are slightly inset');
-    assert.equal(await page.locator('.ah-legend').count(),0,'Full heatmap no longer contains a color legend');
-    assert.equal(await page.locator('.ah-overview-stats').count(),0,'Old four stat blocks are removed');
+    // Both TOP100 galleries now live between Recent Games and the time-played panel.
+    const overviewOrder=await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection));
+    assert.deepEqual(overviewOrder,['heatmap','recent','showcases','top','stats'],
+      'The achievement cabinets sit immediately after Recent Games on the overview');
+    assert.equal(await page.locator('.ah-home-showcases > .ah-showcase').count(),2,
+      'Overview contains exactly two achievement cabinets');
     assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-tile').count(),24,'Showcase previews each eligible earned achievement in one horizontal rail');
     assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-rarity-value').count(),24,
       'Every rare achievement thumbnail includes its global unlock percentage beneath the picture');
@@ -234,8 +227,9 @@ try{
     await page.locator('.ah-showcase-detail .ah-game-source').first().click();
     await page.getByRole('dialog',{name:/游戏详情/}).waitFor();
     await page.getByRole('button',{name:'关闭详情'}).click();
-    await page.getByRole('button',{name:'返回热力图'}).click();
+    await page.getByRole('button',{name:'返回概览'}).click();
     await page.locator('[data-achievement-showcase="preview"]').waitFor();
+    assert.ok(page.url().endsWith('#overview'),'Rare gallery detail returns to overview');
     assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-gap-tile').count(),12,
       'Each of the 12 games contributes a single chronological adjacent unlock pair');
     assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-showcase-top-label').innerText(),'TOP 100',
@@ -295,8 +289,25 @@ try{
     await page.locator('.ah-gap-game-link').first().click();
     await page.getByRole('dialog',{name:/游戏详情/}).waitFor();
     await page.getByRole('button',{name:'关闭详情'}).click();
-    await page.getByRole('button',{name:'返回热力图'}).click();
+    await page.getByRole('button',{name:'返回概览'}).click();
     await page.locator('[data-achievement-gap="preview"]').waitFor();
+    assert.ok(page.url().endsWith('#overview'),'Gap gallery detail returns to overview');
+    await page.getByRole('button',{name:'查看全部成就热力图'}).click();
+    await page.locator('.ah-month-card').first().waitFor();
+    assert.equal(await page.locator('.ah-month-card').count(),59,'Month-by-month calendars cover 2022 through Nov 2026');
+    assert.equal(await page.locator('.ah-month-card').first().getByRole('heading').innerText(),'2026 年 11 月');
+    const monthDot=await page.locator('.ah-month-card .ah-cell .ah-dot').first().evaluate(el=>{
+      const box=el.getBoundingClientRect(),button=el.parentElement.getBoundingClientRect();
+      return {ratio:box.width/box.height,width:button.width,relative:box.width/button.width,radius:getComputedStyle(el).borderRadius};
+    });
+    assert.ok(Math.abs(monthDot.ratio-1)<.04&&monthDot.width>=27,'Monthly date tap targets remain touch-friendly');
+    assert.equal(monthDot.radius,'50%','Month heatmap points are circular');
+    assert.ok(monthDot.relative<.69&&monthDot.relative>.6,'Monthly circles are slightly inset');
+    assert.equal(await page.locator('.ah-legend').count(),0,'Full heatmap no longer contains a color legend');
+    assert.equal(await page.locator('.ah-overview-stats').count(),0,'Old four stat blocks are removed');
+    assert.equal(await page.locator('[data-achievement-showcase="preview"],[data-achievement-gap="preview"]').count(),0,
+      'Full heatmap only contains monthly calendars, not the two overview galleries');
+
 
 
     const yearNav=page.getByRole('navigation',{name:'按年份定位热力图'});
