@@ -137,7 +137,7 @@ export function ManualSyncDialog({onClose,onUpdated,onPhase,lastAt}:{
     <button className="primary full" disabled={submitting||!tokenInput.trim()} onClick={()=>void connect()}>{submitting?'授权并提交中…':'保存授权并立即同步'}</button>
    </div>
   )}
-  {error&&<p className="inline-error" role="alert">{error}</p>}
+  {error&&<><p className="inline-error" role="alert">{error}</p><a className="external" href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noreferrer">检查或修改现有 GitHub 令牌权限 <ArrowUpRight size={15}/></a></>}
   <div className="manual-sync-links"><a href={workflow} target="_blank" rel="noreferrer">在 GitHub Actions 手动运行 <ArrowUpRight size={15}/></a>
    {(known||error.includes('密码不匹配'))&&<button className="text-button" onClick={disconnect}>移除此设备授权</button>}</div>
   <p className="note"><ShieldCheck size={14} aria-hidden="true"/> 同步可能需要数分钟。关闭弹窗不会取消 GitHub 的任务，再次打开仍可检查进度。GitHub 定时同步独立运行。</p>
