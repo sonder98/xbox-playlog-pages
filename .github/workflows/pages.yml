@@ -1,4 +1,5 @@
 name: Deploy Playlog
+run-name: Playlog deploy (${{ github.event_name }} · ${{ inputs.request_id }})
 on:
   push:
     branches: [main]
@@ -14,6 +15,11 @@ on:
       - 'package.json'
       - 'package-lock.json'
   workflow_dispatch:
+    inputs:
+      request_id:
+        description: 'Optional originating manual sync request ID'
+        required: false
+        type: string
 permissions:
   contents: read
   pages: write
