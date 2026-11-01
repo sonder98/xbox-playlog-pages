@@ -6,6 +6,8 @@ import {AchievementSortControl} from './achievement-sort-control';
 import {sortAchievements,type AchievementSort} from '../achievement-sort';
 import {adjacentDay,buildActivity,calendarMonth,dayLabel,heatLevel,recentCalendar,recentDays,type Activity,type UnlockEvent} from '../achievement-activity';
 import {rareAchievementTop,achievementRarityTier,type RareAchievement} from '../rare-achievements';
+import {longestAchievementGaps} from '../achievement-gaps';
+import {AchievementGapRail,AchievementGapDetails} from './achievement-gap-showcase';
 
 const fmt=(n:number)=>n.toLocaleString('zh-CN');
 const time=(value:number)=>new Date(value).toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',hour12:false});
@@ -158,9 +160,10 @@ function DayCard({event,onGame,rank,showFullDate=false}:{event:Pick<UnlockEvent,
   </button>
  </article>;
 }
-export function AchievementJourney({games,dayId,showcase,onBack,onOpenDay,onOpenShowcase,onChangeDay,onOpenGame}:{games:Game[];dayId:string|null;showcase:boolean;onBack:()=>void;onOpenDay:(day:string)=>void;onOpenShowcase:()=>void;onChangeDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
+export function AchievementJourney({games,dayId,showcase,gapShowcase,onBack,onOpenDay,onOpenShowcase,onOpenGapShowcase,onChangeDay,onOpenGame}:{games:Game[];dayId:string|null;showcase:boolean;gapShowcase:boolean;onBack:()=>void;onOpenDay:(day:string)=>void;onOpenShowcase:()=>void;onOpenGapShowcase:()=>void;onChangeDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
  const activity=useMemo(()=>buildActivity(games),[games]);
  const rare=useMemo(()=>rareAchievementTop(games),[games]);
+ const gaps=useMemo(()=>longestAchievementGaps(games),[games]);
  const [selected,setSelected]=useState<string|null>(null);
  const [sheetDay,setSheetDay]=useState<string|null>(null);
  const [order,setOrder]=useState<AchievementSort>('date-asc');
@@ -174,7 +177,7 @@ export function AchievementJourney({games,dayId,showcase,onBack,onOpenDay,onOpen
  const years=Array.from({length:Math.max(0,nowYear-2021)},(_,i)=>nowYear-i);
  const months=years.flatMap(y=>Array.from({length:y===nowYear?nowMonth:12},(_,i)=>({year:y,month:(y===nowYear?nowMonth:12)-i})));
  useEffect(()=>{
-  if(dayId||showcase)return;
+  if(dayId||showcase||gapShowcase)return;
   const current=()=>{let active=years[0];for(const year of years){
    const target=document.getElementById('ah-year-'+year);
    if(target&&target.getBoundingClientRect().top<135)active=year;
@@ -183,7 +186,7 @@ export function AchievementJourney({games,dayId,showcase,onBack,onOpenDay,onOpen
   window.addEventListener('resize',current);
   current();
   return ()=>{window.removeEventListener('scroll',current);window.removeEventListener('resize',current);};
- },[dayId,showcase,years.join(',')]);
+ },[dayId,showcase,gapShowcase,years.join(',')]);
  if(showcase){
   return <section className="ah-page ah-showcase-detail" data-achievement-showcase="detail">
    <button type="button" className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回热力图</button>
@@ -194,6 +197,7 @@ export function AchievementJourney({games,dayId,showcase,onBack,onOpenDay,onOpen
     <p className="ah-empty-day">尚无可用的稀有成就数据。Xbox 同步稀有度后自动展示。</p>}
   </section>;
  }
+ if(gapShowcase)return <AchievementGapDetails items={gaps} onBack={onBack} onGame={onOpenGame}/>;
  const bucket=dayId?activity.byDay.get(dayId):undefined;
  if(dayId){
   const entries=bucket?.events||[];
@@ -214,6 +218,7 @@ export function AchievementJourney({games,dayId,showcase,onBack,onOpenDay,onOpen
   <button className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回概览</button>
   <div className="ah-intro-block"><h1>成就热力图</h1><p className="ah-intro">从 2022 年起，每次解锁都有迹可循</p></div>
   <ShowcaseRail items={rare} onOpen={onOpenShowcase}/>
+  <AchievementGapRail items={gaps} onOpen={onOpenGapShowcase}/>
   <nav className="ah-year-jump" aria-label="按年份定位热力图">{years.map(y=><button type="button" key={y}
    className={activeYear===y?'is-active':''} aria-current={activeYear===y?'location':undefined} aria-controls={'ah-year-'+y}
    onClick={()=>{setActiveYear(y);document.getElementById('ah-year-'+y)?.scrollIntoView({behavior:'smooth',block:'start'});}}>{y}</button>)}</nav>
