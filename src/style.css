@@ -2498,7 +2498,7 @@ footer .dot {
 @media(max-width:700px) {
  .ah-showcase-podium {padding:13px 9px 10px;}
  .ah-showcase-podium .ah-showcase-heading {margin:0 5px 0;}
- .ah-podium-rail {padding-top:3px;}
+ .ah-podium-rail {padding-top:3px;scroll-snap-type:none;}
  .ah-podium-scene {height:319px;}
  .ah-podium-row {height:303px;}
  .ah-showcase-podium .ah-showcase-foot>span {font-size:10px;}
