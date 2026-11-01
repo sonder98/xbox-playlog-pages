@@ -7,6 +7,7 @@ import {getPasswords,readVault} from './password.ts';
 import {publishSnapshot} from './snapshot.ts';
 import {cacheRecordImages} from './image-cache.ts';
 import {appendPlaytimeSamples,boundaryPlaytimeSweep} from '../src/playtime-ledger.ts';
+import {fixedPcMetascores} from './fixed-pc-metascores.ts';
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
 const root=process.env.MICROSOFT_STATE_DIR||'.private/microsoft',key=process.env.MICROSOFT_STATE_KEY!;
 const saved=readState(root+'/candidate.json',key);
@@ -18,7 +19,7 @@ if(ledger&&fresh?.source==='Xbox'&&!boundaryPlaytimeSweep(new Date().toISOString
  const artwork=await australianArtwork(fresh,fetch,previous[0]);
  console.log('快速快照澳区横幅覆盖：'+JSON.stringify(artwork));
  await cacheRecordImages(fresh);
- await publishSnapshot(fresh,previous.filter((r:any)=>r.id!==fresh.id).slice(0,29),target,ledger);console.log('复用刚完成的微软快照。');process.exit(0);
+ await publishSnapshot(fresh,previous.filter((r:any)=>r.id!==fresh.id).slice(0,29),target,ledger,fixedPcMetascores(fresh.games.map((g:any)=>String(g.id)),key));console.log('复用刚完成的微软快照。');process.exit(0);
 }
 const cacheBaseline=saved?.record??previous[0];
 const cachedGames=cacheBaseline?.games||[];
@@ -39,6 +40,6 @@ await cacheRecordImages(result.record);
 console.log('图片缓存耗时（秒）：'+Math.round((Date.now()-mediaStarted)/1000));
 writeState(root+'/candidate.json',result,key);session.save();
 const daily=appendPlaytimeSamples(ledger,result.statsSamples);
-await publishSnapshot(result.record,previous.slice(0,29),target,daily);
+await publishSnapshot(result.record,previous.slice(0,29),target,daily,fixedPcMetascores(result.record.games.map(g=>g.id),key));
 console.log('每日时长采样：'+JSON.stringify({freshSamples:result.statsSamples.length,observedGames:Object.keys(daily.latest).length,dates:Object.keys(daily.days).length,crossDayIntervals:Object.keys(daily.crossDay).length}));
 console.log('微软正式同步完成：'+JSON.stringify({games:result.record.games.length,achievementsWithRarity:result.audit.rarityAchievements,baseGroups:result.audit.officialBaseGroups,dlcGroups:result.audit.officialAddonGroups,artwork,seconds:Math.round((Date.now()-began)/1000)}));
