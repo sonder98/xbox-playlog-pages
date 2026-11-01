@@ -3,7 +3,12 @@ run-name: Xbox sync (${{ github.event_name }} · ${{ inputs.request_id }})
 on:
   schedule:
     # Re-register schedule after missing 3 consecutive fires. GitHub cron is best-effort.
-    - cron: '17,47 * * * *'
+    # Normal half-hour sync, excluding Beijing 23:xx for day-end checkpoint.
+    - cron: '17,47 0-14,16-23 * * *'
+    # Asia/Shanghai 23:42 (15:42 UTC): capture a day-end cumulative-minute checkpoint.
+    - cron: '42 15 * * *'
+    # Asia/Shanghai 00:02 (16:02 UTC): capture next day's baseline.
+    - cron: '2 16 * * *'
   workflow_dispatch:
     inputs:
       request_id:
@@ -64,6 +69,7 @@ jobs:
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
           NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
           MICROSOFT_STATE_KEY: ${{ secrets.MICROSOFT_STATE_KEY }}
+          PLAYTIME_FORCE_SWEEP: ${{ github.event_name == 'schedule' && (github.event.schedule == '42 15 * * *' || github.event.schedule == '2 16 * * *') }}
         run: node --experimental-strip-types scripts/microsoft-sync.ts
       - name: Save encrypted Microsoft authorization
         if: steps.microsoft_sync.outcome == 'success' || steps.microsoft_sync.outcome == 'failure'
