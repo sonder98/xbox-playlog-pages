@@ -68,34 +68,66 @@ export function AchievementPreview({games,onOpen,onOpenDay}:{games:Game[];onOpen
   {sheetDay&&<Sheet day={sheetDay} activity={activity} minDay={days[0].day} onChangeDay={setSheetDay} onClose={()=>setSheetDay(null)} onDetail={()=>{const day=sheetDay;setSheetDay(null);onOpenDay(day);}}/>}
  </section>;
 }
-/** Image-only carousel. The images determine their own width after loading and are never cropped. */
+/** Five metal podiums per scene. Center (rarest) sits highest; every card is real Xbox data. */
 function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
  const rail=useRef<HTMLDivElement>(null);
- return <section className="ah-showcase" aria-label="稀有成就展柜" data-achievement-showcase="preview">
+ useEffect(()=>{
+  const scroller=rail.current;
+  if(!scroller||scroller.clientWidth>=550)return;
+  const center=scroller.querySelector<HTMLElement>('.ah-podium-center');
+  if(center)scroller.scrollLeft=center.offsetLeft+center.offsetWidth/2-scroller.clientWidth/2;
+ },[items]);
+ const groups=Array.from({length:Math.ceil(items.length/5)},(_,page)=>{
+  const chunk=items.slice(page*5,page*5+5);
+  // Visual placement: center is #1, flanked by #2/#3, then #4/#5.
+  return [3,1,0,2,4].filter(index=>index<chunk.length).map(index=>({
+   ...chunk[index],rank:page*5+index+1,position:index===0?'center':index===1||index===2?'inner':'outer'
+  }));
+ });
+ const pageDate=(value:number|null)=>value===null?'日期未知':new Date(value).toLocaleDateString('zh-CN',{
+  timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'
+ }).replaceAll('/','.');
+ return <section className="ah-showcase ah-showcase-podium" aria-label="稀有成就展柜" data-achievement-showcase="preview">
   <div className="ah-showcase-heading">
    <div className="ah-showcase-title-group">
     <span className="ah-showcase-trophy"><Trophy size={21} aria-hidden="true"/></span>
-    <div><h2>稀有成就展柜 <span className="ah-showcase-top-label">TOP 50</span></h2><p>跨游戏 · 全球解锁率最低的 {items.length} 个已解锁成就</p></div>
+    <div><h2>稀有成就展柜 <span className="ah-showcase-top-label">TOP 50</span></h2></div>
    </div>
    <button type="button" className="ah-showcase-open" onClick={onOpen} disabled={!items.length} title="查看稀有成就展柜" aria-label="查看稀有成就展柜详情"><ChevronRight size={22}/></button>
   </div>
   {items.length?
-   <div className="ah-showcase-rail" role="region" aria-label="稀有成就 TOP 50 图片，横向滚动查看" tabIndex={0} ref={rail}>
-    {items.map((item,i)=>{
-     const tier=achievementRarityTier(item.achievement.rarity);
-     return <span key={item.key} className="ah-showcase-tile" data-rarity-tier={tier}
-       title={`第 ${i+1} 名 · ${item.achievement.name} · ${item.achievement.rarity}% · ${item.game.name}`}>
-      <Art src={item.achievement.cachedImage||item.achievement.image} alt={item.achievement.name}
-       className={'ah-showcase-art ah-rarity-'+tier+(tier!=='common'?' ah-rarity-gold':'')}/>
-     </span>;
-    })}
+   <div className="ah-showcase-rail ah-podium-rail" role="region" aria-label="稀有成就 TOP 50 金属领奖台，横向滚动查看" tabIndex={0} ref={rail}>
+    {groups.map((group,page)=><div className="ah-podium-scene" role="group" aria-label={`第 ${page*5+1} 至 ${Math.min(items.length,(page+1)*5)} 名`} key={page}>
+     <div className="ah-podium-row">
+      {group.map(item=>{
+       const tier=achievementRarityTier(item.achievement.rarity);
+       return <button type="button" key={item.key} data-rarity-tier={tier} data-podium-rank={item.rank}
+         className={'ah-podium ah-podium-'+item.position}
+         onClick={onOpen} aria-label={`查看第 ${item.rank} 名：${item.achievement.name}，${item.game.name}，稀有度 ${item.achievement.rarity}%`}
+         title={`#${item.rank} ${item.achievement.name} · ${item.game.name}`}>
+        <span className="ah-podium-award">
+         <span className="ah-podium-rank" aria-hidden="true">#{String(item.rank).padStart(2,'0')}</span>
+         <Art src={item.achievement.cachedImage||item.achievement.image} alt=""
+           className={'ah-showcase-art ah-rarity-'+tier+(tier!=='common'?' ah-rarity-gold':'')}/>
+        </span>
+        <span className="ah-podium-plinth">
+         <span className="ah-podium-emblem" aria-hidden="true"><Trophy size={13}/></span>
+         <span className="ah-podium-name">{item.achievement.name}</span>
+         <span className="ah-podium-game">{item.game.name}</span>
+         <span className="ah-podium-meta">{item.achievement.rarity}% · {pageDate(item.time)}</span>
+        </span>
+       </button>;
+      })}
+     </div>
+     <span className="ah-podium-stage" aria-hidden="true"/>
+    </div>)}
    </div>
   :<p className="ah-showcase-empty">暂时没有可用于排名的已解锁成就，等待官方稀有度数据更新。</p>}
   {items.length>0&&<div className="ah-showcase-foot">
-   <span>解锁率越低，成就越稀有</span>
+   <span>全球解锁率升序 · 共 {items.length} 项 · 左右滑动浏览</span>
    <div className="ah-showcase-rail-actions">
-    <button type="button" aria-label="向左滚动展柜" onClick={()=>rail.current?.scrollBy({left:-420,behavior:'smooth'})}><ChevronLeft size={17}/></button>
-    <button type="button" aria-label="向右滚动展柜" onClick={()=>rail.current?.scrollBy({left:420,behavior:'smooth'})}><ChevronRight size={17}/></button>
+    <button type="button" aria-label="向左滚动展柜" onClick={()=>rail.current?.scrollBy({left:-Math.max(280,rail.current.clientWidth),behavior:'smooth'})}><ChevronLeft size={17}/></button>
+    <button type="button" aria-label="向右滚动展柜" onClick={()=>rail.current?.scrollBy({left:Math.max(280,rail.current.clientWidth),behavior:'smooth'})}><ChevronRight size={17}/></button>
    </div>
   </div>}
  </section>;
