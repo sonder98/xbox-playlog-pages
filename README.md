@@ -22,7 +22,7 @@
 
 | 文件 | 职责 | 触发 |
 | --- | --- | --- |
-| `.github/workflows/sync.yml` | Xbox 正式同步、加密快照、素材缓存 | 每小时 11/41 分 UTC（GitHub 定时任务不保证准点）；同步代码变化或手动触发 |
+| `.github/workflows/sync.yml` | Xbox 正式同步、加密快照、素材缓存 | 每小时 17/47 分 UTC（GitHub 定时任务不保证准点）；同步代码变化或手动触发 |
 | `.github/workflows/pages.yml` | 测试、构建、浏览器导航检查、GitHub Pages 部署 | 前端／工作流修改，或正式同步完成后的手动派发 |
 | `.github/workflows/microsoft-shadow.yml` | 人工授权、compare 与 repair 工具 | 仅手动触发 |
 
