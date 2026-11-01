@@ -1953,10 +1953,6 @@ footer .dot {
 .ah-page h1 {font-size:30px;font-weight:600;letter-spacing:-.7px;}
 .ah-intro {font-size:13px;color:var(--text-secondary);margin-top:9px;}
 .ah-intro-block {margin-bottom:22px;}
-.ah-overview-stats {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 20px;}
-.ah-overview-stats>div {display:flex;flex-direction:column;gap:7px;padding:18px;background:var(--surface-raised);border-radius:16px;min-width:0;}
-.ah-overview-stats small {color:var(--text-muted);font-size:12px;}
-.ah-overview-stats strong {font-size:24px;font-weight:600;line-height:1.25;font-variant-numeric:tabular-nums;}
 .ah-legend {display:flex;align-items:center;justify-content:space-between;gap:9px;padding:16px;border-radius:17px;background:var(--surface);font-size:13px;margin-bottom:24px;}
 .ah-legend-right {display:flex;align-items:center;gap:7px;}
 .ah-legend-right small {font-size:11px;color:var(--text-muted);}
@@ -2033,9 +2029,6 @@ footer .dot {
  .ah-preview-cell {height:16px;}
  .ah-page {margin-top:0;}
  .ah-page h1 {font-size:27px;}
- .ah-overview-stats {gap:10px;}
- .ah-overview-stats>div {padding:13px;}
- .ah-overview-stats strong {font-size:22px;}
  .ah-year-heading h2 {font-size:18px;}
  .ah-legend {padding:13px;font-size:12px;}
  .ah-legend-right {gap:5px;}
@@ -2194,3 +2187,49 @@ footer .dot {
 .game-card .game-last {display:flex;flex-wrap:wrap;column-gap:10px;row-gap:3px;align-items:baseline;line-height:1.5;}
 .game-card .game-last-played,.game-card .game-time-span {display:inline-block;white-space:nowrap;}
 .game-card .game-time-span {font-variant-numeric:tabular-nums;color:var(--text-muted);}
+
+/* TOP 50 Xbox rarity showcase. Thumbnails preserve the source image ratio. */
+.ah-showcase {background:var(--surface);border:1px solid rgba(255,255,255,.07);border-radius:22px;padding:19px 19px 12px;margin:0 0 24px;min-width:0;overflow:hidden;}
+.ah-showcase-heading,.ah-showcase-title-group {display:flex;align-items:center;gap:12px;min-width:0;}
+.ah-showcase-heading {justify-content:space-between;margin-bottom:17px;}
+.ah-showcase-title-group>div {min-width:0;}
+.ah-showcase-trophy {width:41px;height:41px;flex:0 0 41px;display:grid;place-items:center;border-radius:14px;background:rgba(193,255,99,.09);color:var(--accent);}
+.ah-showcase-title-group h2 {display:flex;align-items:center;flex-wrap:wrap;gap:9px;font-size:17px;line-height:1.4;font-weight:600;}
+.ah-showcase-title-group p {color:var(--text-muted);font-size:12px;line-height:1.5;margin-top:5px;}
+.ah-showcase-top-label {font-size:10px;font-weight:700;color:var(--on-accent);background:var(--accent);border-radius:100px;padding:3px 9px;white-space:nowrap;}
+.ah-showcase-open {width:40px;height:40px;min-width:40px;flex:0 0 40px;display:grid;place-items:center;border-radius:50%;background:var(--surface-hover);color:var(--text-primary);transition:color .15s,background .15s;}
+.ah-showcase-open:hover,.ah-showcase-open:focus-visible {background:var(--accent);color:var(--on-accent);}
+.ah-showcase-open:disabled {opacity:.35;cursor:default;}
+.ah-showcase-rail {display:flex;gap:9px;align-items:center;width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;overscroll-behavior-inline:contain;scrollbar-width:thin;scrollbar-color:#555 transparent;padding:2px 1px 11px;}
+.ah-showcase-rail:focus-visible {outline:2px solid var(--accent);outline-offset:-2px;border-radius:10px;}
+.ah-showcase-tile {display:block;flex:0 0 auto;scroll-snap-align:start;}
+.ah-showcase-art {display:grid;place-items:center;flex:none;height:88px;width:auto;aspect-ratio:16/9;max-width:240px;min-width:62px;overflow:hidden;border-radius:11px;background:var(--surface-hover);border:1px solid rgba(255,255,255,.13);color:var(--text-muted);}
+.ah-showcase-art img {display:block;height:100%;width:100%;object-fit:contain;object-position:center;}
+.ah-showcase-foot {display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:33px;margin-top:5px;color:var(--text-muted);font-size:11px;}
+.ah-showcase-rail-actions {display:flex;align-items:center;gap:6px;}
+.ah-showcase-rail-actions button {width:32px;height:32px;display:grid;place-items:center;background:var(--surface-raised);border-radius:50%;color:var(--text-secondary);}
+.ah-showcase-rail-actions button:hover,.ah-showcase-rail-actions button:focus-visible {color:var(--accent);background:var(--surface-hover);}
+.ah-showcase-empty {color:var(--text-muted);font-size:12px;padding:25px 0 20px;}
+.ah-showcase-detail .ah-intro-block {margin-bottom:18px;}
+.ah-showcase-detail-count {display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--text-muted);font-size:12px;padding:0 2px 13px;margin:0 0 15px;border-bottom:1px solid var(--border);}
+.ah-showcase-detail-count strong {font-size:13px;color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums;}
+.ah-showcase-ranked-art {flex:none;position:relative;display:block;}
+.ah-showcase-ranked-art .ah-achievement-art {display:grid;}
+.ah-showcase-rank {position:absolute;left:-7px;top:-8px;z-index:1;padding:5px 8px;min-width:35px;text-align:center;background:var(--surface-hover);border:1px solid #505050;border-radius:9px;color:var(--text-primary);font-size:11px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;}
+.ah-showcase-rank.is-top {background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+.ah-showcase-detail .ah-achievement-meta>span:first-child,.ah-showcase-detail .ah-achievement-meta>span:first-child svg {color:var(--accent);}
+.ah-showcase-detail .ah-achievement-heading time {color:var(--text-muted);font-size:11px;}
+.ah-unlock-unknown {color:var(--text-muted);font-size:11px;white-space:nowrap;}
+@media(max-width:700px){
+ .ah-showcase {padding:16px 14px 10px;border-radius:20px;margin-bottom:20px;}
+ .ah-showcase-heading {gap:8px;}
+ .ah-showcase-trophy {width:36px;height:36px;flex-basis:36px;border-radius:12px;}
+ .ah-showcase-title-group h2 {font-size:15px;gap:6px;}
+ .ah-showcase-title-group p {font-size:11px;}
+ .ah-showcase-open {width:38px;height:38px;min-width:38px;flex-basis:38px;}
+ .ah-showcase-art {height:72px;max-width:192px;min-width:50px;border-radius:9px;}
+ .ah-showcase-rail {gap:8px;}
+ .ah-showcase-rail-actions button {width:34px;height:34px;}
+ .ah-showcase-detail .ah-achievement-heading {flex-wrap:wrap;}
+ .ah-showcase-detail .ah-achievement-heading time {white-space:normal;}
+}

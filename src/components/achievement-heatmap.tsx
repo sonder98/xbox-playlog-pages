@@ -5,14 +5,16 @@ import {GamerscoreIcon} from './gamerscore-icon';
 import {AchievementSortControl} from './achievement-sort-control';
 import {sortAchievements,type AchievementSort} from '../achievement-sort';
 import {adjacentDay,buildActivity,calendarMonth,dayLabel,heatLevel,recentCalendar,recentDays,type Activity,type UnlockEvent} from '../achievement-activity';
+import {rareAchievementTop,type RareAchievement} from '../rare-achievements';
 
 const fmt=(n:number)=>n.toLocaleString('zh-CN');
 const time=(value:number)=>new Date(value).toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',hour12:false});
+const fullTime=(value:number)=>new Date(value).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
 function Art({src,alt='',className}:{src?:string;alt?:string;className:string}){
  const [broken,setBroken]=useState(false),[artRatio,setArtRatio]=useState<number|null>(null);
  useEffect(()=>{setBroken(false);setArtRatio(null);},[src]);
- const artwork=className==='ah-achievement-art';
- const square=artwork&&artRatio!==null&&artRatio<1.35;
+ const artwork=className==='ah-achievement-art'||className==='ah-showcase-art';
+ const square=className==='ah-achievement-art'&&artRatio!==null&&artRatio<1.35;
  return <span className={className+(square?' ah-art-square':'')}
   style={artwork&&artRatio?{aspectRatio:String(artRatio)}:undefined}>
   {src&&!broken?<img src={src} alt={alt} loading="lazy"
@@ -64,6 +66,34 @@ export function AchievementPreview({games,onOpen,onOpenDay}:{games:Game[];onOpen
   {sheetDay&&<Sheet day={sheetDay} activity={activity} minDay={days[0].day} onChangeDay={setSheetDay} onClose={()=>setSheetDay(null)} onDetail={()=>{const day=sheetDay;setSheetDay(null);onOpenDay(day);}}/>}
  </section>;
 }
+/** Image-only carousel. The images determine their own width after loading and are never cropped. */
+function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
+ const rail=useRef<HTMLDivElement>(null);
+ return <section className="ah-showcase" aria-label="稀有成就展柜" data-achievement-showcase="preview">
+  <div className="ah-showcase-heading">
+   <div className="ah-showcase-title-group">
+    <span className="ah-showcase-trophy"><Trophy size={21} aria-hidden="true"/></span>
+    <div><h2>稀有成就展柜 <span className="ah-showcase-top-label">TOP 50</span></h2><p>跨游戏 · 全球解锁率最低的 {items.length} 个已解锁成就</p></div>
+   </div>
+   <button type="button" className="ah-showcase-open" onClick={onOpen} disabled={!items.length} title="查看稀有成就展柜" aria-label="查看稀有成就展柜详情"><ChevronRight size={22}/></button>
+  </div>
+  {items.length?
+   <div className="ah-showcase-rail" role="region" aria-label="稀有成就 TOP 50 图片，横向滚动查看" tabIndex={0} ref={rail}>
+    {items.map((item,i)=><span key={item.key} className="ah-showcase-tile" title={`第 ${i+1} 名 · ${item.achievement.name} · ${item.achievement.rarity}% · ${item.game.name}`}>
+     <Art src={item.achievement.cachedImage||item.achievement.image} alt={item.achievement.name} className="ah-showcase-art"/>
+    </span>)}
+   </div>
+  :<p className="ah-showcase-empty">暂时没有可用于排名的已解锁成就，等待官方稀有度数据更新。</p>}
+  {items.length>0&&<div className="ah-showcase-foot">
+   <span>解锁率越低，成就越稀有</span>
+   <div className="ah-showcase-rail-actions">
+    <button type="button" aria-label="向左滚动展柜" onClick={()=>rail.current?.scrollBy({left:-420,behavior:'smooth'})}><ChevronLeft size={17}/></button>
+    <button type="button" aria-label="向右滚动展柜" onClick={()=>rail.current?.scrollBy({left:420,behavior:'smooth'})}><ChevronRight size={17}/></button>
+   </div>
+  </div>}
+ </section>;
+}
+
 function Sheet({day,activity,minDay='2022-01-01',onChangeDay,onClose,onDetail}:{day:string;activity:Activity;minDay?:string;onChangeDay:(day:string)=>void;onClose:()=>void;onDetail:()=>void}){
  const prev=adjacentDay(day,-1),next=adjacentDay(day,1);
  const bucket=activity.byDay.get(day),games=bucket?.games||[],count=bucket?.events.length||0;
@@ -95,14 +125,15 @@ function Sheet({day,activity,minDay='2022-01-01',onChangeDay,onClose,onDetail}:{
   </section>
  </div>;
 }
-function DayCard({event,onGame}:{event:UnlockEvent;onGame:(id:string)=>void}){
+function DayCard({event,onGame,rank,showFullDate=false}:{event:Pick<UnlockEvent,'achievement'|'game'> & {time:number|null};onGame:(id:string)=>void;rank?:number;showFullDate?:boolean}){
  const a=event.achievement,g=event.game,rare=a.rarity!==null&&a.rarity<10;
  const group=g.groupStatus==='verified'?g.groups?.find(v=>v.achievementIds.includes(a.id)):undefined;
  return <article className="ah-achievement-card" data-achievement-id={a.id} data-game-id={g.id}>
   <div className="ah-achievement-primary">
-   <Art src={a.cachedImage||a.image} className="ah-achievement-art"/>
+   {rank===undefined?<Art src={a.cachedImage||a.image} className="ah-achievement-art"/>:
+    <div className="ah-showcase-ranked-art"><Art src={a.cachedImage||a.image} className="ah-achievement-art" alt={a.name}/><span className={'ah-showcase-rank'+(rank<=3?' is-top':'')}>#{String(rank).padStart(2,'0')}</span></div>}
    <div className="ah-achievement-main">
-    <div className="ah-achievement-heading"><h3>{a.name}</h3><time dateTime={a.unlockedAt||undefined}>{time(event.time)}</time></div>
+    <div className="ah-achievement-heading"><h3>{a.name}</h3>{event.time===null?<span className="ah-unlock-unknown">解锁时间未知</span>:<time dateTime={a.unlockedAt||undefined}>{showFullDate?fullTime(event.time):time(event.time)}</time>}</div>
     {a.description&&<p className="ah-achievement-desc">{a.description}</p>}
     <div className="ah-achievement-meta">
      <span className={rare?'ah-rare':''} aria-label={a.rarity===null?'稀有度未知':'稀有度 '+a.rarity+'%'}><Gem size={14}/>{a.rarity===null?'暂无稀有度':a.rarity+'%'}</span>
@@ -115,8 +146,9 @@ function DayCard({event,onGame}:{event:UnlockEvent;onGame:(id:string)=>void}){
   </button>
  </article>;
 }
-export function AchievementJourney({games,dayId,onBack,onOpenDay,onChangeDay,onOpenGame}:{games:Game[];dayId:string|null;onBack:()=>void;onOpenDay:(day:string)=>void;onChangeDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
+export function AchievementJourney({games,dayId,showcase,onBack,onOpenDay,onOpenShowcase,onChangeDay,onOpenGame}:{games:Game[];dayId:string|null;showcase:boolean;onBack:()=>void;onOpenDay:(day:string)=>void;onOpenShowcase:()=>void;onChangeDay:(day:string)=>void;onOpenGame:(id:string)=>void}){
  const activity=useMemo(()=>buildActivity(games),[games]);
+ const rare=useMemo(()=>rareAchievementTop(games),[games]);
  const [selected,setSelected]=useState<string|null>(null);
  const [sheetDay,setSheetDay]=useState<string|null>(null);
  const [order,setOrder]=useState<AchievementSort>('date-asc');
@@ -130,7 +162,7 @@ export function AchievementJourney({games,dayId,onBack,onOpenDay,onChangeDay,onO
  const years=Array.from({length:Math.max(0,nowYear-2021)},(_,i)=>nowYear-i);
  const months=years.flatMap(y=>Array.from({length:y===nowYear?nowMonth:12},(_,i)=>({year:y,month:(y===nowYear?nowMonth:12)-i})));
  useEffect(()=>{
-  if(dayId)return;
+  if(dayId||showcase)return;
   const current=()=>{let active=years[0];for(const year of years){
    const target=document.getElementById('ah-year-'+year);
    if(target&&target.getBoundingClientRect().top<135)active=year;
@@ -139,7 +171,17 @@ export function AchievementJourney({games,dayId,onBack,onOpenDay,onChangeDay,onO
   window.addEventListener('resize',current);
   current();
   return ()=>{window.removeEventListener('scroll',current);window.removeEventListener('resize',current);};
- },[dayId,years.join(',')]);
+ },[dayId,showcase,years.join(',')]);
+ if(showcase){
+  return <section className="ah-page ah-showcase-detail" data-achievement-showcase="detail">
+   <button type="button" className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回热力图</button>
+   <div className="ah-intro-block"><span className="eyebrow">RARE ACHIEVEMENTS</span><h1>稀有成就展柜</h1>
+    <p className="ah-intro">跨游戏 · 按全球玩家解锁率由低到高排列</p></div>
+   <div className="ah-showcase-detail-count"><span>已解锁成就</span><strong>TOP {rare.length}</strong></div>
+   {rare.length?<div className="ah-achievement-list">{rare.map((item,i)=><DayCard key={item.key} event={item} rank={i+1} showFullDate onGame={onOpenGame}/>)}</div>:
+    <p className="ah-empty-day">尚无可用的稀有成就数据。Xbox 同步稀有度后自动展示。</p>}
+  </section>;
+ }
  const bucket=dayId?activity.byDay.get(dayId):undefined;
  if(dayId){
   const entries=bucket?.events||[];
@@ -159,12 +201,7 @@ export function AchievementJourney({games,dayId,onBack,onOpenDay,onChangeDay,onO
  return <section className="ah-page ah-full-history">
   <button className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回概览</button>
   <div className="ah-intro-block"><h1>成就热力图</h1><p className="ah-intro">从 2022 年起，每次解锁都有迹可循</p></div>
-  <div className="ah-overview-stats">
-   <div><small>累计成就</small><strong>{fmt(activity.total)}</strong></div>
-   <div><small>活跃天数</small><strong>{fmt(activity.activeDays)}</strong></div>
-   <div><small>最长连续</small><strong>{fmt(activity.longestStreak)} 天</strong></div>
-   <div><small>单日最高</small><strong>{fmt(activity.peak)} 个</strong></div>
-  </div>
+  <ShowcaseRail items={rare} onOpen={onOpenShowcase}/>
   <nav className="ah-year-jump" aria-label="按年份定位热力图">{years.map(y=><button type="button" key={y}
    className={activeYear===y?'is-active':''} aria-current={activeYear===y?'location':undefined} aria-controls={'ah-year-'+y}
    onClick={()=>{setActiveYear(y);document.getElementById('ah-year-'+y)?.scrollIntoView({behavior:'smooth',block:'start'});}}>{y}</button>)}</nav>
