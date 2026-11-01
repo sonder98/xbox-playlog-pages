@@ -2558,3 +2558,72 @@ footer .dot {
  .ah-showcase-rarity-value {font-size:10.5px;}
  .ah-gap-achievement-condition {font-size:10.5px;line-height:1.5;}
 }
+
+
+/* Recent games: cover-first horizontal gallery, combined base + DLC progress. */
+.recent-games-rail {
+ display:flex;align-items:stretch;gap:13px;width:100%;max-width:100%;min-width:0;
+ overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;
+ padding:4px 3px 14px;scrollbar-width:thin;scrollbar-color:#4b4b4b transparent;
+}
+.recent-game-card {
+ display:flex;flex-direction:column;align-items:stretch;flex:0 0 162px;width:162px;
+ padding:9px 9px 11px;border:1px solid var(--border);border-radius:17px;
+ background:var(--surface-raised);scroll-snap-align:start;text-align:left;
+ color:var(--text-primary);gap:10px;min-width:0;
+ transition:border-color .15s ease,background .15s ease;
+}
+.recent-game-card:hover,.recent-game-card:focus-visible {
+ background:var(--surface-hover);border-color:rgba(199,255,46,.55);
+}
+.recent-game-cover {display:block;width:100%;aspect-ratio:1;min-width:0;overflow:hidden;border-radius:12px;}
+.recent-game-cover .game-cover {height:100%;border-radius:12px;display:grid;place-items:center;}
+.recent-game-cover .game-cover .cover-artwork {display:block;width:100%;height:100%;object-fit:contain;}
+.recent-game-title {display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+ overflow:hidden;overflow-wrap:anywhere;font-size:13px;font-weight:600;line-height:1.35;
+ min-height:2.7em;}
+.recent-game-progress {margin-top:auto;display:flex;align-items:center;gap:7px;min-width:0;}
+.recent-game-progress-track {height:6px;flex:1;min-width:0;background:#3a3c3a;
+ border-radius:100px;overflow:hidden;display:block;}
+.recent-game-progress-track>span {display:block;height:100%;border-radius:100px;background:var(--accent);}
+.recent-game-progress strong {flex:none;font-size:12px;line-height:1;font-weight:700;color:var(--text-primary);
+ font-variant-numeric:tabular-nums;}
+.recent-game-card:active {transform:scale(.985);}
+@media(max-width:700px){
+ .recent-games-rail {gap:10px;padding:2px 2px 13px;}
+ .recent-game-card {flex-basis:141px;width:141px;gap:8px;padding:8px;border-radius:15px;}
+ .recent-game-cover,.recent-game-cover .game-cover {border-radius:10px;}
+ .recent-game-title {font-size:12px;}
+}
+
+/* Heatmap: games confirmed in that month through Xbox timestamps/achievement unlocks.
+   One cover/name row per game; used identically in overview and the monthly archive. */
+.ah-month-played {margin-top:19px;padding-top:15px;border-top:1px solid var(--border);}
+.ah-month-played-title {display:flex;align-items:center;justify-content:space-between;gap:12px;
+ margin:0 0 10px;}
+.ah-month-played-title>span {display:inline-flex;align-items:center;gap:8px;font-size:13px;
+ font-weight:650;color:var(--text-primary);}
+.ah-month-played-title svg {color:var(--accent);}
+.ah-month-played-title small {font-size:11px;color:var(--text-muted);}
+.ah-month-played-list {display:flex;flex-direction:column;gap:0;
+ border:1px solid rgba(255,255,255,.075);border-radius:14px;
+ overflow:hidden;background:rgba(255,255,255,.025);}
+.ah-month-played-game {display:flex;align-items:center;text-align:left;gap:10px;
+ width:100%;min-width:0;min-height:56px;padding:7px 10px;
+ color:var(--text-primary);}
+.ah-month-played-game+.ah-month-played-game {border-top:1px solid rgba(255,255,255,.06);}
+.ah-month-played-game:hover,.ah-month-played-game:focus-visible {background:rgba(255,255,255,.05);}
+.ah-month-played-cover {display:block;width:40px;height:40px;flex:0 0 40px;border-radius:8px;overflow:hidden;}
+.ah-month-played-cover .game-cover {width:100%;height:100%;border-radius:8px;display:grid;place-items:center;}
+.ah-month-played-cover .game-cover .cover-artwork {display:block;width:100%;height:100%;object-fit:contain;}
+.ah-month-played-name {flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap;font-size:12px;font-weight:550;}
+.ah-month-played-game>svg {flex:none;color:var(--text-muted);}
+.ah-month-played-empty {font-size:12px;color:var(--text-muted);padding:10px 2px 4px;}
+.ah-preview .ah-month-played {margin-top:16px;padding-top:14px;}
+@media(max-width:700px){
+ .ah-month-played {margin-top:15px;padding-top:13px;}
+ .ah-month-played-game {min-height:53px;padding:6px 8px;gap:9px;}
+ .ah-month-played-cover {width:38px;height:38px;flex-basis:38px;}
+ .ah-month-played-name {font-size:11.5px;}
+}
