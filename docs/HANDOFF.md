@@ -122,3 +122,6 @@ npm run build
 - `scripts/fixed-pc-metascores.ts` 保存人工核对过的 29 条固定 PC Metacritic 0–100 分，**键是 HMAC-SHA256(titleId, MICROSOFT_STATE_KEY).slice(0,32)** 而不是公开 Title ID，防止泄露非展示游戏清单；`scripts/microsoft-sync.ts` 的快速与完整路径都在 `publishSnapshot` 时生成 `metacriticScores` 并存入 AES-GCM 加密快照。解锁后 `src/vault.ts` 提供 `pcMetascoresForDisplay()`。完整备份含该映射。
 - 31 款候选中 29 款有人工核验 PC Metascore；另 2 款为 tbd，保持无评分。对于原版和特别版非同一评分的情况，在加密数据中保留版本备注。评分为人工快照，不随常规 Xbox 同步更新；若重设 MICROSOFT_STATE_KEY 需要迁移 HMAC 映射。
 - 临时 RSA 加密库存清单导出工作流已删除，不要把私有 Title ID、完整清单或任何认证密钥写入公开库。验证新快照是否包含分数使用汇总数量日志或私有解密环境，不打印标题/ID。
+
+### 2026-11-01 概览布局精简
+- 已按用户要求完全移除「时光最多的世界」累计游玩 TOP 5 轮播。`src/dashboard.tsx` 不再渲染 `data-overview-section="top"`，不再计算 `top`，删除专用样式。概览顺序为热力图 → 最近游玩 → 成就展柜 → 吃灰游戏 → 统计总览；保留欢迎占位、统计和游戏详情。`scripts/check-navigation.mjs` 在移动端/桌面端回归该顺序和删除项。
