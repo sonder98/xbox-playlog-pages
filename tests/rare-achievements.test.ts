@@ -32,7 +32,7 @@ test('the showcase caps at 100 entries and uses game+achievement composite keys'
  });
  const items=rareAchievementTop(games);
  assert.equal(items.length,100);
- assert.equal(new Set(items.map(item=>item.key)).size,50);
+ assert.equal(new Set(items.map(item=>item.key)).size,100);
  assert.ok(items.every((item,i)=>i===0||item.achievement.rarity!>=items[i-1].achievement.rarity!));
  assert.equal(rareAchievementTop(games,50).length,50,'Explicit smaller limits still work');
  assert.equal(rareAchievementTop(games,0).length,0);
