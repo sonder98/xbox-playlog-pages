@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {ArrowLeft,ArrowRight,ChevronLeft,ChevronRight,Clock3,Gamepad2,Trophy} from 'lucide-react';
+import {ArrowLeft,ArrowRight,ChevronLeft,ChevronRight,Clock3,Gamepad2,Gem,Trophy} from 'lucide-react';
 import type {Achievement,Game} from '../data';
 import {achievementRarityTier} from '../rare-achievements';
 import {formattedGapDays,type AchievementGap} from '../achievement-gaps';
@@ -54,7 +54,6 @@ export function AchievementGapRail({items,onOpen}:{items:AchievementGap[];onOpen
     </button>)}
    </div>:<p className="ah-showcase-empty">尚无同一游戏中两次带有效时间的成就解锁记录。</p>}
   {items.length>0&&<div className="ah-showcase-foot">
-   <span>共 {items.length} 对 · 间隔由长到短</span>
    <div className="ah-showcase-rail-actions">
     <button type="button" aria-label="向左滚动间隔成就展柜" onClick={()=>rail.current?.scrollBy({left:-400,behavior:'smooth'})}><ChevronLeft size={17}/></button>
     <button type="button" aria-label="向右滚动间隔成就展柜" onClick={()=>rail.current?.scrollBy({left:400,behavior:'smooth'})}><ChevronRight size={17}/></button>
@@ -69,7 +68,12 @@ function GapSide({achievement,when,position}:{achievement:Achievement;when:numbe
   <GapArt achievement={achievement} detail/>
   <h3 title={achievement.name}>{achievement.name}</h3>
   <p className="ah-gap-achievement-condition">{achievement.description?.trim()||'暂无解锁条件说明'}</p>
-  <time dateTime={achievement.unlockedAt||undefined}>{timestamp(when)}</time>
+  <div className="ah-gap-side-meta">
+   <span className={'ah-gap-side-rarity'+(achievementRarityTier(achievement.rarity)!=='common'?' is-rare':'')}>
+    <Gem size={11} aria-hidden="true"/>{achievement.rarity===null?'未知':achievement.rarity+'%'}
+   </span>
+   <time dateTime={achievement.unlockedAt||undefined}>{timestamp(when)}</time>
+  </div>
  </div>;
 }
 
