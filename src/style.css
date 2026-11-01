@@ -2670,13 +2670,20 @@ footer .dot {
  .ah-sheet-game-count {gap:4px;}
  .ah-sheet-game-hours {font-size:11px;}
 }
-/* Compact lifetime hours following all-achievements percentage on recent-game tiles. */
-.recent-game-progress {gap:5px;}
-.recent-game-hours {flex:none;white-space:nowrap;font-size:10.5px;line-height:1;color:var(--text-secondary);font-variant-numeric:tabular-nums;letter-spacing:-.15px;}
+/* Recent games: separate lifetime hours beneath the title so the progress bar
+   and percentage occupy their own full-width bottom row, including on mobile. */
+.recent-game-card {gap:8px;}
+.recent-game-hours {
+ display:block;width:100%;min-width:0;white-space:nowrap;
+ font-size:11px;line-height:1.4;color:var(--text-secondary);
+ font-variant-numeric:tabular-nums;
+}
+.recent-game-progress {width:100%;gap:7px;}
 @media(max-width:700px){
- .recent-game-progress {gap:4px;}
+ .recent-game-card {gap:7px;}
+ .recent-game-hours {font-size:10.5px;}
+ .recent-game-progress {gap:6px;}
  .recent-game-progress strong {font-size:11px;}
- .recent-game-hours {font-size:9.5px;}
 }
 
 /* Dusty games: private officially-unclassified titles, preview TOP 5 and full ranking. */
