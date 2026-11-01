@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime} from '../scripts/microsoft-library.ts';
+import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision} from '../scripts/microsoft-library.ts';
 import type {Achievement,Game,RecordData} from '../src/data.ts';
 const config={clientId:'11111111-1111-1111-1111-111111111111',refreshToken:'PRIVATE-REFRESH'};
 const award=(id:string,unlocked=false):Achievement=>({id,name:'Award '+id,image:'',unlocked,unlockedAt:null,rarity:null,points:10});
@@ -190,7 +190,7 @@ test('incremental cache does not refetch unchanged unverified achievements or ol
   if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'xsts',DisplayClaims:{xui:[{uhs:'hash'}]}});
   if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
   if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[
-   {titleId:'1',name:'PRIVATE-GAME',titleHistory:{visible:true,lastTimePlayed:dormant},achievement:{totalAchievements:2,currentAchievements:1,currentGamerscore:10}},
+   {titleId:'1',name:'PRIVATE-GAME',titleHistory:{visible:true,lastTimePlayed:'2026-07-01T00:00:00.0000000Z'},achievement:{totalAchievements:2,currentAchievements:1}},
    {titleId:'2',name:'PRIVATE-GAME-2',titleHistory:{visible:true,lastTimePlayed:recent},achievement:{totalAchievements:2,currentAchievements:1,currentGamerscore:10}}
   ]});
   if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});
@@ -201,6 +201,7 @@ test('incremental cache does not refetch unchanged unverified achievements or ol
  const {record:r,audit}=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old1,old2]),now:at});
  assert.equal(audit.fullRefresh,false);
  assert.equal(audit.reusedDetails,2);
+ assert.deepEqual(audit.reuseReasons,{reused:2});
  assert.equal(audit.detailedReads,0);
  assert.equal(audit.statsReads,1);
  assert.equal(audit.statsSkipped,1);
@@ -208,6 +209,23 @@ test('incremental cache does not refetch unchanged unverified achievements or ol
  assert.equal(calls.length,1);
  assert.equal(r.games.find(g=>g.id==='1')?.minutes,42);
  assert.equal(r.games.find(g=>g.id==='2')?.minutes,99);
+});
+
+test('cached catalogs reuse missing-score summaries and real identical last-played timestamps',()=>{
+ const old={...game(),lastPlayed:'2026-10-26T11:24:30.000Z'};
+ const good={totalAchievements:2,currentAchievements:1};
+ assert.equal(detailCacheDecision(old,good,'2026-10-26T11:24:30.0000000Z',false),'reused');
+ assert.equal(detailCacheDecision(old,{...good,currentGamerscore:10},'2026-10-26T11:24:30Z',false),'reused');
+ assert.equal(detailCacheDecision(old,{...good,currentGamerscore:20},old.lastPlayed,false),'scoreChanged');
+ assert.equal(detailCacheDecision(old,{...good,currentAchievements:2},old.lastPlayed,false),'earnedChanged');
+ assert.equal(detailCacheDecision(old,{...good,totalAchievements:3},old.lastPlayed,false),'totalChanged');
+ assert.equal(detailCacheDecision(old,good,'2026-11-01T11:24:30Z',false),'playedAgain');
+ assert.equal(detailCacheDecision(old,good,old.lastPlayed,true),'dailyRefresh');
+ assert.equal(detailCacheDecision(undefined,good,old.lastPlayed,false),'newGame');
+ assert.equal(detailCacheDecision({...old,achievements:[award('1',true)]},good,old.lastPlayed,false),'incompleteCache');
+ assert.equal(detailCacheDecision(old,{...good,currentAchievements:undefined},old.lastPlayed,false),'missingSummary');
+ assert.equal(detailCacheDecision(old,{...good,totalAchievements:undefined},old.lastPlayed,false),'missingSummary');
+ assert.equal(detailCacheDecision(old,good,null,false),'playedAgain');
 });
 test('daily catalog sweep is scheduled only once during its UTC hour',()=>{
  assert.equal(refreshCatalogToday('2026-10-31T01:30:00Z','2026-11-01T02:00:00Z'),true);
