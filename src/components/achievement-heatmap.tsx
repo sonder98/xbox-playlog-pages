@@ -90,9 +90,15 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
     // Continuous height interpolation: the nearest podium is always highest.
     const focus=Math.max(0,1-steps/1.7);
     const mobile=window.matchMedia('(max-width:700px)').matches;
-    element.style.setProperty('--podium-lift',(focus*(mobile?25:28)).toFixed(2)+'px');
-    element.style.setProperty('--podium-scale',(.91+focus*.09).toFixed(4));
-    element.style.setProperty('--podium-opacity',(.68+focus*.32).toFixed(4));
+    const signedSteps=(middle-(rect.left+rect.width/2))/(rect.width+9);
+    // Perspective turns side objects toward the viewer's centered line of sight.
+    const yaw=Math.max(-8,Math.min(8,signedSteps*4.5));
+    element.style.setProperty('--podium-lift',(focus*(mobile?20:22)).toFixed(2)+'px');
+    element.style.setProperty('--podium-scale',(.9+focus*.1).toFixed(4));
+    element.style.setProperty('--podium-opacity',(.63+focus*.37).toFixed(4));
+    element.style.setProperty('--podium-focus',focus.toFixed(4));
+    element.style.setProperty('--podium-brightness',(.72+focus*.28).toFixed(4));
+    element.style.setProperty('--podium-yaw',yaw.toFixed(2)+'deg');
     if(distance<least){least=distance;closest=i;}
    }
    podiums.forEach((el,i)=>el.classList.toggle('is-center',i===closest));
@@ -137,8 +143,10 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
      const tier=achievementRarityTier(item.achievement.rarity);
      return <button type="button" key={item.key} data-rarity-tier={tier} data-podium-rank={i+1}
        className="ah-podium" aria-pressed={activeIndex===i}
-       style={{'--podium-lift':i===0?'28px':'0px','--podium-opacity':i===0?1:.68,
-        '--podium-scale':i===0?1:.91} as CSSProperties}
+       style={{'--podium-lift':i===0?'22px':'0px','--podium-opacity':i===0?1:.63,
+        '--podium-scale':i===0?1:.9,'--podium-focus':i===0?1:0,
+        '--podium-brightness':i===0?1:.72,
+        '--podium-yaw':'0deg'} as CSSProperties}
        onClick={()=>activeRef.current===i?onOpen():scrollToIndex(i)}
        aria-label={`第 ${i+1} 名：${item.achievement.name}，${item.game.name}，稀有度 ${item.achievement.rarity}%`}
        title={`#${i+1} ${item.achievement.name} · ${item.game.name}`}>
@@ -148,6 +156,7 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
         className={'ah-showcase-art ah-rarity-'+tier+(tier!=='common'?' ah-rarity-gold':'')}/>
       </span>
       <span className="ah-podium-plinth">
+       <span className="ah-podium-rim" aria-hidden="true"/>
        <span className="ah-podium-name">{item.achievement.name}</span>
        <span className="ah-podium-game">{item.game.name}</span>
        <span className="ah-podium-meta">{item.achievement.rarity}% · {pageDate(item.time)}</span>
