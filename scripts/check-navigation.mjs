@@ -7,7 +7,7 @@ import {chromium} from 'playwright';
 import {encryptVault,decryptVault} from '../src/crypto.ts';
 const password='navigation-test-only';
 const games=Array.from({length:12},(_,i)=>({id:String(100+i),name:'Test Game '+i,image:'https://covers.example.test/square.svg',image2x:'https://covers.example.test/medium.svg',image3x:'https://covers.example.test/original.svg',devices:['Xbox'],lastPlayed:'2026-10-30T00:00:00Z',minutes:60,earned:1,total:10,score:10,maxScore:100}));
-for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),points:[10,20,0,15][i],name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
+for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),points:[10,20,0,15][i],name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:i===1?'https://covers.example.test/wide.svg':'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
 for(const game of games){game.total=4;game.earned=2;game.groupStatus='verified';game.groups=[{id:'base',name:'本体',kind:'base',earned:2,total:2,achievementIds:['1','2']},{id:'dlc',name:'追加故事',kind:'dlc',earned:0,total:2,achievementIds:['3','4']}];}
 const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:''},games,source:'Exophase',warnings:[]}]},password);
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4173'],{stdio:'ignore'});
@@ -58,7 +58,7 @@ try{
     page.on('pageerror',error=>errors.push(error.message));
     await page.route('https://covers.example.test/**',route=>{
       const original=route.request().url().endsWith('original.svg'),medium=route.request().url().endsWith('medium.svg');
-      const width=original?1920:medium?480:64,height=width;
+      const width=original?1920:medium?480:url.pathname.endsWith('/wide.svg')?160:64,height=url.pathname.endsWith('/wide.svg')?90:width;
       return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#789"/></svg>`});
     });
     await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
@@ -148,6 +148,30 @@ try{
     assert.equal(monthDot.radius,'50%','Month heatmap points are circular');
     assert.ok(monthDot.relative<.69&&monthDot.relative>.6,'Monthly circles are slightly inset');
     assert.equal(await page.locator('.ah-legend').count(),0,'Full heatmap no longer contains a color legend');
+    assert.equal(await page.locator('.ah-overview-stats').count(),0,'Old four stat blocks are removed');
+    assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-tile').count(),24,'Showcase previews each eligible earned achievement in one horizontal rail');
+    await page.locator('.ah-showcase-art img').first().waitFor();
+    await page.waitForFunction(()=>document.querySelectorAll('.ah-showcase-art img')[1]?.naturalWidth>0);
+    const artworks=await page.locator('.ah-showcase-art').evaluateAll(els=>els.slice(0,2).map(el=>{
+      const rect=el.getBoundingClientRect();
+      const image=el.querySelector('img');
+      return {ratio:rect.width/rect.height,sourceRatio:image.naturalWidth/image.naturalHeight,fit:getComputedStyle(image).objectFit};
+    }));
+    assert.ok(Math.abs(artworks[0].ratio-1)<.04,'Square Xbox art remains square');
+    assert.ok(Math.abs(artworks[1].ratio-16/9)<.04,'Wide Xbox art keeps its source proportions');
+    assert.ok(artworks.every(x=>x.fit==='contain'),'Showcase art is never cropped');
+    await page.getByRole('button',{name:'查看稀有成就展柜详情'}).click();
+    await page.locator('[data-achievement-showcase="detail"]').waitFor();
+    assert.ok(page.url().endsWith('#achievements/showcase'),'Rarity detail supports a deep link');
+    assert.equal(await page.locator('.ah-showcase-detail .ah-achievement-card').count(),24,'Rarity detail shows the same ranked items');
+    assert.equal(await page.locator('.ah-showcase-rank').first().innerText(),'#01','Showcase cards are rank numbered');
+    assert.ok((await page.locator('.ah-showcase-detail .ah-achievement-meta').first().innerText()).includes('0%'),'Rarest eligible item is ranked first');
+    await page.locator('.ah-showcase-detail .ah-game-source').first().click();
+    await page.getByRole('dialog',{name:/游戏详情/}).waitFor();
+    await page.getByRole('button',{name:'关闭详情'}).click();
+    await page.getByRole('button',{name:'返回热力图'}).click();
+    await page.locator('[data-achievement-showcase="preview"]').waitFor();
+
     const yearNav=page.getByRole('navigation',{name:'按年份定位热力图'});
     await yearNav.getByRole('button',{name:'2024'}).click();
     await page.waitForFunction(()=>Math.abs(document.getElementById('ah-year-2024')?.getBoundingClientRect().top-85)<45);
