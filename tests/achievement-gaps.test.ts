@@ -58,7 +58,7 @@ test('TOP 100 limit uses unique composite identities',()=>{
  });
  const items=longestAchievementGaps(games);
  assert.equal(items.length,100);
- assert.equal(new Set(items.map(i=>i.key)).size,50);
+ assert.equal(new Set(items.map(i=>i.key)).size,100);
  assert.equal(longestAchievementGaps(games,50).length,50,'Custom shorter ranking remains supported');
  assert.deepEqual(longestAchievementGaps(games,0),[]);
 });
