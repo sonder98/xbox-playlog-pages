@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import type {Game,RecordData} from '../src/data.ts';
 import {buildActivity} from '../src/achievement-activity.ts';
 import {monthlyPlayedGames} from '../src/monthly-played.ts';
-import {overallAchievementPercent} from '../src/components/recent-games.tsx';
+import {overallAchievementPercent} from '../src/overall-achievement-progress.ts';
 
 function game(id:string,name=id):Game{return {id,name,image:'',devices:[],lastPlayed:null,minutes:0,earned:0,total:0,score:0,maxScore:0};}
 function snap(at:string,games:Game[]):RecordData{return {id:at,at,source:'Xbox',profile:{xuid:'12345',gamertag:'tester',avatar:''},warnings:[],games};}
