@@ -215,7 +215,7 @@ try{
     assert.ok(placement.iconWidth>=50,'Game artwork is visibly larger in day sheet');
     assert.equal(await overviewSheet.locator('.ah-sheet-game-count').count(),3,
       'Only the date half-sheet shows per-game completion followed by hours');
-    assert.equal((await overviewSheet.locator('.ah-sheet-game-count').first().innerText()).replace(/\\s+/g,' ').trim(),'1 个 · — 小时',
+    assert.equal((await overviewSheet.locator('.ah-sheet-game-count').first().innerText()).replace(/\s+/g,' ').trim(),'1 个 · — 小时',
       'Pre-November day cannot invent game-play hours, but shows an explicit unknown slot');
     assert.equal(await page.locator('.ah-day-detail .ah-sheet-game-hours').count(),0,
       'Full day details never add the new hour label');
