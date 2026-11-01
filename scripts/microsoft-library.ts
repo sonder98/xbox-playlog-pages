@@ -180,7 +180,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    // New earned IDs force a full read. Unlocked-but-unchanged catalogs are
    // refreshed during the daily full scan to detect unearned DLC additions.
    if(decision==='missingSummary'&&old){
-    const isLegacy=titles.find(t=>String(t.titleId)===game.id)?.devices?.some((d:any)=>/xbox\\s*360/i.test(String(d)))||summary?.sourceVersion===1;
+    const isLegacy=titles.find(t=>String(t.titleId)===game.id)?.devices?.some((d:any)=>/xbox\s*360/i.test(String(d)))||summary?.sourceVersion===1;
     try{
      const probe=isLegacy?await pagesFor(game.id,'1',false,true,true):
       await pagesFor(game.id,'6',false,false,false,true);
