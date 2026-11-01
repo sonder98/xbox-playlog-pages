@@ -89,7 +89,10 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
     const steps=distance/(rect.width+9);
     // Continuous height interpolation: the nearest podium is always highest.
     const focus=Math.max(0,1-steps/1.7);
-    element.style.setProperty('--podium-focus',focus.toFixed(4));
+    const mobile=window.matchMedia('(max-width:700px)').matches;
+    element.style.setProperty('--podium-lift',(focus*(mobile?25:28)).toFixed(2)+'px');
+    element.style.setProperty('--podium-scale',(.91+focus*.09).toFixed(4));
+    element.style.setProperty('--podium-opacity',(.68+focus*.32).toFixed(4));
     if(distance<least){least=distance;closest=i;}
    }
    podiums.forEach((el,i)=>el.classList.toggle('is-center',i===closest));
@@ -134,7 +137,8 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
      const tier=achievementRarityTier(item.achievement.rarity);
      return <button type="button" key={item.key} data-rarity-tier={tier} data-podium-rank={i+1}
        className="ah-podium" aria-pressed={activeIndex===i}
-       style={{'--podium-focus':i===0?1:0} as CSSProperties}
+       style={{'--podium-lift':i===0?'28px':'0px','--podium-opacity':i===0?1:.68,
+        '--podium-scale':i===0?1:.91} as CSSProperties}
        onClick={()=>activeRef.current===i?onOpen():scrollToIndex(i)}
        aria-label={`第 ${i+1} 名：${item.achievement.name}，${item.game.name}，稀有度 ${item.achievement.rarity}%`}
        title={`#${i+1} ${item.achievement.name} · ${item.game.name}`}>
