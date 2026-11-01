@@ -237,6 +237,15 @@ try{
     });
     assert.ok(Math.abs(artFrame.ratio-1)<.04,'Square achievement art retains a square fitting frame');
     assert.equal(artFrame.fit,'contain','Achievement art is not cropped');
+    assert.equal(await page.locator('.ah-day-detail .ah-achievement-card[data-rarity-tier="ultra"]').count(),12,'Daily unlocks share the ultra-rare tier');
+    const dailyFrame=await page.locator('.ah-day-detail .ah-achievement-art.ah-rarity-ultra').first().evaluate(el=>({
+      border:getComputedStyle(el).borderTopWidth,shine:getComputedStyle(el,'::after').animationName,
+      fit:getComputedStyle(el.querySelector('img')).objectFit
+    }));
+    assert.equal(dailyFrame.border,'2px','Daily achievement uses gold outline');
+    assert.ok(dailyFrame.shine.includes('ah-foil-orbit'),'Daily achievement inherits the animated frame');
+    assert.equal(dailyFrame.fit,'contain','Daily achievement artwork remains uncropped');
+
     await page.getByRole('button',{name:/前一天 2026 年 10 月 26 日/}).click();
     assert.equal(await page.getByRole('heading',{name:'2026 年 10 月 26 日'}).count(),1);
     assert.ok((await page.locator('.ah-empty-day').innerText()).includes('没有'));
@@ -378,6 +387,22 @@ try{
       return {imageWidth:rect.width,imageRatio:rect.width/rect.height,fit:getComputedStyle(image.querySelector('img')).objectFit,titleSize:parseFloat(getComputedStyle(title).fontSize),descriptionSize:parseFloat(getComputedStyle(description).fontSize),sameRow:Math.abs(description.getBoundingClientRect().top-rarity.getBoundingClientRect().top)<1,tier:rarity.getAttribute('data-rarity-tier'),icon:rarity.querySelector('svg')?.getAttribute('class'),fits:row.scrollWidth<=row.clientWidth+1};
     }));
     assert.deepEqual(achievementLayout.map(a=>a.tier),['rare','rare','common',null]);
+    assert.deepEqual(await page.locator('.game-detail .achievement').evaluateAll(rows=>rows.map(el=>el.dataset.frameTier)),
+      ['rare','ultra','common','common'],'Game achievements use strict 1% / 10% frame tiers');
+    const frameResult=await page.locator('.game-detail .achievement-image.ah-rarity-gold').first().evaluate(el=>({
+      border:getComputedStyle(el).borderTopWidth,
+      shine:getComputedStyle(el,'::after').animationName,
+      fit:getComputedStyle(el.querySelector('img')).objectFit
+    }));
+    assert.equal(frameResult.border,'2px','Game achievement gilding matches the showcase');
+    assert.ok(frameResult.shine.includes('ah-foil-orbit'),'Game detail inherits flowing gold foil');
+    assert.equal(frameResult.fit,'contain','Game detail retains uncropped achievement images');
+    assert.equal(await page.locator('.game-detail .achievement-image.ah-rarity-common').count(),2,'Standard and unknown achievements retain gray frames');
+    await page.emulateMedia({reducedMotion:'reduce'});
+    assert.equal(await page.locator('.game-detail .achievement-image.ah-rarity-gold').first().evaluate(el=>getComputedStyle(el,'::after').animationName),
+      'none','Reduced motion disables the universal gilt animation');
+    await page.emulateMedia({reducedMotion:'no-preference'});
+
     const achievementIds=()=>page.locator('.achievement').evaluateAll(rows=>rows.map(row=>row.getAttribute('data-achievement-id')));
     assert.deepEqual(await achievementIds(),['2','1','3','4'],'All-classes tab sorts achievements globally, newest first');
     assert.equal(await page.locator('.game-detail .eyebrow').count(),0,'GAME DETAILS heading is removed');

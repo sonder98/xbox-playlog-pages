@@ -134,14 +134,15 @@ function Sheet({day,activity,minDay='2022-01-01',onChangeDay,onClose,onDetail}:{
 }
 function DayCard({event,onGame,rank,showFullDate=false}:{event:Pick<UnlockEvent,'achievement'|'game'> & {time:number|null};onGame:(id:string)=>void;rank?:number;showFullDate?:boolean}){
  const a=event.achievement,g=event.game,rare=a.rarity!==null&&a.rarity<10;
- const tier=rank!==undefined?achievementRarityTier(a.rarity):null;
+ const tier=achievementRarityTier(a.rarity);
+ const frameClass='ah-achievement-art ah-rarity-'+tier+(tier!=='common'?' ah-rarity-gold':'');
  const group=g.groupStatus==='verified'?g.groups?.find(v=>v.achievementIds.includes(a.id)):undefined;
- return <article className={'ah-achievement-card'+(tier?' ah-showcase-card ah-showcase-card-'+tier:'')}
-  data-rarity-tier={tier??undefined} data-achievement-id={a.id} data-game-id={g.id}>
+ return <article className={'ah-achievement-card'+(rank!==undefined?' ah-showcase-card ah-showcase-card-'+tier:'')}
+  data-rarity-tier={tier} data-achievement-id={a.id} data-game-id={g.id}>
   <div className="ah-achievement-primary">
-   {rank===undefined?<Art src={a.cachedImage||a.image} className="ah-achievement-art"/>:
+   {rank===undefined?<Art src={a.cachedImage||a.image} className={frameClass} alt={a.name}/>:
     <div className="ah-showcase-ranked-art"><Art src={a.cachedImage||a.image}
-     className={'ah-achievement-art ah-rarity-'+tier+(tier!=='common'?' ah-rarity-gold':'')} alt={a.name}/>
+     className={frameClass} alt={a.name}/>
      <span className={'ah-showcase-rank'+(rank<=3?' is-top':'')}>#{String(rank).padStart(2,'0')}</span></div>}
    <div className="ah-achievement-main">
     <div className="ah-achievement-heading"><h3>{a.name}</h3>{event.time===null?<span className="ah-unlock-unknown">解锁时间未知</span>:<time dateTime={a.unlockedAt||undefined}>{showFullDate?fullTime(event.time):time(event.time)}</time>}</div>
