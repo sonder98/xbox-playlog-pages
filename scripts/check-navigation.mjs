@@ -164,12 +164,30 @@ try{
     assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-progress strong').innerText(),'50%',
       'Combined base + DLC progress displays 2 / 4 = 50%, not base-only Mythic 100%');
     assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-progress-track').getAttribute('aria-valuenow'),'50');
-    assert.equal((await recent.locator('.recent-game-card').first().locator('.recent-game-hours').innerText()).trim(),'· 1 h',
-      'Recently played cards append cumulative hours directly after 50% without moving completion');
+    assert.equal((await recent.locator('.recent-game-card').first().locator('.recent-game-hours').innerText()).trim(),'累计游玩 1 h',
+      'Lifetime hours appear on their own line beneath the title');
     assert.equal(await recent.locator('.recent-game-card .recent-game-hours').count(),10,
-      'Every recent game, including unmeasured ones, has a consistent time slot');
+      'Every recent game, including unmeasured ones, keeps a separate hours row');
+    assert.equal(await recent.locator('.recent-game-progress .recent-game-hours').count(),0,
+      'No hours label is allowed to shorten the achievement progress bar');
+    const recentGeometry=await recent.locator('.recent-game-card').first().evaluate(card=>{
+      const box=(selector)=>card.querySelector(selector).getBoundingClientRect();
+      const title=box('.recent-game-title'),hours=box('.recent-game-hours');
+      const progress=box('.recent-game-progress'),track=box('.recent-game-progress-track');
+      const percent=box('.recent-game-progress strong');
+      return {titleBottom:title.bottom,hoursTop:hours.top,hoursBottom:hours.bottom,
+        progressTop:progress.top,trackRatio:track.width/progress.width,
+        trackRight:track.right,percentLeft:percent.left,
+        progressWidth:progress.width,cardWidth:card.clientWidth};
+    });
+    assert.ok(recentGeometry.titleBottom<=recentGeometry.hoursTop&&recentGeometry.hoursBottom<=recentGeometry.progressTop,
+      'Title, cumulative hours and progress are three distinct vertically ordered rows');
+    assert.ok(recentGeometry.trackRatio>.55,
+      'Progress bar recovers at least 55% of its dedicated row on both mobile and desktop');
+    assert.ok(recentGeometry.trackRight<=recentGeometry.percentLeft,
+      'Percentage sits to the right of the full progress track');
     assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-progress').evaluate(el=>getComputedStyle(el).display),'flex',
-      'Completion percentage and lifetime hours share one compact row');
+      'Completion percentage and progress track share a row');
     assert.equal(await recent.locator('.recent-games-rail').evaluate(el=>getComputedStyle(el).overflowX),'auto',
       'Recent games scroll as one cover-first horizontal row');
     if(mobile){
