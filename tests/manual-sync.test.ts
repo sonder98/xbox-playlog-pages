@@ -20,6 +20,18 @@ test('manual sync refuses unscoped/invalid token and maps permission rejection w
  await assert.rejects(dispatchXboxSync('ghp_legacy',id,async()=>{throw Error('Should not call API');}),/fine-grained/);
  await assert.rejects(dispatchXboxSync('github_pat_fixture','invalid',async()=>{throw Error('Should not call API');}),/ID/);
  await assert.rejects(dispatchXboxSync('github_pat_fixture',id,async()=>new Response('',{status:403})),/Actions: Read and write/);
+ await assert.rejects(
+  dispatchXboxSync('github_pat_fixture',id,async()=>Response.json({message:'Resource not accessible by personal access token'},{status:403})),
+  /Resource not accessible by personal access token/
+ );
+ await assert.rejects(
+  dispatchXboxSync('github_pat_fixture',id,async()=>Response.json({message:'API rate limit exceeded'},{status:403})),
+  /Rate limit/
+ );
+ await assert.rejects(
+  dispatchXboxSync('github_pat_fixture',id,async()=>new Response('',{status:403,headers:{'x-ratelimit-remaining':'0'}})),
+  /不需要重新创建令牌/
+ );
 });
 test('run monitoring matches only the clicked request and not an unrelated scheduled or manual run',async()=>{
  const run=(display_title:string,event='workflow_dispatch')=>({id:123,name:'Xbox sync',status:'queued',conclusion:null,html_url:'https://github.com/sonder98/xbox-playlog-pages/actions/runs/123',created_at:'2026-11-01T00:00:00Z',updated_at:'2026-11-01T00:00:00Z',display_title,event});
