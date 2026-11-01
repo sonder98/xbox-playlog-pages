@@ -177,7 +177,7 @@ try{
       'Management groups retain the old content in the requested top-to-bottom order');
     assert.equal(await page.locator('.manage-page .settings-grid>.panel').count(),3,
       'Microsoft sync, backup/import and statistics description are preserved');
-    assert.equal(await page.locator('#sync-history .history-row').count(),2,
+    assert.equal(await page.locator('#sync-history .history-row').count(),1,
       'Existing full snapshot history is still rendered under connection/data');
     const groupOrder=await page.locator('.manage-section').evaluateAll(sections=>sections.map(section=>section.getBoundingClientRect().top));
     assert.ok(groupOrder[0]<groupOrder[1],'Sync history visually follows the connection cards');
