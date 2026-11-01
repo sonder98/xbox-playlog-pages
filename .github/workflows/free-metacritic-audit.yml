@@ -1,0 +1,33 @@
+name: Audit free Metascore sources
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/free-metacritic-audit.yml'
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - run: npm install --no-save --ignore-scripts playwright
+      - name: Validate source and tests
+        run: |
+          npm test
+          npx tsc --noEmit
+      - name: Restore encrypted Xbox snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/live-assets.mjs restore-snapshot
+      - name: Audit free PC Metascores against private Xbox library
+        env:
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
+        run: node --experimental-strip-types scripts/free-metacritic-audit.ts
