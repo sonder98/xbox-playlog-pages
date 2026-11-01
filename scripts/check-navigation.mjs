@@ -82,6 +82,37 @@ try{
     }
     await unlock();
     await page.locator('.recent-game-card').first().waitFor();
+    // Manual sync is fully client-side, and the scoped Actions credential never reaches Playlog hosting.
+    let manualDispatches=0,requestedId='';
+    await page.route('https://api.github.com/repos/sonder98/xbox-playlog-pages/actions/workflows/**',route=>{
+      const req=route.request();
+      if(req.method()==='POST'){
+        manualDispatches++;
+        assert.equal(req.headers().authorization,'Bearer github_pat_fixture_only');
+        const body=req.postDataJSON();
+        assert.equal(body.ref,'main');
+        requestedId=body.inputs.request_id;
+        return route.fulfill({status:204,body:''});
+      }
+      return route.fulfill({json:{workflow_runs:requestedId?[{id:123,display_title:'Xbox sync (workflow_dispatch · '+requestedId+')',name:'Sync Xbox records',event:'workflow_dispatch',status:'queued',conclusion:null,html_url:'https://github.com/sonder98/xbox-playlog-pages/actions/runs/123',created_at:new Date().toISOString(),updated_at:new Date().toISOString()}]:[]}});
+    });
+    await page.locator('.title-row .overview-refresh').click();
+    const syncDialog=page.getByRole('dialog',{name:'手动同步 Xbox 游戏记录'});
+    await syncDialog.waitFor();
+    await syncDialog.locator('input[aria-label="GitHub fine-grained token"]').fill('github_pat_fixture_only');
+    await syncDialog.getByRole('button',{name:'保存授权并立即同步'}).click();
+    await syncDialog.getByText('已提交，等待 GitHub 排队').waitFor();
+    assert.equal(manualDispatches,1,'Connected browser dispatches exactly one authenticated workflow');
+    const encryptedToken=await page.evaluate(()=>localStorage.getItem('xbox-playlog-manual-sync-token-v1'));
+    assert.ok(encryptedToken&&!encryptedToken.includes('github_pat_fixture_only'),'Scoped Actions token is encrypted in browser storage');
+    await syncDialog.getByRole('button',{name:'关闭详情'}).click();
+    await page.locator('.title-row .overview-refresh').click();
+    await syncDialog.waitFor();
+    assert.equal(manualDispatches,1,'Reopening an unfinished sync never dispatches a duplicate run');
+    await syncDialog.getByRole('button',{name:'移除此设备授权'}).click();
+    assert.equal(await page.evaluate(()=>localStorage.getItem('xbox-playlog-manual-sync-token-v1')),null,'Disconnect removes the local token');
+    await syncDialog.getByRole('button',{name:'关闭详情'}).click();
+    console.log((mobile?'Mobile':'Desktop')+': PASS scoped one-click Xbox sync, encrypted credentials, job resume and disconnect');
     const pwa=await page.evaluate(async()=>{
       const link=document.querySelector('link[rel="manifest"]');
       return {href:link?.getAttribute('href'),manifest:link?await (await fetch(link.href)).json():null};

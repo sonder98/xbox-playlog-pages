@@ -2640,3 +2640,23 @@ footer .dot {
   object-fit:cover;
   border-radius:8px;
 }
+
+/* Manual Xbox sync: match the existing dark, neon-green mobile-first language. */
+.manual-sync-dialog .dialog-body { max-width:640px; }
+.manual-sync-connect { margin:18px 0; padding:17px; border:1px solid var(--border); border-radius:16px; background:var(--surface-raised); }
+.manual-sync-connect h3 { font-size:16px; margin:0 0 9px; }
+.manual-sync-connect p { font-size:13px; line-height:1.6; color:var(--text-secondary); margin-bottom:12px; }
+.manual-sync-connect a,.manual-sync-links a,.manual-sync-progress a { display:inline-flex; align-items:center; gap:6px; color:var(--accent); font-size:13px; text-decoration:none; }
+.manual-sync-connect a { margin-bottom:10px; }
+.manual-sync-connect .field { display:block; margin:12px 0; }
+.manual-sync-connect .field input { display:block; width:100%; font-size:16px; }
+.manual-sync-progress { display:flex; align-items:flex-start; gap:12px; padding:17px; margin:18px 0; border:1px solid rgba(199,255,46,.35); border-radius:16px; background:var(--surface-raised); }
+.manual-sync-progress.is-error { border-color:rgba(255,120,120,.5); }
+.manual-sync-progress > .dot { flex-shrink:0; margin-top:6px; }
+.manual-sync-progress > div { min-width:0; flex:1; }
+.manual-sync-progress strong { display:block; color:var(--text-primary); font-size:15px; }
+.manual-sync-progress p { margin:6px 0 10px; color:var(--text-secondary); font-size:13px; line-height:1.6; }
+.manual-sync-progress a { margin-right:13px; margin-bottom:4px; }
+.manual-sync-links { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin:17px 0 10px; }
+.manual-sync-dialog .note svg { vertical-align:middle; }
+@media(max-width:700px) { .manual-sync-connect { padding:14px; } }

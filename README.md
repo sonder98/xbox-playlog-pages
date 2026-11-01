@@ -86,3 +86,9 @@ npm run dev
 - 封面缺失：先检查澳区商店数据匹配、`ProductKind`、`ImagePurpose`、图片源是否允许访问，以及图片缓存是否回退微软原图。
 - 成就分组未知：不要根据积分或数量猜测本体／DLC，等待官方有效分组或唯一可验证的目录补充分组。
 - GitHub Pages 未更新：检查 `Sync Xbox records` 是否成功发布 Release，再核对 `Deploy Playlog`；同步工作流显式派发 Pages，不依赖 Git 密文提交。GitHub Actions cron 是尽力触发，超过半小时未跑不表示数据遗失，可手动派发同步。
+
+### 网站内手动同步
+
+解锁后点击右上角「立即同步」（手机端是刷新图标）。首次使用需到 GitHub 创建仅对 sonder98/xbox-playlog-pages 有效的 fine-grained personal access token，Repository permissions 中仅将 Actions 设置为 Read and write。粘贴进网页后点击「保存授权并立即同步」，此后再点击刷新图标即可直接发起同步。进度包括 GitHub 排队、Xbox 数据读取、Pages 部署，成功后网页会自动载入最新快照。未授权时仍可直接访问 GitHub Actions 手动运行。
+
+此令牌由 APP_PASSWORD 加密，仅存在当前浏览器的 localStorage，浏览器仅将其直接发送给 api.github.com；从不将令牌放进源码、站点文件或日志。可以在弹窗「移除此设备授权」删除本机令牌；彻底撤销须去 GitHub 账户设置删除该 token。不同浏览器需要分别授权，切勿将令牌发送给他人或粘贴到聊天中。

@@ -1,10 +1,15 @@
 name: Sync Xbox records
-run-name: Xbox sync (${{ github.event_name }})
+run-name: Xbox sync (${{ github.event_name }} · ${{ inputs.request_id }})
 on:
   schedule:
     # Re-register schedule after missing 3 consecutive fires. GitHub cron is best-effort.
     - cron: '17,47 * * * *'
   workflow_dispatch:
+    inputs:
+      request_id:
+        description: 'Optional manual sync request ID'
+        required: false
+        type: string
   push:
     branches: [main]
     paths:
@@ -79,4 +84,5 @@ jobs:
       - name: Trigger Pages explicitly (bot pushes do not start push workflows)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run pages.yml --ref main
+          SYNC_REQUEST_ID: ${{ inputs.request_id }}
+        run: gh workflow run pages.yml --ref main -f request_id="$SYNC_REQUEST_ID"
