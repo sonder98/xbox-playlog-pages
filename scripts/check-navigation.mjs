@@ -157,6 +157,10 @@ try{
       'Rarest visible achievement displays 0% unlock rate');
     assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-top-label').innerText(),'TOP 100',
       'Rarity display shows the expanded TOP 100 capacity');
+    assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-foot').locator('span').count(),0,
+      'Rarity showcase footer has no redundant explanation');
+    assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-foot').evaluate(el=>getComputedStyle(el).justifyContent),
+      'flex-end','Rarity showcase arrows stay right-aligned');
 
     await page.locator('.ah-showcase-art img').first().waitFor();
     const wideArt=page.locator('.ah-showcase-art').filter({has:page.locator('img[src*="wide.svg"]')}).first();
@@ -207,6 +211,10 @@ try{
       'Each of the 12 games contributes a single chronological adjacent unlock pair');
     assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-showcase-top-label').innerText(),'TOP 100',
       'Gap preview also uses TOP 100');
+    assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-showcase-foot').locator('span').count(),0,
+      'Gap showcase footer has no count/ranking explanation');
+    assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-showcase-foot').evaluate(el=>getComputedStyle(el).justifyContent),
+      'flex-end','Gap showcase arrows stay right-aligned');
 
     assert.equal((await page.locator('.ah-gap-tile-duration').first().innerText()).replace(/\s+/g,' ').trim(),'间隔 1.0 天',
       'Gap previews show one-decimal elapsed days');
@@ -232,6 +240,22 @@ try{
       '完成一次挑战。','Later achievement keeps its full unlock requirement');
     assert.ok(await page.locator('.ah-gap-detail-card').first().evaluate(el=>el.scrollWidth<=el.clientWidth+1),
       'Mobile achievement conditions do not cause horizontal overflow');
+    assert.equal(await page.locator('.ah-gap-achievement-condition').first().evaluate(el=>getComputedStyle(el).textAlign),
+      'center','Each unlock description is centered beneath the achievement name');
+    const firstPairMeta=await page.locator('.ah-gap-detail-card').first().locator('.ah-gap-side-meta').evaluateAll(nodes=>nodes.map(el=>({
+      rarity:el.querySelector('.ah-gap-side-rarity')?.textContent?.trim(),
+      timestamp:el.querySelector('time')?.textContent?.trim(),
+      order:[...el.children].map(child=>child.tagName.toLowerCase()),
+      alignment:getComputedStyle(el).justifyContent,
+      overflow:el.scrollWidth>el.clientWidth+1
+    })));
+    assert.equal(firstPairMeta.length,2,'Each achievement gets its own rarity and timestamp');
+    assert.deepEqual(firstPairMeta.map(meta=>meta.rarity),['0%','9.9%'],
+      'Each side shows its own original Xbox rarity before unlock date');
+    assert.ok(firstPairMeta.every(meta=>meta.order.join(',')==='span,time'&&meta.timestamp?.includes('2026.10.')),
+      'Rarity precedes the existing full timestamp in DOM order');
+    assert.ok(firstPairMeta.every(meta=>meta.alignment==='center'&&!meta.overflow),
+      'Rarity/date metadata stays centered without mobile overflow');
 
     assert.deepEqual(await page.locator('.ah-gap-detail-card').first().locator('[data-gap-side]').evaluateAll(nodes=>nodes.map(node=>node.dataset.gapSide)),
       ['earlier','later'],'Detail renders chronologically ordered achievements on two sides');
