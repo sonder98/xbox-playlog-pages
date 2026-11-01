@@ -6,12 +6,12 @@ import {chooseSteam,pcScore,keyName} from './steam-metacritic-matcher.ts';
  * Strict exact normalized-name equivalence avoids fake coverage. */
 const {old,target}=getPasswords(process.env);
 const vault=await readVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),old,target);
-const games=(vault.records?.[0]?.games||[]).filter((x:any)=>typeof x.name==='string'&&x.name.trim());
+const games=(vault.records?.[0]?.games||[]).filter((x:any)=>x.officialHidden===undefined&&typeof x.name==='string'&&x.name.trim());
 const stats={all:{games:0,steam:0,cheapshark:0,cheapsharkNew:0,union:0,missing:0,errors:0},
  eligible:{games:0,steam:0,cheapshark:0,cheapsharkNew:0,union:0,missing:0,errors:0}};
 let lastRequestAt=0;
 async function fetchJson(url:string):Promise<any>{
- const ms=Date.now()-lastRequestAt;if(ms<500)await new Promise(r=>setTimeout(r,500-ms));
+ const ms=Date.now()-lastRequestAt;if(ms<950)await new Promise(r=>setTimeout(r,950-ms));
  lastRequestAt=Date.now();
  const res=await fetch(url,{signal:AbortSignal.timeout(18000),headers:{accept:'application/json','user-agent':'XBOX-Playlog-Coverage-Experiment/1.0'}});
  if(!res.ok)throw Error('HTTP '+res.status);
