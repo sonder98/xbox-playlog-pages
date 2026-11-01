@@ -58,7 +58,7 @@ export function catalogGroups(bundle:CatalogBundle|undefined,game:Game):Achievem
  if(map.size!==game.achievements.length)return;
  return validateGroups(catalog.data.groups.map(g=>({...g,achievementIds:g.achievementIds.map(id=>map.get(id)!)})),game.achievements,game.total,game.earned);
 }
-export type ScanAudit={version:1;at:string;titlePages:number;achievementHistoryPages:number;historySourcesFailed:number;historyTitlesAdded:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;failed:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number;matchedAchievementDates:number};};
+export type ScanAudit={version:1;at:string;titlePages:number;achievementHistoryPages:number;historySourcesFailed:number;historyTitlesAdded:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;fullRefresh:boolean;reusedDetails:number;detailedReads:number;statsReads:number;statsSkipped:number;failed:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number;matchedAchievementDates:number};};
 export function compareLibrary(games:Game[],prior?:RecordData,aliases=new Map<string,string[]>(),awardNames=new Map<string,Map<string,string>>()){
  const out={matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0};
  const choices=new Map(games.map(g=>{const names=new Set([g.name,...(aliases.get(g.id)||[])].map(normalizedName));return [g.id,(prior?.games||[]).filter(p=>names.has(normalizedName(p.name)))];}));
@@ -91,7 +91,17 @@ export function mergeTitleHistories(hub:any[],modern:any[],legacy:any[]){
  }
  return [...titles.values()];
 }
-export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void}={}){
+/** One full catalog refresh per day; incremental runs still check official title summaries.
+ * This also refreshes rarity percentages and retries unavailable official groups. */
+export function refreshCatalogToday(previousAt:string|undefined,at:string){
+ return at.slice(11,13)==='02' && previousAt?.slice(0,13)!==at.slice(0,13);
+}
+/** Poll current playtime for recently played or unmeasured games only. */
+export function shouldReadPlaytime(lastPlayed:string|null,oldMinutes:number|null,at:string){
+ const played=lastPlayed?Date.parse(lastPlayed):NaN;
+ return oldMinutes===null || (Number.isFinite(played) && Date.parse(at)-played<7*86400_000);
+}
+export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
  // Sustained pacing, no retries against permissions/security errors. 429 stops this scan.
  const request:typeof fetch=async(input,init)=>{await pause(1050);return (options.request||fetch)(input,init);};
@@ -110,7 +120,8 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  // Display policy: explicit visible=true is the only showable Xbox state.
  // Missing flags remain unknown in the archive, but are hidden in UI and on later syncs.
  const games=normalizeTitles({titles:titles.filter(t=>!options.onlyIds||options.onlyIds.has(String(t.titleId))||!prior.has(String(t.titleId)))});
- const audit:ScanAudit={version:1,at:new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
+ const audit:ScanAudit={version:1,at:options.now||new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,fullRefresh:false,reusedDetails:0,detailedReads:0,statsReads:0,statsSkipped:0,failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
+ audit.fullRefresh=refreshCatalogToday(options.previous?.at,audit.at);
  const pagesFor=async(id:string,version:string,possible=false,legacy=false,earned=false)=>{
   const pages:any[]=[];const result=await collectPages(async token=>{
    const params=new URLSearchParams(legacy?{earned:String(earned)}:{contractVersion:version,possibleOnly:String(possible)});if(token)params.set('continuationToken',token);
@@ -139,11 +150,18 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    const title=titles.find(t=>String(t.titleId)===game.id),summary=title?.achievement;
    const lastPlayed=title?.titleHistory?.lastTimePlayed||null;
    const oldAchievements=old?.achievements||[],oldGroups=old?.groups||[];
-   const unchanged=!!old&&oldAchievements.length>0&&old.groupStatus==='verified'&&oldGroups.length>0&&!!lastPlayed&&old.lastPlayed===lastPlayed&&summary?.totalAchievements>0&&summary.totalAchievements===old.total&&summary.currentAchievements===old.earned&&summary.currentGamerscore===old.score;
+   const cacheComplete=oldAchievements.length>0&&oldAchievements.length===old?.total&&(old?.groupStatus!=='verified'||oldGroups.some(g=>g.kind==='base'));
+   const unchanged=!!old&&cacheComplete&&!audit.fullRefresh&&old.lastPlayed===lastPlayed&&summary?.totalAchievements>0&&summary.totalAchievements===old.total&&summary.currentAchievements===old.earned&&summary.currentGamerscore===old.score;
    if(unchanged){
-    const minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id);
-    Object.assign(game,{achievements:oldAchievements,groups:oldGroups,groupStatus:old.groupStatus,earned:old.earned,total:old.total,score:old.score,maxScore:old.maxScore,minutes:minutes??old.minutes,lastPlayed:old.lastPlayed});
-    audit.complete++;audit.processed++;audit.preserved++;audit.rarityTitles+=oldAchievements.some(a=>a.rarity!==null)?1:0;audit.rarityAchievements+=oldAchievements.filter(a=>a.rarity!==null).length;audit.images+=oldAchievements.filter(a=>!!a.image).length;audit.unlockDates+=oldAchievements.filter(a=>!!a.unlockedAt).length;audit.officialBaseGroups++;if(oldGroups.some(g=>g.kind==='dlc'))audit.officialAddonGroups++;if(game.minutes!==null)audit.playtimeTitles++;options.progress?.(audit.processed,games.length,audit);continue;
+    let minutes=old.minutes;
+    if(shouldReadPlaytime(lastPlayed,old.minutes,audit.at)){
+     minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id)??old.minutes;
+     audit.statsReads++;
+    }else audit.statsSkipped++;
+    Object.assign(game,{achievements:oldAchievements,groups:oldGroups,groupStatus:old.groupStatus,earned:old.earned,total:old.total,score:old.score,maxScore:old.maxScore,minutes,lastPlayed:old.lastPlayed});
+    audit.complete++;audit.processed++;audit.preserved++;audit.reusedDetails++;audit.rarityTitles+=oldAchievements.some(a=>a.rarity!==null)?1:0;audit.rarityAchievements+=oldAchievements.filter(a=>a.rarity!==null).length;audit.images+=oldAchievements.filter(a=>!!a.image).length;audit.unlockDates+=oldAchievements.filter(a=>!!a.unlockedAt).length;
+    if(old.groupStatus==='verified'){audit.officialBaseGroups++;if(oldGroups.some(g=>g.kind==='dlc'))audit.officialAddonGroups++;}else audit.unknownGroups++;
+    if(game.minutes!==null)audit.playtimeTitles++;options.progress?.(audit.processed,games.length,audit);continue;
    }
    let data:Awaited<ReturnType<typeof pagesFor>>|undefined,version='6';const isLegacy=titles.find(t=>String(t.titleId)===game.id)?.devices?.some((d:any)=>/xbox\s*360/i.test(String(d)))||titles.find(t=>String(t.titleId)===game.id)?.achievement?.sourceVersion===1;
    if(isLegacy){
@@ -177,7 +195,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    if(version==='1')game.score=awards.filter(a=>a.unlocked).reduce((sum,a)=>sum+(a.points||0),0);
    if(expectedScore===null)game.maxScore=returnedScore;
    if(awards.length!==game.total||unlocked!==game.earned||(expectedScore!==null&&expectedScore!==returnedScore)){audit.summaryMismatches++;throw Error('Xbox 成就明细与摘要不一致。');}
-   game.achievements=awards;complete=true;audit.complete++;audit.contracts[version]=(audit.contracts[version]||0)+1;
+   game.achievements=awards;complete=true;audit.complete++;audit.detailedReads++;audit.contracts[version]=(audit.contracts[version]||0)+1;
    let groups=officialGroups(data.pages,game.id,awards);
    if(!groups&&version!=='6'){
     try{const metadata=await pagesFor(game.id,'6',true);groups=officialGroups(metadata.pages,game.id,awards);
@@ -196,7 +214,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    if(awards.some(a=>a.rarity!==null))audit.rarityTitles++;audit.rarityAchievements+=awards.filter(a=>a.rarity!==null).length;
    audit.images+=awards.filter(a=>!!a.image).length;audit.unlockDates+=awards.filter(a=>!!a.unlockedAt).length;
    // Legacy time is explicitly unavailable, unless an earlier direct snapshot has a value.
-   if(version!=='1')game.minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id);
+   if(version!=='1'){game.minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id);audit.statsReads++;}
    if(game.minutes!==null)audit.playtimeTitles++;else if(old?.minutes!=null)game.minutes=old.minutes;
   }catch(error){
    audit.failed++;
