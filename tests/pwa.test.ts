@@ -4,7 +4,9 @@ import {readFileSync} from 'node:fs';
 
 test('PWA installs as a standalone app at both GitHub subpath and hosting root',()=>{
  const manifest=JSON.parse(readFileSync('public/manifest.webmanifest','utf8'));
- assert.equal(manifest.name,'游迹 · Xbox Playlog');
+ assert.equal(manifest.name,'XBOX Playlog');
+ assert.equal(manifest.short_name,'XBOX Playlog');
+ assert.deepEqual(manifest.icons.map((icon:any)=>icon.src),['pwa-192-v2.png','pwa-512-v2.png']);
  assert.equal(manifest.display,'standalone');
  assert.equal(manifest.start_url,'./');
  assert.equal(manifest.scope,'./');
@@ -12,7 +14,9 @@ test('PWA installs as a standalone app at both GitHub subpath and hosting root',
  assert.ok(manifest.icons.some((icon:any)=>icon.sizes==='512x512'));
  const html=readFileSync('index.html','utf8');
  assert.ok(html.includes('%BASE_URL%manifest.webmanifest'));
- assert.ok(html.includes('%BASE_URL%apple-touch-icon.png'));
+ assert.ok(html.includes('%BASE_URL%apple-touch-icon-v2.png'));
+ assert.ok(html.includes('apple-mobile-web-app-title" content="XBOX Playlog"'));
+ assert.ok(html.includes('<title>XBOX Playlog</title>'));
  const vite=readFileSync('vite.config.ts','utf8');
  assert.ok(vite.includes("process.env.PLAYLOG_BASE||'/xbox-playlog-pages/'"));
 });
@@ -29,5 +33,5 @@ test('PWA icons are generated from local SVG via existing Sharp dependency',()=>
  const build=JSON.parse(readFileSync('package.json','utf8')).scripts.build;
  assert.ok(build.startsWith('node --experimental-strip-types scripts/generate-pwa-icons.ts'));
  const generator=readFileSync('scripts/generate-pwa-icons.ts','utf8');
- for(const file of ['pwa-192.png','pwa-512.png','apple-touch-icon.png'])assert.ok(generator.includes(file));
+ for(const file of ['pwa-192-v2.png','pwa-512-v2.png','apple-touch-icon-v2.png','apple-touch-icon.png'])assert.ok(generator.includes(file));
 });
