@@ -1519,39 +1519,10 @@ footer .dot {
 .dialog.game-detail .dialog-body { padding-top:16px; }
 .overview-moment { grid-template-columns:1fr; }
 
-/* Playtime hall of fame: full-frame artwork, medal ornament and readable hours. */
-.top-worlds { margin-bottom:24px; }
-.top-worlds .section-title h2 { margin-top:8px; }
-.top-rail { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(180px,1fr); gap:16px; overflow-x:auto; scroll-snap-type:x mandatory; padding:8px 4px 16px; scrollbar-width:thin; scrollbar-color:var(--accent) var(--surface-raised); }
-.top-card { --rank-color:#C7FF2E; min-width:0; padding:16px; display:flex; flex-direction:column; align-items:stretch; text-align:left; border:1px solid var(--border); border-radius:20px; background:var(--surface-raised); color:var(--text-primary); scroll-snap-align:start; transition:background 180ms,transform 180ms; cursor:pointer; }
-.top-card:nth-child(2) { --rank-color:#83E9D3; }
-.top-card:nth-child(3) { --rank-color:#9CCBFF; }
-.top-card:nth-child(4) { --rank-color:#C5AEFF; }
-.top-card:nth-child(5) { --rank-color:#F5C78D; }
-.top-card:hover { background:var(--surface-hover); }
-.top-card:active { transform:scale(.98); }
-.top-rank { display:flex; justify-content:space-between; align-items:center; color:var(--rank-color); font-size:11px; letter-spacing:2px; margin-bottom:16px; }
-.top-rank b { font-size:28px; font-weight:600; line-height:1; letter-spacing:-1px; }
-.top-card .game-cover { margin-bottom:20px; }
-.top-card .game-cover img { display:block; }
-.top-name { font-size:16px; font-weight:600; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:2.8em; overflow-wrap:anywhere; }
-.top-hours { display:flex; gap:6px; align-items:baseline; flex-wrap:wrap; margin:20px 0 12px; color:var(--rank-color); }
-.top-hours strong { font-size:32px; line-height:1.15; letter-spacing:-1px; font-weight:600; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
-.top-hours > span { color:var(--text-secondary); font-size:12px; }
-.top-time-bar { display:block; height:5px; border-radius:999px; background:rgba(255,255,255,.09); overflow:hidden; margin-top:auto; }
-.top-time-bar i { display:block; height:100%; background:var(--rank-color); border-radius:inherit; }
-.top-card.top-mythic { border-color:rgba(155,240,185,.28); }
-.top-rail:focus-visible { outline:2px solid var(--accent); outline-offset:4px; border-radius:12px; }
-@media(max-width:1150px) { .top-rail { grid-auto-columns:220px; } }
 @media(max-width:700px) {
   .dialog-body { padding:16px; scrollbar-gutter:auto; }
   .dialog-toolbar { min-height:56px; padding:6px 12px; }
-  .top-worlds .section-title { align-items:flex-start; gap:12px; }
-  .top-worlds .section-title > span { white-space:nowrap; margin-top:4px; font-size:11px; }
-  .top-rail { grid-auto-columns:min(240px,82%); gap:12px; }
-  .top-hours strong { font-size:36px; }
 }
-@media(prefers-reduced-motion:reduce) { .top-card { transition:none; } }
 
 /* iOS focuses small form text by zooming the viewport; keep touch form text >=16px.
    Preserve normal pinch zoom and accessibility zoom instead of disabling scaling. */
