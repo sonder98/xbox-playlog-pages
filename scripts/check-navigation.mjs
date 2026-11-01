@@ -157,6 +157,39 @@ try{
       await page.locator('[data-overview-section="recent"]').waitFor();
       console.log('Mobile: PASS four bottom tabs hidden initially, reveal on scroll, auto-hide and navigate');
     }
+    // Bottom/sidebar navigation: heatmap is a first-class third tab; the fourth
+    // combines previously separate connection/data and snapshot history screens.
+    const navSurface=page.locator(mobile?'nav.mobile-nav':'aside.sidebar nav');
+    assert.deepEqual(await navSurface.locator('button').allTextContents(),['概览','游戏库','成就','管理'],
+      'Both mobile and desktop have exactly four tabs in their new order');
+    await switchMainTab('成就');
+    await page.locator('.ah-month-card').first().waitFor();
+    assert.ok(page.url().endsWith('#achievements'),'Third tab opens the full heatmap directly');
+    assert.equal(await page.locator('.ah-full-history').count(),1,'Third tab has full monthly heatmap rather than overview preview');
+    assert.equal(await navSurface.locator('button').nth(2).getAttribute(mobile?'aria-current':'class'),mobile?'page':'active');
+    await page.getByRole('button',{name:'返回概览',exact:true}).click();
+    await page.locator('[data-overview-section="recent"]').waitFor();
+    await switchMainTab('管理');
+    await page.locator('[data-page="manage"]').waitFor();
+    assert.ok(page.url().endsWith('#manage'),'Fourth tab opens combined management screen');
+    assert.equal(await navSurface.locator('button').nth(3).getAttribute(mobile?'aria-current':'class'),mobile?'page':'active');
+    assert.deepEqual(await page.locator('.manage-section-heading h2').allTextContents(),['连接与数据','同步历史'],
+      'Management groups retain the old content in the requested top-to-bottom order');
+    assert.equal(await page.locator('.manage-page .settings-grid>.panel').count(),3,
+      'Microsoft sync, backup/import and statistics description are preserved');
+    assert.equal(await page.locator('#sync-history .history-row').count(),1,
+      'Existing full snapshot history is still rendered under connection/data');
+    const groupOrder=await page.locator('.manage-section').evaluateAll(sections=>sections.map(section=>section.getBoundingClientRect().top));
+    assert.ok(groupOrder[0]<groupOrder[1],'Sync history visually follows the connection cards');
+    for(const legacy of ['#settings','#history']){
+      await page.evaluate(hash=>{location.hash=hash;},legacy);
+      await page.locator('[data-page="manage"]').waitFor();
+      assert.equal(await navSurface.locator('button').nth(3).getAttribute(mobile?'aria-current':'class'),mobile?'page':'active',
+        'Old bookmark '+legacy+' resolves to the new fourth tab');
+    }
+    await switchMainTab('概览');
+    await page.locator('[data-overview-section="recent"]').waitFor();
+    console.log((mobile?'Mobile':'Desktop')+': PASS direct achievement tab, merged management hierarchy, legacy bookmarks and four-tab navigation');
     const recent=page.locator('[data-overview-section="recent"]');
     assert.equal(await recent.locator('.recent-game-card').count(),10,'Overview renders ten latest games in one horizontal rail');
     assert.equal(await recent.locator('.game-card').count(),0,'Recent games are not the old multi-line list');

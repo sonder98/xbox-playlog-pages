@@ -677,6 +677,22 @@ select {
   display:flex;
   gap:16px
 }
+/* One management tab: Xbox connection and backups first, sync history second. */
+.manage-page{display:flex;flex-direction:column;gap:38px;min-width:0;}
+.manage-section{display:flex;flex-direction:column;gap:16px;min-width:0;}
+.manage-section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;min-width:0;}
+.manage-section-heading .eyebrow{display:block;margin-bottom:5px;}
+.manage-section-heading h2{font-size:21px;font-weight:650;letter-spacing:-.4px;}
+.manage-section-heading p{font-size:12px;line-height:1.5;text-align:right;}
+.manage-page .settings-grid{align-items:stretch;}
+.manage-page #sync-history>.panel{min-width:0;}
+@media(max-width:700px){
+ .manage-page{gap:30px;}
+ .manage-section{gap:13px;}
+ .manage-section-heading{align-items:flex-start;flex-direction:column;gap:4px;}
+ .manage-section-heading h2{font-size:19px;}
+ .manage-section-heading p{text-align:left;font-size:11px;}
+}
 .data-actions {
   display:flex;
   flex-wrap:wrap;
