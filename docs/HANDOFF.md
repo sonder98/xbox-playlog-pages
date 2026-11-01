@@ -137,3 +137,8 @@ npm run build
 - `[tab,gameId,dayId,showcase,gapShowcase]` 路由变化 effect 在该点击保护期内**不再立即隐藏**；非点击切换仍按原规则隐藏。
 - 滚动/触摸/滚轮行为仍使用原先 1000ms 自动隐藏，但新计时器不得早于点击所承诺的剩余保护时间；保护结束后导航恢复隐藏和 `pointer-events:none`，PC 侧栏不受影响。
 - `scripts/check-navigation.mjs` 覆盖：默认隐藏、滚动显示及 1s 自动隐藏、切换后持续显示、重复点击延长 1.5s、到点隐藏及页面不被底栏拦截。
+
+### 2026-11-01 Cloudflare 免费定时器（准备完成、待用户配置）
+- GitHub `schedule` 长时间漏触发，手动 `workflow_dispatch` 成功证明 Xbox 数据链路正常。已准备 `cloudflare-sync/scheduler.mjs` 和 `docs/CLOUDFLARE_CRON_SETUP.md`；用户还需要在 Cloudflare 创建免费 Worker 并自行设置 GitHub fine-grained `Actions:write` Token 为 Worker Secret `GITHUB_ACTIONS_TOKEN`（不得在任何公开仓库、聊天或日志泄漏）。
+- Cloudflare 三条 Cron 与旧 `sync.yml` 等价，单独处理北京时间 23:42 和 00:02 时长强制采样。`sync.yml` 已支持 `workflow_dispatch.inputs.force_sweep`，不会破坏已有网页手动同步或日终扫库。
+- **暂时没有启用 Cloudflare、也没有关闭 GitHub `on.schedule`**。待 Cloudflare 至少一轮实测成功且 GitHub 同步/Pages 发布均成功后，再只删除 `sync.yml` 的 `schedule:` 块，避免迁移空窗和长期双重任务。
