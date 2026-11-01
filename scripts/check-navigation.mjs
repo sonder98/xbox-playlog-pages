@@ -246,7 +246,7 @@ try{
     await overviewSheet.waitFor({state:'hidden'});
     // Both TOP100 galleries now live between Recent Games and the time-played panel.
     const overviewOrder=await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection));
-    assert.deepEqual(overviewOrder,['heatmap','recent','showcases','top','stats'],
+    assert.deepEqual(overviewOrder,['heatmap','recent','showcases','dusty','top','stats'],
       'The achievement cabinets sit immediately after Recent Games on the overview');
     assert.equal(await page.locator('.ah-home-showcases > .ah-showcase').count(),2,
       'Overview contains exactly two achievement cabinets');
