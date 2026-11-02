@@ -64,7 +64,7 @@ try{
       return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#789"/></svg>`});
     });
     await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
-    await page.route('**/vault.json',route=>route.fulfill({json:activeEnvelope}));
+    await page.route('**/vault.json*',route=>route.fulfill({json:activeEnvelope}));
     async function unlock(hash=''){
       await page.goto('about:blank');
       await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/'+hash);
