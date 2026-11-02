@@ -919,6 +919,26 @@ try{
     await page.reload();
     await page.getByRole('button',{name:'锁定档案',exact:true}).waitFor();
     assert.equal(await page.locator('input[type="password"]').count(),0);
+    if(mobile){
+      // Simulate a release published while the PWA is open. The version
+      // mismatch reloads the shell, and explicit remembered-device consent
+      // restores the unlock automatically after navigation.
+      await page.route('**/version.json?check=*',route=>route.fulfill({json:{version:'new-release-test'}}));
+      await page.evaluate(()=>{
+        window.scrollTo(0,0);
+        const make=(type,y,end=false)=>{
+          const point=new Touch({identifier:1,target:document.body,clientX:160,clientY:y});
+          window.dispatchEvent(new TouchEvent(type,{touches:end?[]:[point],changedTouches:[point],bubbles:true,cancelable:true}));
+        };
+        make('touchstart',80);make('touchmove',250);make('touchend',250,true);
+      });
+      await page.waitForEvent('framenavigated',{timeout:18000});
+      await page.getByRole('button',{name:'锁定档案',exact:true}).waitFor();
+      assert.equal(await page.locator('input[type="password"]').count(),0,
+        'New release automatically reloads and restores explicitly remembered login');
+      await page.unroute('**/version.json?check=*');
+      console.log('Mobile: PASS PWA version upgrade via pull without another login');
+    }
     await page.getByRole('button',{name:'锁定档案',exact:true}).click();
     await page.locator('input[type="password"]').waitFor();
     await page.reload();
