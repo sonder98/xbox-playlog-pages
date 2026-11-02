@@ -887,6 +887,13 @@ try{
       updated.records[0].games[0].minutes=180;
       activeEnvelope=await encryptVault(updated,password);
       await firePull();
+      await page.waitForTimeout(1200);
+      console.log('PULL_REFRESH_DIAG '+JSON.stringify({
+        indicators:await page.locator('[data-pull-refresh]').allTextContents(),
+        firstCard:await page.locator('.recent-game-card').first().innerText(),
+        scrollY:await page.evaluate(()=>window.scrollY),
+        url:page.url()
+      }));
       await page.locator('.recent-game-card').first().getByText('累计游玩 3 h').waitFor();
       assert.equal(await page.locator('[data-pull-refresh="done"]').count(),1,
         'Pull-to-refresh updates new encrypted Xbox data without reloading or locking the page');
