@@ -32,8 +32,8 @@ export function PullToRefresh({onUpdated}:{onUpdated:(records:RecordData[])=>voi
   const reset=()=>{state.current.tracking=false;state.current.decided=false;state.current.pull=0;setDistance(0);};
   const begin=(event:TouchEvent)=>{
    if(running.current||event.touches.length!==1||window.scrollY>1)return;
-   const target=event.target as Element|null;
-   if(target?.closest('input,textarea,select,[role="dialog"],.mobile-nav'))return;
+   const target=event.target;
+   if(target instanceof Element&&target.closest('input,textarea,select,[role="dialog"],.mobile-nav'))return;
    const finger=event.touches[0];
    state.current={tracking:true,startX:finger.clientX,startY:finger.clientY,pull:0,decided:false};
   };
