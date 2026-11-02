@@ -64,7 +64,7 @@ try{
       return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#789"/></svg>`});
     });
     await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
-    await page.route('**/vault.json',route=>route.fulfill({json:activeEnvelope}));
+    await page.route('**/vault.json*',route=>route.fulfill({json:activeEnvelope}));
     async function unlock(hash=''){
       await page.goto('about:blank');
       await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/'+hash);
@@ -119,6 +119,9 @@ try{
     });
     assert.equal(pwa.manifest?.display,'standalone','Production manifest enables standalone PWA');
     assert.ok(pwa.href?.endsWith('/xbox-playlog-pages/manifest.webmanifest'),'PWA links follow GitHub Pages base path');
+    const versionResponse=await page.request.get('http://127.0.0.1:4173/xbox-playlog-pages/version.json');
+    assert.ok(versionResponse.ok(),'Every release publishes an uncached build version manifest');
+    assert.ok((await versionResponse.json()).version,'Build manifest has a real build revision');
     assert.equal(pwa.manifest.name,'XBOX Playlog','Installed app uses the exact requested brand name');
     assert.equal(pwa.manifest.short_name,'XBOX Playlog','Home screen label matches the brand');
     assert.equal(await page.title(),'XBOX Playlog','Website title matches installed brand');
@@ -857,6 +860,42 @@ try{
     activeEnvelope=envelope;
     await unlock('#library');
     console.log((mobile?'Mobile':'Desktop')+': PASS unclassified game omits tabs and retains functional sort and completion');
+    if(mobile){
+      const firePull=async({startX=180,endX=180,startY=95,endY=255}={})=>{
+        await page.evaluate(({startX,endX,startY,endY})=>{
+          const send=(type,x,y,ending=false)=>{
+            const point=new Touch({identifier:1,target:document.body,clientX:x,clientY:y});
+            window.dispatchEvent(new TouchEvent(type,{
+              touches:ending?[]:[point],changedTouches:[point],bubbles:true,cancelable:true
+            }));
+          };
+          send('touchstart',startX,startY);
+          send('touchmove',endX,endY);
+          send('touchend',endX,endY,true);
+        },{startX,endX,startY,endY});
+      };
+      // This fixture may be too short for a wheel gesture to show the
+      // auto-hidden nav. Trigger its real React click handler directly.
+      await page.locator('nav.mobile-nav button').first().evaluate(button=>button.click());
+      await page.locator('.recent-game-card').first().waitFor();
+      await page.evaluate(()=>window.scrollTo(0,0));
+      await firePull({endX:340,endY:104});
+      assert.equal(await page.locator('[data-pull-refresh="refreshing"]').count(),0,
+        'Horizontal swipes at top must not start refresh');
+      const updated=await decryptVault(envelope,password);
+      updated.records[0].at='2026-11-02T01:00:00Z';
+      updated.records[0].games[0].minutes=180;
+      activeEnvelope=await encryptVault(updated,password);
+      await firePull();
+      await page.locator('.recent-game-card').first().getByText('累计游玩 3 h').waitFor();
+      assert.equal(await page.locator('[data-pull-refresh="done"]').count(),1,
+        'Pull-to-refresh updates new encrypted Xbox data without reloading or locking the page');
+      assert.ok(page.url().endsWith('#overview'),'In-place data refresh preserves the active page');
+      assert.equal(await page.locator('input[type="password"]').count(),0,'Pulling never requests the password again');
+      activeEnvelope=envelope;
+      await unlock('#library');
+      console.log('Mobile: PASS top pull, horizontal swipe guard and encrypted data update without sign-in');
+    }
     // Remembered credentials survive a reload and a new snapshot's random salt.
     async function signInRemembered(){
       await page.locator('input[type="password"]').fill(password);
@@ -882,6 +921,26 @@ try{
     await page.reload();
     await page.getByRole('button',{name:'锁定档案',exact:true}).waitFor();
     assert.equal(await page.locator('input[type="password"]').count(),0);
+    if(mobile){
+      // Simulate a release published while the PWA is open. The version
+      // mismatch reloads the shell, and explicit remembered-device consent
+      // restores the unlock automatically after navigation.
+      await page.route('**/version.json?check=*',route=>route.fulfill({json:{version:'new-release-test'}}));
+      await page.evaluate(()=>{
+        window.scrollTo(0,0);
+        const make=(type,y,end=false)=>{
+          const point=new Touch({identifier:1,target:document.body,clientX:160,clientY:y});
+          window.dispatchEvent(new TouchEvent(type,{touches:end?[]:[point],changedTouches:[point],bubbles:true,cancelable:true}));
+        };
+        make('touchstart',80);make('touchmove',250);make('touchend',250,true);
+      });
+      await page.waitForEvent('framenavigated',{timeout:18000});
+      await page.getByRole('button',{name:'锁定档案',exact:true}).waitFor();
+      assert.equal(await page.locator('input[type="password"]').count(),0,
+        'New release automatically reloads and restores explicitly remembered login');
+      await page.unroute('**/version.json?check=*');
+      console.log('Mobile: PASS PWA version upgrade via pull without another login');
+    }
     await page.getByRole('button',{name:'锁定档案',exact:true}).click();
     await page.locator('input[type="password"]').waitFor();
     await page.reload();

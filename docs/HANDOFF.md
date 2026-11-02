@@ -142,3 +142,10 @@ npm run build
 - GitHub `schedule` 长时间漏触发，手动 `workflow_dispatch` 成功证明 Xbox 数据链路正常。已准备 `cloudflare-sync/scheduler.mjs` 和 `docs/CLOUDFLARE_CRON_SETUP.md`；用户还需要在 Cloudflare 创建免费 Worker 并自行设置 GitHub fine-grained `Actions:write` Token 为 Worker Secret `GITHUB_ACTIONS_TOKEN`（不得在任何公开仓库、聊天或日志泄漏）。
 - Cloudflare 三条 Cron 与旧 `sync.yml` 等价，单独处理北京时间 23:42 和 00:02 时长强制采样。`sync.yml` 已支持 `workflow_dispatch.inputs.force_sweep`，不会破坏已有网页手动同步或日终扫库。
 - **暂时没有启用 Cloudflare、也没有关闭 GitHub `on.schedule`**。待 Cloudflare 至少一轮实测成功且 GitHub 同步/Pages 发布均成功后，再只删除 `sync.yml` 的 `schedule:` 块，避免迁移空窗和长期双重任务。
+
+### 2026-11-02 手机端顶部下拉检查数据 / PWA 新版本
+- `src/pull-to-refresh.tsx` 挂在已解锁的所有 Dashboard 路由；仅在手机视宽 ≤700px 且 window.scrollY 处于最顶部时，单指向下拖动约 120px（拉动指示条≥82px）并松开才触发。禁止误触发横向游戏卡片滑动、普通向上滚动、弹窗表单手势，不能把「查看最新网站数据」误认为手动 GitHub Xbox 同步。
+- 先检查 `dist/version.json` 的网站 buildId，再调用 `refreshCloudRecords()` 从本站直接获取 `vault.json`，在当前已解锁页面更新游戏/成就/时长，不需要退出或重输密码；没变化显示「当前已是最新版本和数据」。`vite.config.ts` 在每次构建发布时生成版本信息，配合 build 内联常量对比。
+- 如果前端 JS/CSS 有新版本，且用户此前显式选择「在此设备记住我」并有可恢复的加密凭据，则自动 reload 并复用现有安全解锁机制。**未选择记住设备时不得静默存储密码**：页面显示「新版本已上线，点击更新（需重新解锁）」，仅在用户主动点击「更新」时重载；不妨碍数据层在本页更新。
+- PWA 现有 SW 仅缓存 JS/CSS/公共图片，加密档案和 version.json 采用网络请求；新前端 chunk 文件名哈希变化，刷新文档时会获取新 bundle。手动点击「立即同步」仍是真正调 GitHub Xbox 工作流，与下拉「读取最新已发布数据」区分。
+- `scripts/check-navigation.mjs` 端到端涵盖横向手势不刷新、顶部拉动读新加密快照并继续解锁、发布版本变化在记住设备下自动 reload、新版 version.json 可从网页读取。保持现有手机底栏交互及 PC 页面不变。
