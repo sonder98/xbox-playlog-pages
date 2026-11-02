@@ -874,7 +874,9 @@ try{
           send('touchend',endX,endY,true);
         },{startX,endX,startY,endY});
       };
-      await switchMainTab('概览');
+      // This fixture may be too short for a wheel gesture to show the
+      // auto-hidden nav. Trigger its real React click handler directly.
+      await page.locator('nav.mobile-nav button').first().evaluate(button=>button.click());
       await page.locator('.recent-game-card').first().waitFor();
       await page.evaluate(()=>window.scrollTo(0,0));
       await firePull({endX:340,endY:104});
