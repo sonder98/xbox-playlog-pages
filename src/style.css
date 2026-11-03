@@ -2337,6 +2337,12 @@ footer .dot {
 .game-detail .achievement[data-frame-tier="ultra"] {
  background:linear-gradient(105deg,rgba(224,172,75,.085),transparent 62%),var(--surface);
 }
+/* Rare detail cards use the same raised surface as standard achievements.
+   Keep rarity-specific warm gradients and metallic artwork frames intact. */
+.game-detail .achievement[data-frame-tier="rare"],
+.game-detail .achievement[data-frame-tier="ultra"] {
+  background-color:var(--surface-raised);
+}
 .game-detail .achievement-rarity.rare {color:#f3cc77;}
 
 
