@@ -646,7 +646,8 @@ try{
     gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
     assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'游玩时长',
       'Selecting playtime sorting updates the custom selected state');
-    await gameSortMenu.getByRole('menuitemradio',{name:'最近游玩'}).click();
+    await page.keyboard.press('Escape');
+    assert.equal(await gameSort.getAttribute('aria-expanded'),'false');
     const beforeDetail=await page.evaluate(()=>window.scrollY);
     await page.locator('.game-card').first().click();
     await page.getByRole('dialog').waitFor();
