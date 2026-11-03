@@ -745,6 +745,24 @@ try{
     assert.ok(frameResult.shine.includes('ah-foil-orbit'),'Game detail inherits flowing gold foil');
     assert.equal(frameResult.fit,'contain','Game detail retains uncropped achievement images');
     assert.equal(await page.locator('.game-detail .achievement-image.ah-rarity-common').count(),2,'Standard and unknown achievements retain gray frames');
+    const detailCardBackgrounds=await page.locator('.game-detail .achievement').evaluateAll(rows=>rows.map(el=>({
+      tier:el.getAttribute('data-frame-tier'),
+      color:getComputedStyle(el).backgroundColor,
+      image:getComputedStyle(el).backgroundImage,
+      artworkBorder:getComputedStyle(el.querySelector('.achievement-image')).borderTopWidth
+    })));
+    const standardCard=detailCardBackgrounds.find(card=>card.tier==='common');
+    assert.ok(standardCard,'Test fixture includes standard game-detail achievements');
+    for(const card of detailCardBackgrounds.filter(card=>card.tier==='rare'||card.tier==='ultra')){
+      assert.equal(card.color,standardCard.color,
+        'Rare and ultra-rare achievements use the same raised background color as standard cards');
+      assert.ok(card.image.includes('gradient'),
+        'Rare achievement cards retain their warm gradient accent');
+      assert.equal(card.artworkBorder,'2px',
+        'Rare achievement artwork still has its metal rarity frame');
+    }
+    assert.equal(standardCard.color,'rgb(34, 34, 34)',
+      'Game-detail achievement cards use the raised surface rather than the dialog background');
     await page.emulateMedia({reducedMotion:'reduce'});
     assert.equal(await page.locator('.game-detail .achievement-image.ah-rarity-gold').first().evaluate(el=>getComputedStyle(el,'::after').animationName),
       'none','Reduced motion disables the universal gilt animation');
