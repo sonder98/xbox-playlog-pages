@@ -5,6 +5,8 @@ import type {DailyPlaytimeLedger} from './playtime-ledger';
 import {validatedPcMetascores,type PcMetascores} from './metascores';
 export const repo='https://github.com/sonder98/xbox-playlog-pages';
 export const workflow=repo+'/actions/workflows/sync.yml';
+/** EdgeOne serves the same encrypted envelope through a Blob-backed Function; Pages keeps its static snapshot URL. */
+export const cloudVaultUrl=()=>import.meta.env.VITE_VAULT_ENDPOINT||import.meta.env.BASE_URL+'vault.json';
 let records:RecordData[]=[],password='',cloudLatestAt='';
 let dailyPlaytime:DailyPlaytimeLedger|null=null;
 let pcMetascores:PcMetascores={};
@@ -37,7 +39,7 @@ export function clearManualSyncToken(){localStorage.removeItem(syncTokenKey);}
 /** Fetch the newly deployed encrypted archive; leave the old view untouched until validated. */
 export async function refreshCloudRecords():Promise<RecordData[]|null>{
  if(!password)throw Error('请先解锁档案。');
- const response=await fetch(import.meta.env.BASE_URL+'vault.json?refresh='+Date.now(),{cache:'no-store'});
+ const response=await fetch(cloudVaultUrl()+'?refresh='+Date.now(),{cache:'no-store'});
  if(!response.ok)throw Error('还无法从网站获取最新快照。');
  const envelope=await response.json();
  const payload=await decryptVault(envelope,password);
