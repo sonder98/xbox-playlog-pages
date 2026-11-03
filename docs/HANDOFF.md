@@ -1,6 +1,6 @@
 # XBOX Playlog Xbox Playlog 开发交接
 
-更新：2026-11-01。以 GitHub 仓库 `main` 最新代码和 GitHub Actions 运行记录为准，勿照搬早期对话的结论。
+更新：2026-11-03。以 GitHub 仓库 `main` 最新代码和 GitHub Actions 运行记录为准，勿照搬早期对话的结论。
 
 ## 项目与环境
 
@@ -149,3 +149,17 @@ npm run build
 - 如果前端 JS/CSS 有新版本，且用户此前显式选择「在此设备记住我」并有可恢复的加密凭据，则自动 reload 并复用现有安全解锁机制。**未选择记住设备时不得静默存储密码**：页面显示「新版本已上线，点击更新（需重新解锁）」，仅在用户主动点击「更新」时重载；不妨碍数据层在本页更新。
 - PWA 现有 SW 仅缓存 JS/CSS/公共图片，加密档案和 version.json 采用网络请求；新前端 chunk 文件名哈希变化，刷新文档时会获取新 bundle。手动点击「立即同步」仍是真正调 GitHub Xbox 工作流，与下拉「读取最新已发布数据」区分。
 - `scripts/check-navigation.mjs` 端到端涵盖横向手势不刷新、顶部拉动读新加密快照并继续解锁、发布版本变化在记住设备下自动 reload、新版 version.json 可从网页读取。保持现有手机底栏交互及 PC 页面不变。
+
+
+### 2026-11-03 EdgeOne 免 VPN 访问预览（实现中，GitHub Pages 仍为正式站点）
+
+- 用户选择同步频率改为每 2 小时一次；`.github/workflows/sync.yml` 使用 UTC `17 */2 * * *`，对应北京时间每两小时 :17；另保留北京时间 23:42、00:02 两次跨日时长采样。每天为 12 次常规同步 + 2 次边界采样，网页手动同步不变。
+- 已核对腾讯云 EdgeOne Makers 官方能力：Blob 免费存储 1GB、单对象 25MB；Edge Functions 可读 Blob。当前 playlog-live/vault.json 约 32.1MB，不能直接作为单 Blob，新增 `scripts/edgeone-blob.mjs` 将 AES-GCM 密文按 8MiB 分块，manifest 最后切换，保留上一完整版本并清理更早旧块。
+- 新增 `edge-functions/api/vault.js`：通过 `@edgeone/pages-blob` 从 Blob 读取分块并流式响应 `GET /api/vault`。公开内容仍是 AES-GCM 密文；前端仍由用户 APP_PASSWORD 本地解密，不把 Makers API Token 放进浏览器。
+- `src/vault.ts` 新增 `cloudVaultUrl()`；EdgeOne 构建设 `VITE_VAULT_ENDPOINT=/api/vault`、`PLAYLOG_BASE=/`，GitHub Pages 继续使用原静态 `vault.json`。Service Worker 已绕过 /api/，不会缓存快照。
+- 新增手动预览工作流 `.github/workflows/edgeone-preview.yml`：恢复 GitHub Release 的当前加密快照及约 6,499 张 WebP 素材，上传 Blob，构建根路径站点、移除超过 25MB 的静态 vault.json，将 Edge Function 与精简 package.json 一起部署到 EdgeOne Preview。**目前只支持手动 Preview，不会因 Xbox 同步触发 EdgeOne 构建。**
+- `sync.yml` 在配置 GitHub Secrets `EDGEONE_API_TOKEN` 和 `EDGEONE_PROJECT_ID` 后，会可选镜像加密快照到 Blob；镜像失败不会阻断 GitHub Release 和 GitHub Pages 正式发布。
+- 用户尚需在腾讯云 Makers 控制台创建名为 `xbox-playlog` 的「直接上传」项目，并在 GitHub 仓库 Actions Secrets 中配置以上两个值。Token 不得发送到聊天或写入仓库。
+- **大陆域名限制：** 官方规定默认项目/部署域名在中国大陆网络需用有效期 3 小时的系统预览链接。无已备案自定义域名时只能免费测试，不能作为永久固定免 VPN 入口；长期稳定大陆访问需自定义域名及 ICP 备案。见 `docs/EDGEONE_MIGRATION.md`。
+- 商业化公告预计 2026-11-09 至 11-11 将构建额度从 500 次改为 300 分钟/月，Cloud Functions 调整为 5 万 GB-s/月。本项目 Blob 读取采用 Edge Functions；同步数据不触发 EdgeOne 构建。
+- **不要切换或删除 GitHub Pages。** 只有用户完成 Secrets 配置、预览工作流成功，且在中国大陆关闭 VPN 实测登录、封面、成就、热力图和手动同步后，才讨论正式切换。用户没有 ICP 域名时，应明确说明默认域名 3 小时预览限制。
