@@ -836,7 +836,13 @@ try{
     await page.goBack();
     await page.getByRole('dialog').waitFor({state:'hidden'});
     assert.equal(await page.getByRole('textbox',{name:'搜索游戏名称'}).inputValue(),'Test Game 1');
-    assert.equal(await page.getByRole('combobox',{name:'排序游戏'}).inputValue(),'time');
+    const persistedGameSort=page.getByRole('button',{name:'游戏排序',exact:true});
+    await persistedGameSort.click();
+    const persistedGameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
+    assert.equal(await persistedGameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'游玩时长',
+      'The chosen library sort persists when navigating back from a game detail');
+    await page.keyboard.press('Escape');
+    assert.equal(await persistedGameSort.getAttribute('aria-expanded'),'false');
     await page.waitForFunction(y=>Math.abs(window.scrollY-y)<5,beforeDetail);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
     // Hiding is a reversible encrypted display preference, independent of fresh sync snapshots.
