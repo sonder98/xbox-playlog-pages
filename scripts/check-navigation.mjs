@@ -323,6 +323,44 @@ try{
       'Every rare achievement thumbnail includes its global unlock percentage beneath the picture');
     assert.equal((await page.locator('.ah-showcase-rarity-value').first().innerText()).trim(),'0%',
       'Rarest visible achievement displays 0% unlock rate');
+    const rareTiles=page.locator('[data-achievement-showcase="preview"] .ah-showcase-tile');
+    assert.equal(await rareTiles.locator('.ah-showcase-name').count(),24,
+      'Every rare achievement has a visible name below its artwork');
+    assert.equal(await rareTiles.locator('.ah-showcase-unlock-time').count(),24,
+      'Every rare achievement shows its unlock time alongside its rarity');
+    assert.equal(await rareTiles.first().locator('.ah-showcase-name').innerText(),'Achievement 0');
+    assert.equal(await rareTiles.first().locator('time').innerText(),'2026.10.27 20:24',
+      'Unlock time is rendered in Beijing time');
+    assert.equal(await rareTiles.first().locator('time').getAttribute('datetime'),'2026-10-27T12:24:00.000Z');
+    const rarePreviewLayout=await rareTiles.first().evaluate(el=>{
+      const art=el.querySelector('.ah-showcase-art').getBoundingClientRect();
+      const name=el.querySelector('.ah-showcase-name');
+      const label=name.getBoundingClientRect();
+      const meta=el.querySelector('.ah-showcase-meta');
+      const info=meta.getBoundingClientRect();
+      const date=meta.querySelector('.ah-showcase-unlock-time').getBoundingClientRect();
+      const rarity=meta.querySelector('.ah-showcase-rarity-value').getBoundingClientRect();
+      const tile=el.getBoundingClientRect();
+      const center=box=>box.x+box.width/2;
+      return {
+        cardWidth:tile.width,
+        artCentered:Math.abs(center(art)-center(tile))<2,
+        labelCentered:Math.abs(center(label)-center(tile))<2&&getComputedStyle(name).textAlign==='center',
+        groupCentered:Math.abs((date.left+rarity.right)/2-center(tile))<2,
+        correctRows:art.bottom<label.top&&label.bottom<=info.top,
+        sameMetaRow:Math.abs(date.y-rarity.y)<2,
+        dateBeforeRarity:date.right<rarity.left,
+        noOverflow:el.scrollWidth<=el.clientWidth+1
+      };
+    });
+    assert.ok(rarePreviewLayout.artCentered&&rarePreviewLayout.labelCentered&&rarePreviewLayout.groupCentered&&
+      rarePreviewLayout.correctRows&&rarePreviewLayout.sameMetaRow&&rarePreviewLayout.dateBeforeRarity&&
+      rarePreviewLayout.noOverflow,
+      'Artwork, name and the date/rarity group are centered with the prescribed two caption rows');
+    assert.equal(rarePreviewLayout.cardWidth,mobile?184:190,'Rare preview uses the intended compact responsive card widths');
+    const longRareName=rareTiles.locator('.ah-showcase-name').filter({hasText:'Very long achievement name'}).first();
+    assert.ok(await longRareName.evaluate(el=>el.scrollWidth>el.clientWidth&&getComputedStyle(el).textOverflow==='ellipsis'),
+      'Long achievement names are truncated, never forcing wider tiles');
     assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-top-label').innerText(),'TOP 100',
       'Rarity display shows the expanded TOP 100 capacity');
     assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-foot').locator('span').count(),0,

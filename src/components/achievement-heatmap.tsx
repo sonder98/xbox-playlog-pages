@@ -16,6 +16,12 @@ const fmt=(n:number)=>n.toLocaleString('zh-CN');
 const fmtDailyHours=(minutes:number|null)=>minutes===null?'— 小时':(minutes/60).toLocaleString('zh-CN',{maximumFractionDigits:2})+' 小时';
 const time=(value:number)=>new Date(value).toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',hour12:false});
 const fullTime=(value:number)=>new Date(value).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+const showcaseTime=(value:number|null)=>{
+ if(value===null)return '时间未知';
+ const parts=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(value);
+ const part=(type:'year'|'month'|'day'|'hour'|'minute')=>parts.find(p=>p.type===type)?.value||'';
+ return `${part('year')}.${part('month')}.${part('day')} ${part('hour')}:${part('minute')}`;
+};
 function Art({src,alt='',className}:{src?:string;alt?:string;className:string}){
  const [broken,setBroken]=useState(false),[artRatio,setArtRatio]=useState<number|null>(null);
  useEffect(()=>{setBroken(false);setArtRatio(null);},[src]);
@@ -90,7 +96,7 @@ export function AchievementPreview({games,records=[],playtimeLedger,onOpen,onOpe
   {sheetDay&&<Sheet day={sheetDay} activity={activity} playtimeLedger={playtimeLedger} minDay={days[0].day} onChangeDay={setSheetDay} onClose={()=>setSheetDay(null)} onDetail={()=>{const day=sheetDay;setSheetDay(null);onOpenDay(day);}}/>}
  </section>;
 }
-/** Image-only carousel. The images determine their own width after loading and are never cropped. */
+/** Centered achievement captions beneath original-ratio artwork in the overview carousel. */
 function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
  const rail=useRef<HTMLDivElement>(null);
  return <section className="ah-showcase" aria-label="稀有成就展柜" data-achievement-showcase="preview">
@@ -102,15 +108,21 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
    <button type="button" className="ah-showcase-open" onClick={onOpen} disabled={!items.length} title="查看稀有成就展柜" aria-label="查看稀有成就展柜详情"><ChevronRight size={22}/></button>
   </div>
   {items.length?
-   <div className="ah-showcase-rail" role="region" aria-label="稀有成就 TOP 100 图片与稀有度，横向滚动查看" tabIndex={0} ref={rail}>
+   <div className="ah-showcase-rail" role="region" aria-label="稀有成就 TOP 100 名称、解锁时间及稀有度，横向滚动查看" tabIndex={0} ref={rail}>
     {items.map((item,i)=>{
      const tier=achievementRarityTier(item.achievement.rarity);
      return <span key={item.key} className="ah-showcase-tile" data-rarity-tier={tier}
-       title={`第 ${i+1} 名 · ${item.achievement.name} · ${item.achievement.rarity}% · ${item.game.name}`}>
+       title={`第 ${i+1} 名 · ${item.achievement.name} · ${showcaseTime(item.time)} · ${item.achievement.rarity}% · ${item.game.name}`}>
       <Art src={item.achievement.cachedImage||item.achievement.image} alt={item.achievement.name}
        className={'ah-showcase-art ah-rarity-'+tier+(tier!=='common'?' ah-rarity-gold':'')}/>
-      <span className={'ah-showcase-rarity-value'+(tier!=='common'?' is-rare':'')}>
-       <Gem size={12} aria-hidden="true"/><strong>{item.achievement.rarity}%</strong>
+      <span className="ah-showcase-name" title={item.achievement.name}>{item.achievement.name}</span>
+      <span className="ah-showcase-meta">
+       {item.time===null?
+        <span className="ah-showcase-unlock-time">时间未知</span>:
+        <time className="ah-showcase-unlock-time" dateTime={item.achievement.unlockedAt||undefined}>{showcaseTime(item.time)}</time>}
+       <span className={'ah-showcase-rarity-value'+(tier!=='common'?' is-rare':'')}>
+        <Gem size={12} aria-hidden="true"/><strong>{item.achievement.rarity}%</strong>
+       </span>
       </span>
      </span>;
     })}

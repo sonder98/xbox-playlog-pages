@@ -2482,28 +2482,70 @@ footer .dot {
 }
 
 
-/* TOP 100 rarity showcase: percentage belongs to each original-ratio achievement thumbnail. */
+/* TOP 100 rarity showcase: original-ratio art and both caption rows are centered. */
 .ah-showcase-tile {
- display:flex;
- flex-direction:column;
- align-items:center;
- justify-content:flex-start;
- gap:7px;
+  display:flex;
+  flex:0 0 190px;
+  width:190px;
+  min-width:0;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:0;
+  text-align:center;
+}
+.ah-showcase-tile .ah-showcase-art {
+  height:104px;
+  max-width:100%;
+  min-width:0;
+}
+.ah-showcase-name {
+  display:block;
+  width:100%;
+  min-width:0;
+  margin-top:10px;
+  color:var(--text-primary);
+  font-size:13px;
+  font-weight:650;
+  line-height:19px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-align:center;
+}
+.ah-showcase-meta {
+  display:flex;
+  width:100%;
+  min-width:0;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  margin-top:5px;
+  min-height:20px;
+  line-height:20px;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.ah-showcase-unlock-time {
+  color:var(--text-muted);
+  font-size:10px;
 }
 .ah-showcase-rarity-value {
- display:inline-flex;
- align-items:center;
- justify-content:center;
- gap:5px;
- width:100%;
- min-height:20px;
- color:var(--text-secondary);
- font-size:11px;
- font-variant-numeric:tabular-nums;
- white-space:nowrap;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  min-height:20px;
+  color:var(--text-secondary);
+  font-size:11px;
+  white-space:nowrap;
 }
 .ah-showcase-rarity-value strong {font-weight:650;}
 .ah-showcase-rarity-value.is-rare {color:#f3cc77;}
+@media(max-width:700px){
+  .ah-showcase-tile {flex-basis:184px;width:184px;}
+  .ah-showcase-tile .ah-showcase-art {height:100px;}
+}
 
 /* Pair detail: complete unlock conditions, never clipped or silently truncated. */
 .ah-gap-achievement-condition {
