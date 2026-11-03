@@ -1,0 +1,50 @@
+name: Deploy XBOX Playlog to EdgeOne preview
+run-name: EdgeOne preview deployment
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+      EDGEONE_PROJECT_ID: ${{ secrets.EDGEONE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Validate EdgeOne credentials
+        run: |
+          test -n "$EDGEONE_API_TOKEN" || { echo "::error::Add EDGEONE_API_TOKEN to repository Actions secrets."; exit 1; }
+          test -n "$EDGEONE_PROJECT_ID" || { echo "::error::Add EDGEONE_PROJECT_ID to repository Actions secrets."; exit 1; }
+      - run: npm ci --ignore-scripts
+      - name: Install EdgeOne deployment and Blob SDKs
+        run: npm install --no-save --ignore-scripts edgeone@1.6.39 @edgeone/pages-blob@0.0.18
+      - name: Restore current encrypted snapshot and public artwork
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/live-assets.mjs restore-snapshot
+          node scripts/live-assets.mjs restore-media
+      - name: Publish current encrypted snapshot to EdgeOne Blob
+        run: node scripts/edgeone-blob.mjs publish
+      - name: Build root-hosted EdgeOne site and attach its Function
+        env:
+          PLAYLOG_BASE: /
+          VITE_VAULT_ENDPOINT: /api/vault
+        run: |
+          npm run build
+          rm -f dist/vault.json
+          mkdir -p dist/edge-functions
+          cp -R edge-functions/* dist/edge-functions/
+          printf '%s\n' '{"type":"module","dependencies":{"@edgeone/pages-blob":"0.0.18"}}' > dist/package.json
+          test -f dist/status.json
+          test ! -e dist/vault.json
+          test -f dist/edge-functions/api/vault.js
+          test -d dist/media
+      - name: Deploy EdgeOne preview (GitHub Pages remains live)
+        run: npx edgeone makers deploy ./dist -n xbox-playlog -t "$EDGEONE_API_TOKEN" --site china -e preview

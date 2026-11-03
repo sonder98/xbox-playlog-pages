@@ -2,9 +2,8 @@ name: Sync Xbox records
 run-name: Xbox sync (${{ github.event_name }} · ${{ inputs.request_id }})
 on:
   schedule:
-    # Re-register schedule after missing 3 consecutive fires. GitHub cron is best-effort.
-    # Normal half-hour sync, excluding Beijing 23:xx for day-end checkpoint.
-    - cron: '17,47 0-14,16-23 * * *'
+    # Every two hours at :17 UTC (Beijing :17 on all even local hours).
+    - cron: '17 */2 * * *'
     # Asia/Shanghai 23:42 (15:42 UTC): capture a day-end cumulative-minute checkpoint.
     - cron: '42 15 * * *'
     # Asia/Shanghai 00:02 (16:02 UTC): capture next day's baseline.
@@ -91,6 +90,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/live-assets.mjs publish
+
+      # Optional mirror: GitHub Release and Pages remain the production fallback.
+      - name: Publish encrypted snapshot to EdgeOne Blob
+        if: ${{ env.EDGEONE_API_TOKEN != '' && env.EDGEONE_PROJECT_ID != '' }}
+        continue-on-error: true
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+          EDGEONE_PROJECT_ID: ${{ secrets.EDGEONE_PROJECT_ID }}
+        run: |
+          npm install --no-save --ignore-scripts @edgeone/pages-blob@0.0.18
+          node scripts/edgeone-blob.mjs publish
 
       - name: Trigger Pages explicitly (bot pushes do not start push workflows)
         env:

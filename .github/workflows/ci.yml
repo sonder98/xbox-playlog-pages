@@ -5,6 +5,7 @@ on:
       - '.github/workflows/**'
       - 'src/**'
       - 'scripts/**'
+      - 'edge-functions/**'
       - 'tests/**'
       - 'public/**'
       - 'index.html'
@@ -31,5 +32,8 @@ jobs:
       - run: npm run build
       - name: Verify desktop and mobile navigation and Mythic cover geometry
         run: node --experimental-strip-types scripts/check-navigation.mjs
-      - name: Check release publishing script syntax without credentials
-        run: node --check scripts/live-assets.mjs
+      - name: Check release and EdgeOne publishing script syntax without credentials
+        run: |
+          node --check scripts/live-assets.mjs
+          node --check scripts/edgeone-blob.mjs
+          node --check edge-functions/api/vault.js
