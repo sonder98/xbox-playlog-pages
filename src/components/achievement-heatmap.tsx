@@ -115,15 +115,13 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
        title={`第 ${i+1} 名 · ${item.achievement.name} · ${showcaseTime(item.time)} · ${item.achievement.rarity}% · ${item.game.name}`}>
       <Art src={item.achievement.cachedImage||item.achievement.image} alt={item.achievement.name}
        className={'ah-showcase-art ah-rarity-'+tier+(tier!=='common'?' ah-rarity-gold':'')}/>
-      <span className="ah-showcase-name" title={item.achievement.name}>{item.achievement.name}</span>
-      <span className="ah-showcase-meta">
-       {item.time===null?
-        <span className="ah-showcase-unlock-time">时间未知</span>:
-        <time className="ah-showcase-unlock-time" dateTime={item.achievement.unlockedAt||undefined}>{showcaseTime(item.time)}</time>}
-       <span className={'ah-showcase-rarity-value'+(tier!=='common'?' is-rare':'')}>
-        <Gem size={12} aria-hidden="true"/><strong>{item.achievement.rarity}%</strong>
-       </span>
+      <span className={'ah-showcase-rarity-value'+(tier!=='common'?' is-rare':'')}>
+       <Gem size={12} aria-hidden="true"/><strong>{item.achievement.rarity}%</strong>
       </span>
+      <span className="ah-showcase-name" title={item.achievement.name}>{item.achievement.name}</span>
+      {item.time===null?
+       <span className="ah-showcase-unlock-time">时间未知</span>:
+       <time className="ah-showcase-unlock-time" dateTime={item.achievement.unlockedAt||undefined}>{showcaseTime(item.time)}</time>}
      </span>;
     })}
    </div>
