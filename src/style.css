@@ -1521,8 +1521,8 @@ footer .dot {
 .display-manager-list { max-height:42dvh; overflow:auto; overscroll-behavior:contain; }
 .display-game-choice { display:flex; align-items:center; gap:12px; min-height:52px; padding:12px; border-radius:12px; cursor:pointer; }
 .display-game-choice:hover { background:var(--surface-raised); }
-.display-game-choice span { flex:1; min-width:0; font-size:14px; overflow-wrap:anywhere; }
-.display-game-choice.is-hidden span,.display-game-choice svg { color:var(--text-muted); }
+.display-game-choice > .display-game-name { flex:1; min-width:0; font-size:14px; overflow-wrap:anywhere; }
+.display-game-choice.is-hidden > .display-game-name,.display-game-choice svg { color:var(--text-muted); }
 .display-game-choice svg { flex-shrink:0; }
 .display-manager-footer { display:flex; gap:12px; justify-content:flex-end; margin-top:20px; }
 
@@ -2833,4 +2833,40 @@ footer .dot {
   .filters .game-library-sort {flex:1 1 0;min-width:0;}
   .game-library-sort .achievement-sort-control {max-width:100%;}
   .game-library-sort .achievement-sort-menu {max-width:min(270px,calc(100vw - 32px));}
+}
+
+
+/* Compact cached game artwork in the display-management list. */
+.display-game-cover {
+  display:block;
+  flex:0 0 40px;
+  width:40px;
+  height:40px;
+  overflow:hidden;
+  border-radius:8px;
+  background:var(--surface-raised);
+}
+.display-game-cover .game-cover {
+  display:grid;
+  place-items:center;
+  width:100%;
+  height:100%;
+  aspect-ratio:1;
+  border-radius:8px;
+}
+.display-game-cover .cover-artwork {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+.display-game-cover .cover-fallback {
+  width:100%;
+  height:100%;
+  aspect-ratio:1;
+}
+.display-game-cover .completion-ornament {display:none;}
+.display-game-choice > .display-game-name {min-width:0;}
+@media(max-width:700px) {
+  .display-game-cover {flex-basis:36px;width:36px;height:36px;}
 }
