@@ -327,37 +327,38 @@ try{
     assert.equal(await rareTiles.locator('.ah-showcase-name').count(),24,
       'Every rare achievement has a visible name below its artwork');
     assert.equal(await rareTiles.locator('.ah-showcase-unlock-time').count(),24,
-      'Every rare achievement shows its unlock time alongside its rarity');
+      'Every rare achievement shows its unlock time on a separate third row');
     assert.equal(await rareTiles.first().locator('.ah-showcase-name').innerText(),'Achievement 0');
     assert.equal(await rareTiles.first().locator('time').innerText(),'2026.10.27 20:24',
       'Unlock time is rendered in Beijing time');
     assert.equal(await rareTiles.first().locator('time').getAttribute('datetime'),'2026-10-27T12:24:00.000Z');
     const rarePreviewLayout=await rareTiles.first().evaluate(el=>{
       const art=el.querySelector('.ah-showcase-art').getBoundingClientRect();
+      const rarity=el.querySelector('.ah-showcase-rarity-value').getBoundingClientRect();
       const name=el.querySelector('.ah-showcase-name');
       const label=name.getBoundingClientRect();
-      const meta=el.querySelector('.ah-showcase-meta');
-      const info=meta.getBoundingClientRect();
-      const date=meta.querySelector('.ah-showcase-unlock-time').getBoundingClientRect();
-      const rarity=meta.querySelector('.ah-showcase-rarity-value').getBoundingClientRect();
+      const time=el.querySelector('.ah-showcase-unlock-time');
+      const date=time.getBoundingClientRect();
       const tile=el.getBoundingClientRect();
-      const center=box=>box.x+box.width/2;
+      const centered=box=>Math.abs(box.x+box.width/2-(tile.x+tile.width/2))<2;
       return {
         cardWidth:tile.width,
-        artCentered:Math.abs(center(art)-center(tile))<2,
-        labelCentered:Math.abs(center(label)-center(tile))<2&&getComputedStyle(name).textAlign==='center',
-        groupCentered:Math.abs((date.left+rarity.right)/2-center(tile))<2,
-        correctRows:art.bottom<label.top&&label.bottom<=info.top,
-        sameMetaRow:Math.abs(date.y-rarity.y)<2,
-        dateBeforeRarity:date.right<rarity.left,
+        imageHeight:art.height,
+        artCentered:centered(art),
+        rarityCentered:centered(rarity),
+        labelCentered:centered(label)&&getComputedStyle(name).textAlign==='center',
+        dateCentered:centered(date)&&getComputedStyle(time).textAlign==='center',
+        threeRows:art.bottom<rarity.top&&rarity.bottom<=label.top&&label.bottom<=date.top,
         noOverflow:el.scrollWidth<=el.clientWidth+1
       };
     });
-    assert.ok(rarePreviewLayout.artCentered&&rarePreviewLayout.labelCentered&&rarePreviewLayout.groupCentered&&
-      rarePreviewLayout.correctRows&&rarePreviewLayout.sameMetaRow&&rarePreviewLayout.dateBeforeRarity&&
-      rarePreviewLayout.noOverflow,
-      'Artwork, name and the date/rarity group are centered with the prescribed two caption rows');
-    assert.equal(rarePreviewLayout.cardWidth,mobile?184:190,'Rare preview uses the intended compact responsive card widths');
+    assert.ok(rarePreviewLayout.artCentered&&rarePreviewLayout.rarityCentered&&
+      rarePreviewLayout.labelCentered&&rarePreviewLayout.dateCentered&&
+      rarePreviewLayout.threeRows&&rarePreviewLayout.noOverflow,
+      'Artwork and all three caption rows are centered, with rarity first, name second, date third');
+    assert.equal(rarePreviewLayout.cardWidth,mobile?156:164,'Rare preview uses compact card widths');
+    assert.ok(Math.abs(rarePreviewLayout.imageHeight-(mobile?72:88))<1,
+      'Rare showcase image height matches the original smaller size');
     const longRareName=rareTiles.locator('.ah-showcase-name').filter({hasText:'Very long achievement name'}).first();
     assert.ok(await longRareName.evaluate(el=>el.scrollWidth>el.clientWidth&&getComputedStyle(el).textOverflow==='ellipsis'),
       'Long achievement names are truncated, never forcing wider tiles');
