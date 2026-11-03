@@ -1,5 +1,7 @@
 # 免费 Cloudflare Cron 接管 Xbox 同步（不迁移网站）
 
+> **历史备选方案（2026-11-03）：** 用户已选择 EdgeOne 作为网站免 VPN 访问方案，并将 Xbox 自动同步改为每两小时一次。本文件中的半小时 Cron 配置不再是当前目标；除非用户明确要求回退到 Cloudflare，否则不要按本文启用或修改调度。
+
 目的：替换目前容易漏触发的 GitHub Actions `schedule`，**仍然由现有 GitHub Actions 抓取 Xbox、保管微软授权、加密快照并发布 GitHub Pages**。Cloudflare 只定时发送一次授权的 GitHub workflow_dispatch。**不要把 Token 发到聊天、Issue、仓库文件或截图里。**
 
 ## 当前准备状态
