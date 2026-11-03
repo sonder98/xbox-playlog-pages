@@ -16,6 +16,15 @@ const statusChoices:Option<AchievementUnlockFilter>[]=[
  ['locked','未解锁'],
 ];
 
+export type GameLibrarySort='recent'|'time'|'completion'|'span-desc'|'span-asc';
+const gameLibraryChoices:Option<GameLibrarySort>[]=[
+ ['recent','最近游玩'],
+ ['time','游玩时长'],
+ ['completion','成就完成度'],
+ ['span-desc','时间跨度：长 → 短'],
+ ['span-asc','时间跨度：短 → 长'],
+];
+
 /** Same accessible dropdown, menu keyboard behavior, and appearance for both controls. */
 function AchievementDropdown<T extends string>({title,label,menuLabel,value,options,onChange,icon}:{
  title:string;label:string;menuLabel:string;value:T;options:Option<T>[];onChange:(next:T)=>void;icon:ReactNode;
@@ -70,4 +79,15 @@ export function AchievementUnlockFilterControl({filter,onChange}:{
  return <AchievementDropdown title="筛选" label="成就筛选" menuLabel="成就筛选方式"
   value={filter} onChange={onChange} options={statusChoices}
   icon={<ListFilter size={17} aria-hidden="true"/>}/>;
+}
+
+/** The library uses the same custom menu, selection treatment and keyboard behavior as detail sorting. */
+export function GameLibrarySortControl({sort,onChange}:{
+ sort:GameLibrarySort;onChange:(next:GameLibrarySort)=>void;
+}){
+ return <div className="game-library-sort">
+  <AchievementDropdown title="排序" label="游戏排序" menuLabel="游戏排序方式"
+   value={sort} onChange={onChange} options={gameLibraryChoices}
+   icon={<ArrowDownUp size={17} aria-hidden="true"/>}/>
+ </div>;
 }
