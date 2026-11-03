@@ -2,8 +2,8 @@ import {useEffect,useRef,useState,useId,type ReactNode} from 'react';
 import {Gamepad2,Trophy,X,Lock,Check,Clock3,Gem} from 'lucide-react';
 import {completion} from '../completion';
 import {GamerscoreIcon} from './gamerscore-icon';
-import {AchievementSortControl} from './achievement-sort-control';
-import {sortAchievements,type AchievementSort} from '../achievement-sort';
+import {AchievementSortControl,AchievementUnlockFilterControl} from './achievement-sort-control';
+import {sortAchievements,filterAchievements,type AchievementSort,type AchievementUnlockFilter} from '../achievement-sort';
 import type {Game,Achievement} from '../data';
 import {achievementTimeSpan,formatAchievementTimeSpan} from '../achievement-time-span';
 import {achievementRarityTier} from '../rare-achievements';
@@ -102,11 +102,16 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
   const addOns=groups.filter(group=>group.kind!=='base');
   const categorized=!!base&&addOns.length>0;
   const [order,setOrder]=useState<AchievementSort>('date-desc');
+  const [unlockFilter,setUnlockFilter]=useState<AchievementUnlockFilter>('all');
   const [category,setCategory]=useState<'all'|'base'|'dlc'>('all');
+  function changeUnlockFilter(next:AchievementUnlockFilter){
+    if(next==='locked'&&order.startsWith('date'))setOrder('rarity-asc');
+    setUnlockFilter(next);
+  }
   const selectedCategory=categorized?category:'all';
   const selectedGroups=selectedCategory==='base'?base?[base]:[]:selectedCategory==='dlc'?addOns:groups;
   const ids=categorized&&selectedCategory!=='all'?new Set(selectedGroups.flatMap(g=>g.achievementIds)):null;
-  const achievements=sortAchievements((game.achievements||[]).filter(a=>!ids||ids.has(a.id)),order);
+  const achievements=sortAchievements(filterAchievements((game.achievements||[]).filter(a=>!ids||ids.has(a.id)),unlockFilter),order);
   const earned=selectedCategory==='all'?game.earned:selectedGroups.reduce((sum,g)=>sum+g.earned,0);
   const total=selectedCategory==='all'?game.total:selectedGroups.reduce((sum,g)=>sum+g.total,0);
   const categories=[{id:'all',name:'全部成就'},{id:'base',name:'本体成就'},{id:'dlc',name:'DLC成就'}] as const;
@@ -136,12 +141,16 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
       </div>}
       <section className="achievement-group detail-achievement-section" data-group-id={selectedCategory}>
         <div className="achievement-sort-row">
-          <AchievementSortControl order={order} onChange={setOrder}/>
+          <div className="achievement-sort-actions">
+            <AchievementSortControl order={order} onChange={setOrder} lockedOnly={unlockFilter==='locked'}/>
+            <AchievementUnlockFilterControl filter={unlockFilter} onChange={changeUnlockFilter}/>
+          </div>
           <span className="achievement-filter-count" aria-live="polite">{earned}/{total}</span>
         </div>
         <Progress earned={earned} total={total} complete={earned===total&&total>0} label="当前成就分类完成度"/>
-        <div className="achievement-list" id="achievement-panel" role={categorized?'tabpanel':undefined} aria-labelledby={categorized?'achievement-tab-'+selectedCategory:undefined}>
+        <div className="achievement-list" id="achievement-panel" data-unlock-filter={unlockFilter} role={categorized?'tabpanel':undefined} aria-labelledby={categorized?'achievement-tab-'+selectedCategory:undefined}>
           {achievements.map(a=><AchievementItem key={a.id} achievement={a}/>)}
+          {!achievements.length&&<p className="achievement-filter-empty">当前筛选条件下没有成就。</p>}
         </div>
       </section>
     </>}

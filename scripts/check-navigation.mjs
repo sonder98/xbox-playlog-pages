@@ -708,6 +708,56 @@ try{
       await popup.waitFor({state:'hidden'});
       assert.deepEqual(await achievementIds(),expected);
     }
+
+    // Game-detail unlock filters use the same menu behavior and styling as sorting.
+    const filterToggle=page.getByRole('button',{name:'成就筛选',exact:true});
+    await filterToggle.click();
+    let filterMenu=page.getByRole('menu',{name:'成就筛选方式'});
+    assert.deepEqual(await filterMenu.getByRole('menuitemradio').allTextContents(),['全部','已解锁','未解锁']);
+    assert.equal(await filterMenu.getByRole('menuitemradio',{checked:true}).innerText(),'全部');
+    await filterMenu.getByRole('menuitemradio',{name:'已解锁'}).click();
+    assert.deepEqual(await achievementIds(),['2','1'],'Unlocked filter preserves the chosen date order');
+    assert.equal(await page.locator('.achievement-filter-count').innerText(),'2/4','Status filter does not alter overall completion count');
+    await filterToggle.click();
+    filterMenu=page.getByRole('menu',{name:'成就筛选方式'});
+    await filterMenu.getByRole('menuitemradio',{name:'未解锁'}).click();
+    assert.deepEqual(await achievementIds(),['3','4'],'Locked filter excludes earned achievements');
+    assert.equal(await page.locator('.achievement-list').getAttribute('data-unlock-filter'),'locked');
+    await page.getByRole('button',{name:'成就排序',exact:true}).click();
+    let lockedSortMenu=page.getByRole('menu',{name:'成就排序方式'});
+    assert.deepEqual(await lockedSortMenu.getByRole('menuitemradio').allTextContents(),
+      ['稀有度：低 → 高','稀有度：高 → 低'],'Locked achievements have rarity-only sort choices');
+    assert.equal(await lockedSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'稀有度：低 → 高',
+      'Switching from date sort automatically picks rarity ascending');
+    await lockedSortMenu.getByRole('menuitemradio',{name:'稀有度：高 → 低'}).click();
+    assert.deepEqual(await achievementIds(),['3','4'],'Unknown rarity stays at end in locked-only mode');
+    await tabs.getByRole('tab',{name:'本体成就'}).click();
+    assert.equal(await page.locator('.achievement').count(),0,'Locked-only base category has no achievements in fixture');
+    assert.ok(await page.locator('.achievement-filter-empty').isVisible(),'Empty filter results have an explanation');
+    assert.equal(await page.locator('.achievement-filter-count').innerText(),'2/2',
+      'Empty filtered view still shows the base completion summary');
+    await tabs.getByRole('tab',{name:'DLC成就'}).click();
+    assert.deepEqual(await achievementIds(),['3','4'],'Locked filter composes with DLC category');
+    await tabs.getByRole('tab',{name:'全部成就'}).click();
+    await filterToggle.click();
+    filterMenu=page.getByRole('menu',{name:'成就筛选方式'});
+    await filterMenu.getByRole('menuitemradio',{name:'全部'}).click();
+    await page.getByRole('button',{name:'成就排序',exact:true}).click();
+    lockedSortMenu=page.getByRole('menu',{name:'成就排序方式'});
+    assert.equal(await lockedSortMenu.getByRole('menuitemradio').count(),4,
+      'Restoring all achievements restores both time-based sort choices');
+    await lockedSortMenu.getByRole('menuitemradio',{name:'解锁时间：新 → 旧'}).click();
+    assert.deepEqual(await achievementIds(),['2','1','3','4'],'All-classes ordering returns to normal');
+    const detailFilterLayout=await page.locator('.achievement-sort-row').evaluate(el=>{
+      const toggles=[...el.querySelectorAll('.achievement-sort-toggle')].map(node=>node.getBoundingClientRect());
+      const count=el.querySelector('.achievement-filter-count').getBoundingClientRect();
+      return {sortBeforeFilter:toggles[0].x<toggles[1].x,filterBeforeCount:toggles[1].right<count.x,
+       sameLine:Math.abs(toggles[0].y-toggles[1].y)<2,
+       noOverflow:el.scrollWidth<=el.clientWidth+1};
+    });
+    assert.ok(detailFilterLayout.sortBeforeFilter&&detailFilterLayout.filterBeforeCount&&
+      detailFilterLayout.sameLine&&detailFilterLayout.noOverflow,
+      'Sort, filter, and count fit in the expected one-row order on desktop and mobile');
     await tabs.getByRole('tab',{name:'本体成就'}).click();
     assert.deepEqual(await achievementIds(),['2','1']);
     assert.equal(await page.locator('.achievement-filter-count').innerText(),'2/2');

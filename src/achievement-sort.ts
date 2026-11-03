@@ -1,5 +1,11 @@
 import type {Achievement} from './data.ts';
 export type AchievementSort='date-desc'|'date-asc'|'rarity-asc'|'rarity-desc';
+export type AchievementUnlockFilter='all'|'unlocked'|'locked';
+/** Unlock-state filtering composes with the existing base/DLC membership filter. */
+export function filterAchievements(items:Achievement[],filter:AchievementUnlockFilter):Achievement[]{
+ return filter==='all'?items:items.filter(a=>a.unlocked===(filter==='unlocked'));
+}
+
 export function sortAchievements(items:Achievement[],order:AchievementSort):Achievement[]{
   const time=(a:Achievement)=>a.unlocked&&a.unlockedAt&&Number.isFinite(Date.parse(a.unlockedAt))?Date.parse(a.unlockedAt):null;
   const rarity=(a:Achievement)=>a.rarity!==null&&Number.isFinite(a.rarity)?a.rarity:null;

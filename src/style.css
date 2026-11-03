@@ -1899,6 +1899,17 @@ footer .dot {
 }
 .game-detail .achievement-sort-option.selected:hover,
 .game-detail .achievement-sort-option.selected:focus-visible { background:#444; }
+/* Unlock filter shares the existing sort control; both stay beside the completion count. */
+.game-detail .achievement-sort-actions {display:flex;align-items:center;gap:4px;min-width:0;}
+.game-detail .achievement-sort-control:focus-within {z-index:6;}
+.game-detail .achievement-sort-actions>.achievement-sort-control:last-child .achievement-sort-menu {
+  left:auto;right:0;min-width:172px;
+}
+.game-detail .achievement-filter-empty {padding:18px 8px;text-align:center;color:var(--text-muted);font-size:13px;}
+@media(max-width:370px) {
+  .game-detail .achievement-sort-actions{gap:0;}
+  .game-detail .achievement-sort-toggle{gap:5px;padding:7px 10px;}
+}
 .game-detail .achievement-tab { padding-left:19px; padding-right:19px; }
 .game-detail .achievement-tab:hover { background:var(--surface-hover); }
 @media(max-width:700px) {
