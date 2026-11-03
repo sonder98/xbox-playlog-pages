@@ -615,13 +615,38 @@ try{
     await page.getByRole('heading',{name:'我的游戏档案',exact:true}).waitFor();
     await page.getByRole('button',{name:'全部游戏',exact:true}).click();
     await page.getByRole('textbox',{name:'搜索游戏名称'}).fill('Test Game 1');
-    const gameSort=page.getByRole('combobox',{name:'排序游戏'});
-    await gameSort.selectOption('span-desc');
-    assert.equal(await gameSort.inputValue(),'span-desc','Longest-to-shortest achievement span sorting is available');
+    const gameSort=page.getByRole('button',{name:'游戏排序',exact:true});
+    assert.equal(await page.getByRole('combobox',{name:'排序游戏'}).count(),0,'The library no longer uses the browser-native sort select');
+    await gameSort.focus();
+    await gameSort.press('ArrowDown');
+    let gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
+    await gameSortMenu.waitFor();
+    assert.deepEqual(await gameSortMenu.getByRole('menuitemradio').allTextContents(),
+      ['最近游玩','游玩时长','成就完成度','时间跨度：长 → 短','时间跨度：短 → 长'],
+      'Library sorting preserves all five existing sort choices');
+    assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'最近游玩',
+      'Library sorting keeps the recent-play default');
+    const libraryMenuBounds=await gameSortMenu.evaluate(el=>{
+      const r=el.getBoundingClientRect();
+      return {left:r.left,right:r.right,viewport:window.innerWidth};
+    });
+    assert.ok(libraryMenuBounds.left>=0&&libraryMenuBounds.right<=libraryMenuBounds.viewport,
+      'The custom sort menu stays inside the viewport on desktop and mobile');
+    await gameSortMenu.getByRole('menuitemradio',{name:'时间跨度：长 → 短'}).click();
+    await gameSortMenu.waitFor({state:'hidden'});
     assert.equal(await page.locator('.game-card .game-time-span').first().innerText(),'时间跨度：1.0天');
-    await gameSort.selectOption('span-asc');
-    assert.equal(await gameSort.inputValue(),'span-asc','Shortest-to-longest achievement span sorting is available');
-    await gameSort.selectOption('time');
+    await gameSort.click();
+    gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
+    await gameSortMenu.getByRole('menuitemradio',{name:'时间跨度：短 → 长'}).click();
+    assert.equal(await gameSort.getAttribute('aria-expanded'),'false');
+    await gameSort.click();
+    gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
+    await gameSortMenu.getByRole('menuitemradio',{name:'游玩时长'}).click();
+    await gameSort.click();
+    gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
+    assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'游玩时长',
+      'Selecting playtime sorting updates the custom selected state');
+    await gameSortMenu.getByRole('menuitemradio',{name:'最近游玩'}).click();
     const beforeDetail=await page.evaluate(()=>window.scrollY);
     await page.locator('.game-card').first().click();
     await page.getByRole('dialog').waitFor();
