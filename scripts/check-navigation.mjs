@@ -615,6 +615,8 @@ try{
     await page.getByRole('heading',{name:'我的游戏档案',exact:true}).waitFor();
     await page.getByRole('button',{name:'全部游戏',exact:true}).click();
     await page.getByRole('textbox',{name:'搜索游戏名称'}).fill('Test Game 1');
+    assert.equal(await page.locator('.toolbar').getByRole('button',{name:'CSV',exact:true}).count(),0,
+      'The All Games toolbar no longer shows the CSV download action');
     const gameSort=page.getByRole('button',{name:'游戏排序',exact:true});
     assert.equal(await page.getByRole('combobox',{name:'排序游戏'}).count(),0,'The library no longer uses the browser-native sort select');
     await gameSort.focus();
@@ -849,6 +851,21 @@ try{
     // Hiding is a reversible encrypted display preference, independent of fresh sync snapshots.
     const manageDisplay=()=>page.locator('.toolbar').getByRole('button',{name:'管理展示',exact:true}).click();
     await manageDisplay();
+    assert.equal(await page.getByText('只管理 Xbox 明确标记可见的游戏。',{exact:false}).count(),0,
+      'The long display-scope explanation is removed from the Manage Display dialog');
+    const displayChoices=page.locator('.display-game-choice');
+    assert.ok(await displayChoices.count()>0,'Manage Display shows the available games');
+    assert.equal(await displayChoices.locator('.display-game-cover').count(),await displayChoices.count(),
+      'Every managed game has a compact cover before its name');
+    assert.equal(await displayChoices.locator('.display-game-cover + .display-game-name').count(),await displayChoices.count(),
+      'Game covers appear immediately before their corresponding names');
+    assert.equal(await displayChoices.locator('.display-game-cover img').count(),await displayChoices.count(),
+      'The managed-game thumbnails use the existing game artwork');
+    const displayCoverBounds=await displayChoices.first().locator('.display-game-cover').evaluate(el=>{
+      const r=el.getBoundingClientRect();return {width:r.width,height:r.height};
+    });
+    assert.ok(displayCoverBounds.width>=34&&displayCoverBounds.width<=41&&Math.abs(displayCoverBounds.width-displayCoverBounds.height)<1,
+      'Manage Display uses small square cover thumbnails on desktop and mobile');
     if(mobile){
       const fonts=await page.locator('input:not([type="checkbox"]):not([type="file"]),select,textarea').evaluateAll(els=>els.filter(el=>el.getClientRects().length).map(el=>({label:el.getAttribute('aria-label'),size:parseFloat(getComputedStyle(el).fontSize)})));
       assert.ok(fonts.length>=2);assert.ok(fonts.every(f=>f.size>=16),JSON.stringify(fonts));
