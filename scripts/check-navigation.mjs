@@ -65,7 +65,17 @@ try{
     });
     await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
     await page.route('**/vault.json*',route=>route.fulfill({json:activeEnvelope}));
+    // Most visual regressions inject a fresh network fixture on each login.
+    // Clear only the encrypted local snapshot before those fixture resets.
     async function unlock(hash=''){
+      if(page.url().startsWith('http://127.0.0.1:4173/xbox-playlog-pages/')){
+        await page.evaluate(()=>new Promise((resolve,reject)=>{
+          const request=indexedDB.deleteDatabase('playlog-encrypted-history-v1');
+          request.onsuccess=()=>resolve(true);
+          request.onerror=()=>reject(request.error);
+          request.onblocked=()=>reject(Error('Encrypted fixture cache deletion blocked'));
+        }));
+      }
       await page.goto('about:blank');
       await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/'+hash);
       await page.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
@@ -80,8 +90,78 @@ try{
       }
       await page.getByRole('button',{name,exact:true}).click();
     }
+    // On a new device, network failure is not evidence that the site awaits its first sync.
+    const simulatedOutage=route=>route.abort('failed');
+    await page.route('**/vault.json*',simulatedOutage);
+    await page.route('**/status.json',simulatedOutage);
+    await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/');
+    await page.getByRole('heading',{name:'暂时无法连接游戏档案'}).waitFor();
+    assert.equal(await page.getByText('等待首次同步').count(),0,
+      'A failed network request never masquerades as a first synchronization');
+    await page.unroute('**/vault.json*',simulatedOutage);
+    await page.unroute('**/status.json',simulatedOutage);
+    await page.getByRole('button',{name:'重新读取游戏档案'}).click();
+    await page.getByRole('heading',{name:'欢迎回到 XBOX Playlog'}).waitFor();
     await unlock();
     await page.locator('.recent-game-card').first().waitFor();
+    // A successful decrypt persists ONLY the existing AES-GCM envelope in IndexedDB.
+    const savedEncrypted=async()=>page.evaluate(()=>new Promise((resolve,reject)=>{
+      const request=indexedDB.open('playlog-encrypted-history-v1',1);
+      request.onsuccess=()=>{
+        const db=request.result,read=db.transaction('snapshots').objectStore('snapshots').get('latest');
+        read.onsuccess=()=>{const value=read.result;db.close();resolve(value?{
+          version:value.version,algorithm:value.algorithm,hasCiphertext:typeof value.ciphertext==='string',
+          exposedRecords:'records' in value,hasGameName:JSON.stringify(value).includes('Test Game 1')
+        }:null);};
+        read.onerror=()=>reject(read.error);
+      };
+      request.onerror=()=>reject(request.error);
+    }));
+    await page.waitForFunction(async()=>{
+      const request=indexedDB.open('playlog-encrypted-history-v1',1);
+      return await new Promise(resolve=>{
+        request.onsuccess=()=>{
+          const db=request.result,read=db.transaction('snapshots').objectStore('snapshots').get('latest');
+          read.onsuccess=()=>{db.close();resolve(!!read.result?.ciphertext);};
+          read.onerror=()=>{db.close();resolve(false);};
+        };
+        request.onerror=()=>resolve(false);
+      });
+    });
+    assert.deepEqual(await savedEncrypted(),{version:1,algorithm:'AES-GCM',hasCiphertext:true,exposedRecords:false,hasGameName:false},
+      'Only the encrypted envelope, never decrypted records, is saved for offline use');
+    // The app now opens historic records even when both cloud endpoints are unreachable.
+    await page.route('**/vault.json*',simulatedOutage);
+    await page.route('**/status.json',simulatedOutage);
+    await page.reload();
+    await page.getByRole('heading',{name:'欢迎回到 XBOX Playlog'}).waitFor();
+    assert.equal(await page.locator('.entry-screen').getByText('等待首次同步').count(),0);
+    await page.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
+    await page.locator('input[type="password"]').fill(password);
+    await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    await page.locator('.recent-game-card').first().waitFor();
+    await page.getByText('当前显示本机保存的历史档案',{exact:false}).waitFor();
+    assert.equal(await page.locator('.stats').count(),1,
+      'Historical game records remain readable while cloud refresh fails in the background');
+    await page.unroute('**/vault.json*',simulatedOutage);
+    await page.unroute('**/status.json',simulatedOutage);
+    // A newer encrypted cloud snapshot replaces the local history without hiding the archive.
+    const newerPayload=await decryptVault(envelope,password);
+    newerPayload.records[0].at='2026-11-02T00:00:00.000Z';
+    newerPayload.records[0].games[0].name='Updated Test Game 0';
+    activeEnvelope=await encryptVault(newerPayload,password);
+    await page.reload();
+    await page.getByRole('heading',{name:'欢迎回到 XBOX Playlog'}).waitFor();
+    await page.locator('input[type="password"]').fill(password);
+    await page.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
+    await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    await page.getByText('已自动加载最新同步记录。').waitFor();
+    assert.ok((await page.locator('.recent-game-card').first().innerText()).includes('Updated Test Game 0'),
+      'Latest cloud history refreshes the archive after cached records are already visible');
+    activeEnvelope=envelope;
+    await unlock();
+    await page.locator('.recent-game-card').first().waitFor();
+    console.log((mobile?'Mobile':'Desktop')+': PASS offline-first encrypted history, network outage versus first sync, retry, background newer-snapshot refresh');
     // Manual sync is fully client-side, and the scoped Actions credential never reaches Playlog hosting.
     let manualDispatches=0,requestedId='';
     await page.route('https://api.github.com/repos/sonder98/xbox-playlog-pages/actions/workflows/**',route=>{
