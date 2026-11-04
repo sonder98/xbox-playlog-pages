@@ -9,7 +9,7 @@ import {rankDustyGames} from './dusty-games';
 import {AchievementPreview,AchievementJourney,AchievementShowcases} from './components/achievement-heatmap';
 import {completion} from './completion';
 import {achievementTimeSpan,compareAchievementTimeSpans} from './achievement-time-span';
-import {api,workflow,repo,playtimeLedgerForBackup,pcMetascoresForDisplay} from './vault';
+import {api,workflow,repo,playtimeLedgerForBackup,pcMetascoresForDisplay,refreshCloudRecords} from './vault';
 import {ManualSyncDialog} from './components/manual-sync';
 import {GameLibrarySortControl,type GameLibrarySort} from './components/achievement-sort-control';
 import {usePageNavigation} from './navigation';
@@ -17,7 +17,7 @@ import {PullToRefresh} from './pull-to-refresh';
 const fmt=(m:number|null)=>m===null?'暂无数据':(m/60).toLocaleString('zh-CN',{maximumFractionDigits:1})+' 小时';
 const dt=(s:string|null)=>s?new Date(s).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'尚未同步';
 function download(name:string,content:string,type:string){const u=URL.createObjectURL(new Blob([content],{type}));const a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
-export default function Dashboard({onLock,locking=false}:{onLock:()=>void;locking?:boolean}){
+export default function Dashboard({onLock,locking=false,refreshFromCache=false}:{onLock:()=>void;locking?:boolean;refreshFromCache?:boolean}){
  const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState(false),[busy,setBusy]=useState(false),[progress]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState<GameLibrarySort>('recent'),[filter,setFilter]=useState('all');
  const [manualPhase,setManualPhase]=useState<'idle'|'queued'|'running'|'deploying'|'ready'|'error'>('idle');
   const [hiddenIds,setHiddenIds]=useState<string[]>([]),[manageDisplay,setManageDisplay]=useState(false),[draftHidden,setDraftHidden]=useState<string[]>([]),[displayQuery,setDisplayQuery]=useState(''),[onlyHidden,setOnlyHidden]=useState(false),[savingDisplay,setSavingDisplay]=useState(false),[displayError,setDisplayError]=useState('');
@@ -81,6 +81,18 @@ export default function Dashboard({onLock,locking=false}:{onLock:()=>void;lockin
  },[tab,gameId,dayId,showcase,gapShowcase]);
  const input=useRef<HTMLInputElement>(null);const current=records[0],games=current?.games||[],prev=records[1];const playtimeLedger=playtimeLedgerForBackup();const pcScores=pcMetascoresForDisplay();const selected=games.find(g=>g.id===gameId&&officialGameVisible(g,current?.source||'')&&!hiddenIds.includes(g.id));const delta=current?compareRecords(current,prev):null;
  useEffect(()=>{api('/api/records').then(async d=>{try{const preferences=await api('/api/display-preferences');setHiddenIds(preferences.hiddenGameIds);}catch(e){setError((e as Error).message);}setRecords(d.records);}).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
+ useEffect(()=>{
+  if(!refreshFromCache)return;
+  // Keep history visible while fetching the latest cloud envelope.
+  // Network errors or an Xbox sync never clear an already unlocked archive.
+  let active=true;
+  refreshCloudRecords().then(latest=>{
+   if(active&&latest){setRecords(latest);setNotice('已自动加载最新同步记录。');}
+  }).catch(()=>{
+   if(active)setNotice('当前显示本机保存的历史档案；云端暂时无法连接，历史数据仍可正常查看。');
+  });
+  return()=>{active=false;};
+ },[refreshFromCache]);
  const hiddenSet=new Set(hiddenIds);
  const officialAvailableGames=games.filter(g=>officialGameVisible(g,current?.source||''));
  const officialAvailableIds=new Set(officialAvailableGames.map(g=>g.id));
