@@ -266,10 +266,18 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    if(isLegacy){
     data=await legacyFor(game.id);version='1';audit.legacy++;
    }else{
+    let unavailable: XboxReadError|undefined;
     for(const candidate of ['6','4','2']){
      try{const result=await pagesFor(game.id,candidate);data=result;version=candidate;if(result.raw.length)break;}
-     catch(error){if(fatal(error))throw error;}
+     catch(error){
+      if(fatal(error))throw error;
+      if(game.officialHidden!==false&&error instanceof XboxReadError&&[403,404].includes(error.status)){
+       unavailable=error;
+       if(error.status===403)throw error;
+      }
+     }
     }
+    if(!data&&unavailable)throw unavailable;
    }
    if(!data)throw Error('Xbox 成就读取未完成。');
    if(!data.raw.length&&version!=='1'){
