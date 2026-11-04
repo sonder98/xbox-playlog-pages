@@ -84,3 +84,14 @@ test('Adjacent date navigation spans year and leap-day boundaries',()=>{
  assert.equal(adjacentDay('2024-02-28',1),'2024-02-29');
  assert.equal(adjacentDay('2024-02-29',1),'2024-03-01');
 });
+
+test('Heatmap counts officially hidden and unknown-visibility Xbox achievements without inventing unlocks',()=>{
+ const visible={...fixture('1',['2026-10-29T10:00:00Z']),officialHidden:false};
+ const hidden={...fixture('2',['2026-10-29T11:00:00Z']),officialHidden:true};
+ const unknown=fixture('3',['2026-10-29T12:00:00Z']);
+ const result=buildActivity([visible,hidden,unknown],new Date('2026-11-04T00:00:00Z'));
+ assert.equal(result.total,3);
+ assert.deepEqual(result.byDay.get('2026-10-29')?.games.map(g=>g.game.id),['1','2','3']);
+ assert.equal(recentDays(result).find(d=>d.day==='2026-10-29')?.count,3);
+ assert.equal(result.byDay.get('2026-10-29')?.events.filter(e=>e.game.officialHidden!==false).length,2);
+});
