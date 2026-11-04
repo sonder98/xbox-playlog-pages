@@ -97,6 +97,16 @@ export function mergeTitleHistories(hub:any[],modern:any[],legacy:any[]){
 export function refreshCatalogToday(previousAt:string|undefined,at:string){
  return at.slice(11,13)==='02' && previousAt?.slice(0,13)!==at.slice(0,13);
 }
+/** GitHub scheduled workflows are best-effort and may skip 02:17 UTC.
+ * Encrypted private metadata remembers the last completed full catalog sweep
+ * and catches up on the next non-boundary run after 24h. */
+export function catalogRefreshDue(previousAt:string|undefined,lastFullAt:string|undefined,at:string,playtimeBoundary=false){
+ if(playtimeBoundary)return false;
+ if(refreshCatalogToday(previousAt,at))return true;
+ if(!lastFullAt)return false;
+ const age=Date.parse(at)-Date.parse(lastFullAt);
+ return Number.isFinite(age)&&age>=24*3600_000&&at.slice(11,13)>='02';
+}
 /** Encrypted private sync cache only; never include missing titles in the public vault. */
 export type EmptyTitleCache={id:string;lastPlayed:string|null;total:number;earned:number;score:number;maxScore:number;devices:string[];checkedAt:string};
 export const EMPTY_TITLE_RECHECK_MS=24*60*60*1000;
@@ -151,7 +161,7 @@ export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:st
  if(typeof summary.currentGamerscore==='number'&&summary.currentGamerscore!==old.score)return 'scoreChanged';
  return 'reused';
 }
-export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;emptyTitles?:EmptyTitleCache[];pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string;forcePlaytimeSweep?:boolean}={}){
+export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;emptyTitles?:EmptyTitleCache[];lastFullCatalogAt?:string;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string;forcePlaytimeSweep?:boolean}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
  // Sustained pacing, no retries against permissions/security errors. 429 stops this scan.
  const request:typeof fetch=async(input,init)=>{await pause(1050);return (options.request||fetch)(input,init);};
@@ -171,7 +181,8 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  // Missing flags remain unknown in the archive, but are hidden in UI and on later syncs.
  const games=normalizeTitles({titles:titles.filter(t=>!options.onlyIds||options.onlyIds.has(String(t.titleId))||!prior.has(String(t.titleId)))});
  const audit:ScanAudit={version:1,at:options.now||new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,fullRefresh:false,reusedDetails:0,detailedReads:0,statsReads:0,statsSkipped:0,emptySkipped:0,reuseReasons:{},failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
- audit.fullRefresh=refreshCatalogToday(options.previous?.at,audit.at);
+ audit.fullRefresh=catalogRefreshDue(options.previous?.at,options.lastFullCatalogAt,audit.at,
+  options.forcePlaytimeSweep===true||boundaryPlaytimeSweep(audit.at));
  const statsSamples:PlaytimeSample[]=[];
  const sampleMinutes=(id:string,value:number|null)=>{if(value!==null&&Number.isSafeInteger(value)&&value>=0)statsSamples.push({id,minutes:value,at:options.now||new Date().toISOString()});};
  const sweepPlaytime=options.forcePlaytimeSweep===true||boundaryPlaytimeSweep(audit.at);
