@@ -32,7 +32,7 @@ const began=Date.now();
 const result=await scanMicrosoft(session.config,{previous:cacheBaseline,emptyTitles:saved?.emptyTitles,expectedOwner:session.state.owner,forcePlaytimeSweep:process.env.PLAYTIME_FORCE_SWEEP==='true',progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
 const scanSeconds=Math.round((Date.now()-began)/1000);
 // Only aggregate counts: no XUID, game names, credentials, private snapshots or timestamps.
-console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,emptySkipped:result.audit.emptySkipped,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed}));
+console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,emptySkipped:result.audit.emptySkipped,emptyCached:result.emptyTitles.length,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed}));
 if(result.audit.failed||result.audit.interrupted||result.audit.historySourcesFailed)throw Error('微软同步未完整完成。');
 const artworkStarted=Date.now();
 const artwork=await australianArtwork(result.record,fetch,previous[0]);
