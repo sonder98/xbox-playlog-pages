@@ -1,5 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue} from '../scripts/microsoft-library.ts';
+import {officialGameVisible} from '../src/data.ts';
 import type {Achievement,Game,RecordData} from '../src/data.ts';
 const config={clientId:'11111111-1111-1111-1111-111111111111',refreshToken:'PRIVATE-REFRESH'};
 const award=(id:string,unlocked=false):Achievement=>({id,name:'Award '+id,image:'',unlocked,unlockedAt:null,rarity:null,points:10});
@@ -141,6 +142,50 @@ test('Microsoft hidden games stay archived without detail requests, and unhide o
  assert.equal(output.record.games.find(g=>g.id==='2')?.officialHidden,false,'Official unhide overrides the old hidden state');
  assert.ok(requests.every(x=>!x.includes('titleId=1')),'No detail fetches for official hidden titles');
  assert.equal(output.audit.failed,0);
+});
+
+test('Hidden and unknown-visibility Xbox titles contribute officially unlocked achievements without entering the visible game library',async()=>{
+ const requests:string[]=[];
+ const request:typeof fetch=async input=>{
+  const u=new URL(String(input));
+  if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});
+  if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
+  if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[
+   {titleId:'1',name:'PRIVATE-HIDDEN',titleHistory:{visible:false,lastTimePlayed:'2026-10-29T12:00:00Z'},achievement:{totalAchievements:2,currentAchievements:1}},
+   {titleId:'2',name:'PRIVATE-UNKNOWN',titleHistory:{lastTimePlayed:'2026-10-29T12:00:00Z'},achievement:{totalAchievements:2,currentAchievements:1}},
+   {titleId:'3',name:'PRIVATE-NO-EARNED',titleHistory:{visible:false},achievement:{totalAchievements:0,currentAchievements:0}},
+   {titleId:'4',name:'PRIVATE-FORBIDDEN',titleHistory:{visible:false},achievement:{totalAchievements:2,currentAchievements:1}},
+   {titleId:'5',name:'PRIVATE-VISIBLE',titleHistory:{visible:true},achievement:{totalAchievements:2,currentAchievements:1}}
+  ]});
+  if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});
+  if(u.hostname==='userstats.xboxlive.com')return Response.json({statlistscollection:[{stats:[{name:'MinutesPlayed',value:12}]}]});
+  const id=u.searchParams.get('titleId');
+  requests.push(id||'unexpected');
+  if(id==='4')return Response.json({error:'restricted'},{status:403});
+  if(!['1','2','5'].includes(id||''))throw Error('No details should be requested for hidden games with no achievement evidence');
+  return Response.json({achievements:[
+   {id:'one',name:'PRIVATE-UNLOCK',progressState:'Achieved',progression:{timeUnlocked:'2026-10-29T12:24:00Z'},gamerscore:10,rarity:{currentPercentage:1.5}},
+   {id:'two',name:'PRIVATE-LOCKED',progressState:'NotStarted',gamerscore:10,rarity:{currentPercentage:20}}
+  ],completion:[{titleId:id,groups:{base:{groupType:'BaseGame',achievementIds:['one','two'],unlockedAchievementIds:['one']}}}]});
+ };
+ const output=await scanMicrosoft(config,{request,pause:async()=>{},now:'2026-11-04T03:00:00Z'});
+ assert.equal(output.audit.failed,0,'A privacy-restricted hidden title must not block the whole sync');
+ for(const id of ['1','2','5']){
+  const g=output.record.games.find(x=>x.id===id);
+  assert.ok(g?.achievements?.some(a=>a.unlocked&&a.unlockedAt==='2026-10-29T12:24:00.000Z'),id+' contains a timestamped unlock');
+  assert.equal(g?.earned,1);
+ }
+ assert.equal(output.record.games.find(g=>g.id==='1')?.officialHidden,true);
+ assert.equal(output.record.games.find(g=>g.id==='2')?.officialHidden,undefined);
+ assert.equal(output.record.games.find(g=>g.id==='5')?.officialHidden,false);
+ assert.equal(output.record.games.filter(g=>officialGameVisible(g,'Xbox')).length,1,'Only explicit visible=true is in the game library');
+ assert.equal(output.record.games.find(g=>g.id==='3')?.achievements?.length??0,0);
+ assert.equal(output.record.games.find(g=>g.id==='4')?.achievements?.length??0,0);
+ assert.ok(requests.includes('1')&&requests.includes('2')&&requests.includes('5'));
+ assert.ok(!requests.includes('3'));
+ assert.ok(!JSON.stringify(output.audit).includes('PRIVATE-'));
 });
 
 test('Missing visibility field overrides old visible state without losing playtime',async()=>{

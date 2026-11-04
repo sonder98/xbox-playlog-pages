@@ -26,6 +26,7 @@ export function usePageNavigation(){
  }
  function navigate(next:PageTab){if(next!==current.tab||current.gameId||current.dayId||current.showcase||current.gapShowcase)push('#'+next);}
  function openGame(id:string){push('#'+current.tab+'/game/'+id);}
+ function openAchievementGame(id:string){push('#achievements/game/'+id);}
  function openAchievementDay(day:string){push('#achievements/day/'+day);}
  function openAchievementShowcase(){push('#achievements/showcase');}
  function openAchievementGapShowcase(){push('#achievements/gaps');}
@@ -39,5 +40,5 @@ export function usePageNavigation(){
   if(history.state?.playlog&&history.state.depth>0)history.back();
   else {history.replaceState({playlog:true,depth:0,scrollY:0},'',current.gameId?'#'+current.tab:'#overview');setCurrent(route());}
  }
- return {...current,navigate,back,openGame,openAchievementDay,openAchievementShowcase,openAchievementGapShowcase,changeAchievementDay};
+ return {...current,navigate,back,openGame,openAchievementGame,openAchievementDay,openAchievementShowcase,openAchievementGapShowcase,changeAchievementDay};
 }
