@@ -149,6 +149,7 @@ try{
     const newerPayload=await decryptVault(envelope,password);
     newerPayload.records[0].at='2026-11-02T00:00:00.000Z';
     newerPayload.records[0].games[0].name='Updated Test Game 0';
+    newerPayload.records[0].games[0].lastPlayed='2026-11-02T00:00:00.000Z';
     activeEnvelope=await encryptVault(newerPayload,password);
     await page.reload();
     await page.getByRole('heading',{name:'欢迎回到 XBOX Playlog'}).waitFor();
