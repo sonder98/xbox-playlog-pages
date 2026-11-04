@@ -6,7 +6,8 @@ import {readEncryptedHistory} from './encrypted-history';
 import {rememberDevice,recalledPassword,forgetDevice} from './device';
 import './style.css';
 
-const FETCH_TIMEOUT_MS=14_000;
+// Initial cloud downloads can be large on mobile data; cached startups never wait for them.
+const FETCH_TIMEOUT_MS=30_000;
 
 /** A missing snapshot means "first sync" only when the published status explicitly says so.
  * The status endpoint must never block an otherwise available encrypted vault. */
