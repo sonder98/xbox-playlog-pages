@@ -208,9 +208,14 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  const fatal=(error:unknown)=>error instanceof XboxReadError&&[401,429].includes(error.status);
  for(let i=0;i<games.length;i++){
   const game=games[i],old=prior.get(game.id);let complete=false;
-  // Missing visibility is interpreted as hidden, without pretending the API returned false.
-  // Keep all prior achievements and playtime in the encrypted archive and aggregates.
-  if(game.officialHidden!==false){
+  // Xbox visibility controls the game library and recent lists, not achievement
+  // history. Hidden/unknown titles with earned-achievement evidence must be scanned.
+  const titleForVisibility=titles.find(t=>String(t.titleId)===game.id);
+  const summaryForVisibility=titleForVisibility?.achievement;
+  const hasUnlockEvidence=(Number(summaryForVisibility?.currentAchievements)||0)>0||
+   (Number(summaryForVisibility?.currentGamerscore)||0)>0||
+   (old?.earned||0)>0||!!old?.achievements?.some(a=>a.unlocked);
+  if(game.officialHidden!==false&&!hasUnlockEvidence){
    if(old){games[i]={...old,officialHidden:game.officialHidden};audit.preserved++;}
    audit.processed++;options.progress?.(audit.processed,games.length,audit);continue;
   }
@@ -314,9 +319,15 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    }
    if(game.minutes!==null)audit.playtimeTitles++;else if(old?.minutes!=null)game.minutes=old.minutes;
   }catch(error){
-   audit.failed++;
-   if(old){games[i]=complete?{...game,minutes:old.minutes}:{...old,officialHidden:game.officialHidden};audit.preserved++;}
-   if(fatal(error)){audit.interrupted=true;break;}
+   // Xbox can forbid reading a private title even from its owner's account.
+   // Keep prior hidden awards, and don't let a restricted title block public data.
+   if(game.officialHidden!==false&&error instanceof XboxReadError&&[403,404].includes(error.status)){
+    if(old){games[i]={...old,officialHidden:game.officialHidden};audit.preserved++;}
+   }else{
+    audit.failed++;
+    if(old){games[i]=complete?{...game,minutes:old.minutes,officialHidden:game.officialHidden}:{...old,officialHidden:game.officialHidden};audit.preserved++;}
+    if(fatal(error)){audit.interrupted=true;break;}
+   }
   }
   audit.processed++;options.progress?.(audit.processed,games.length,audit);
  }
