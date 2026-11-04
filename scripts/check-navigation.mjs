@@ -1206,6 +1206,7 @@ try{
     activeEnvelope=await encryptVault(await decryptVault(envelope,password),'changed-fixture-password');
     await page.reload();
     await page.getByRole('button',{name:'锁定档案',exact:true}).waitFor();
+    await page.locator('.recent-game-card').first().waitFor();
     assert.equal(await page.locator('.recent-game-card').count()>0,true,
       'A password rotation in the cloud cannot lock the user out of previously decrypted encrypted history');
     await page.getByText('当前显示本机保存的历史档案',{exact:false}).waitFor();
