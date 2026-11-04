@@ -59,7 +59,7 @@ export function catalogGroups(bundle:CatalogBundle|undefined,game:Game):Achievem
  if(map.size!==game.achievements.length)return;
  return validateGroups(catalog.data.groups.map(g=>({...g,achievementIds:g.achievementIds.map(id=>map.get(id)!)})),game.achievements,game.total,game.earned);
 }
-export type ScanAudit={version:1;at:string;titlePages:number;achievementHistoryPages:number;historySourcesFailed:number;historyTitlesAdded:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;fullRefresh:boolean;reusedDetails:number;detailedReads:number;statsReads:number;statsSkipped:number;reuseReasons:Partial<Record<DetailDecision,number>>;failed:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number;matchedAchievementDates:number};};
+export type ScanAudit={version:1;at:string;titlePages:number;achievementHistoryPages:number;historySourcesFailed:number;historyTitlesAdded:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;fullRefresh:boolean;reusedDetails:number;detailedReads:number;statsReads:number;statsSkipped:number;emptySkipped:number;reuseReasons:Partial<Record<DetailDecision,number>>;failed:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number;matchedAchievementDates:number};};
 export function compareLibrary(games:Game[],prior?:RecordData,aliases=new Map<string,string[]>(),awardNames=new Map<string,Map<string,string>>()){
  const out={matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0};
  const choices=new Map(games.map(g=>{const names=new Set([g.name,...(aliases.get(g.id)||[])].map(normalizedName));return [g.id,(prior?.games||[]).filter(p=>names.has(normalizedName(p.name)))];}));
@@ -97,6 +97,31 @@ export function mergeTitleHistories(hub:any[],modern:any[],legacy:any[]){
 export function refreshCatalogToday(previousAt:string|undefined,at:string){
  return at.slice(11,13)==='02' && previousAt?.slice(0,13)!==at.slice(0,13);
 }
+/** Encrypted private sync cache only; never include missing titles in the public vault. */
+export type EmptyTitleCache={id:string;lastPlayed:string|null;total:number;earned:number;score:number;maxScore:number;devices:string[];checkedAt:string};
+export const EMPTY_TITLE_RECHECK_MS=24*60*60*1000;
+export function reusableEmptyTitle(game:Game,stored:EmptyTitleCache|undefined,at:string,forceCheck=false):boolean{
+ if(forceCheck||game.officialHidden!==false||!stored||stored.id!==game.id)return false;
+ const age=Date.parse(at)-Date.parse(stored.checkedAt);
+ if(!Number.isFinite(age)||age<0||age>=EMPTY_TITLE_RECHECK_MS)return false;
+ if(game.total!==0||game.earned!==0||game.score!==0||game.maxScore!==0||
+    game.minutes!==null||game.lastPlayed!==stored.lastPlayed)return false;
+ return stored.total===0&&stored.earned===0&&stored.score===0&&stored.maxScore===0&&
+   Array.isArray(stored.devices)&&JSON.stringify(game.devices)===JSON.stringify(stored.devices);
+}
+/** A daily full scan finds delayed achievements and newly released DLC for inactive games.
+ * For normal runs, only unchanged games inactive for 14+ days may skip earned-ID
+ * probes when Xbox omits mandatory counts; new activity/counter changes never skip. */
+export function shouldProbeMissingSummary(old:Game,summary:any,lastPlayed:string|null,at:string,forceCheck=false):boolean{
+ if(forceCheck||!lastPlayed||lastPlayed!==old.lastPlayed&&Date.parse(lastPlayed)!==Date.parse(old.lastPlayed||''))return true;
+ const age=Date.parse(at)-Date.parse(lastPlayed);
+ if(!Number.isFinite(age)||age<0||age<14*86400_000)return true;
+ if(typeof summary?.currentAchievements==='number'&&summary.currentAchievements!==old.earned)return true;
+ if(typeof summary?.totalAchievements==='number'&&summary.totalAchievements>0&&summary.totalAchievements!==old.total)return true;
+ if(typeof summary?.currentGamerscore==='number'&&summary.currentGamerscore!==old.score)return true;
+ if(typeof summary?.totalGamerscore==='number'&&summary.totalGamerscore>0&&summary.totalGamerscore!==old.maxScore)return true;
+ return false;
+}
 /** Poll current playtime for recently played or unmeasured games only. */
 export function shouldReadPlaytime(lastPlayed:string|null,oldMinutes:number|null,at:string){
  const played=lastPlayed?Date.parse(lastPlayed):NaN;
@@ -106,7 +131,7 @@ export function shouldReadPlaytime(lastPlayed:string|null,oldMinutes:number|null
  * Xbox omits currentGamerscore on some title summaries, and can change the textual
  * timestamp precision without changing the actual last-played instant.
  * The total and earned counts are mandatory: absent ones must trigger a fresh read. */
-export type DetailDecision='newGame'|'incompleteCache'|'dailyRefresh'|'playedAgain'|'missingSummary'|'totalChanged'|'earnedChanged'|'scoreChanged'|'reused'|'verifiedEarned';
+export type DetailDecision='newGame'|'incompleteCache'|'dailyRefresh'|'playedAgain'|'missingSummary'|'totalChanged'|'earnedChanged'|'scoreChanged'|'reused'|'verifiedEarned'|'inactiveReuse'|'emptyCache';
 export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:string|null,fullRefresh:boolean):DetailDecision {
  if(!old)return 'newGame';
  const awards=old.achievements||[],groups=old.groups||[];
@@ -126,7 +151,7 @@ export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:st
  if(typeof summary.currentGamerscore==='number'&&summary.currentGamerscore!==old.score)return 'scoreChanged';
  return 'reused';
 }
-export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string;forcePlaytimeSweep?:boolean}={}){
+export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;emptyTitles?:EmptyTitleCache[];pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string;forcePlaytimeSweep?:boolean}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
  // Sustained pacing, no retries against permissions/security errors. 429 stops this scan.
  const request:typeof fetch=async(input,init)=>{await pause(1050);return (options.request||fetch)(input,init);};
@@ -145,11 +170,15 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  // Display policy: explicit visible=true is the only showable Xbox state.
  // Missing flags remain unknown in the archive, but are hidden in UI and on later syncs.
  const games=normalizeTitles({titles:titles.filter(t=>!options.onlyIds||options.onlyIds.has(String(t.titleId))||!prior.has(String(t.titleId)))});
- const audit:ScanAudit={version:1,at:options.now||new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,fullRefresh:false,reusedDetails:0,detailedReads:0,statsReads:0,statsSkipped:0,reuseReasons:{},failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
+ const audit:ScanAudit={version:1,at:options.now||new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,fullRefresh:false,reusedDetails:0,detailedReads:0,statsReads:0,statsSkipped:0,emptySkipped:0,reuseReasons:{},failed:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
  audit.fullRefresh=refreshCatalogToday(options.previous?.at,audit.at);
  const statsSamples:PlaytimeSample[]=[];
  const sampleMinutes=(id:string,value:number|null)=>{if(value!==null&&Number.isSafeInteger(value)&&value>=0)statsSamples.push({id,minutes:value,at:options.now||new Date().toISOString()});};
  const sweepPlaytime=options.forcePlaytimeSweep===true||boundaryPlaytimeSweep(audit.at);
+  const knownEmpty=new Map((Array.isArray(options.emptyTitles)?options.emptyTitles:[])
+   .filter(e=>e&&typeof e.id==='string'&&/^[0-9]{1,20}$/.test(e.id))
+   .map(e=>[e.id,e]));
+  const skippedEmpty=new Set<string>();
  const pagesFor=async(id:string,version:string,possible=false,legacy=false,earned=false,unlockedOnly=false)=>{
   const pages:any[]=[];const result=await collectPages(async token=>{
    const params=new URLSearchParams(legacy?{earned:String(earned)}:{contractVersion:version,possibleOnly:String(possible),unlockedOnly:String(unlockedOnly)});if(token)params.set('continuationToken',token);
@@ -177,7 +206,14 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
   try{
    const title=titles.find(t=>String(t.titleId)===game.id),summary=title?.achievement;
    const lastPlayed=title?.titleHistory?.lastTimePlayed||null;
+   if(reusableEmptyTitle(game,knownEmpty.get(game.id),audit.at,
+    audit.fullRefresh||sweepPlaytime||!!options.onlyIds?.has(game.id))){
+    skippedEmpty.add(game.id);audit.emptySkipped++;audit.reuseReasons.emptyCache=(audit.reuseReasons.emptyCache||0)+1;
+    audit.processed++;options.progress?.(audit.processed,games.length,audit);continue;
+   }
    let decision=detailCacheDecision(old,summary,lastPlayed,audit.fullRefresh);
+   if(decision==='missingSummary'&&old&&!shouldProbeMissingSummary(old,summary,lastPlayed,audit.at,
+     audit.fullRefresh||!!options.onlyIds?.has(game.id)))decision='inactiveReuse';
    // The title-history API occasionally omits mandatory counters (86 titles in
    // a production scan). Check earned IDs with ONE small official request instead
    // of fetching the full catalog and rarity/groups several times every 30m.
@@ -196,7 +232,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
     }catch(error){if(fatal(error))throw error;/* Unknown probe contract: full fetch below. */}
    }
    audit.reuseReasons[decision]=(audit.reuseReasons[decision]||0)+1;
-   if(decision==='reused'||decision==='verifiedEarned'){
+   if(decision==='reused'||decision==='verifiedEarned'||decision==='inactiveReuse'){
     const cached=old!,oldAchievements=cached.achievements||[],oldGroups=cached.groups||[];
     let minutes=cached.minutes;
     if(sweepPlaytime||shouldReadPlaytime(lastPlayed,cached.minutes,audit.at)){
@@ -278,5 +314,10 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  let aliases=new Map<string,string[]>();if(options.baseline)aliases=await titleAliases(p=>provider.call(p));
  audit.comparison=compareLibrary(games,options.baseline,aliases);
  const record:RecordData={id:crypto.randomUUID(),at:audit.at,source:'Xbox',profile:{xuid:provider.xuid,gamertag:setting('Gamertag')||'Xbox 玩家',avatar:safeImage(setting('GameDisplayPicRaw'))},games,warnings:[...(audit.failed?[`${audit.failed} 个游戏的官方数据尚未完整核对。`]:[]),...(audit.unknownGroups?[`${audit.unknownGroups} 个游戏分组未知。`]:[])]};
- return {record,audit,statsSamples};
+ // Only the MICROSOFT_STATE_KEY-encrypted candidate cache stores zero-result titles.
+ const emptyTitles:EmptyTitleCache[]=games.filter(g=>g.officialHidden===false&&g.total===0&&g.earned===0&&
+  g.score===0&&g.maxScore===0&&g.minutes===null&&!(g.achievements?.length))
+  .map(g=>({id:g.id,lastPlayed:g.lastPlayed,total:0,earned:0,score:0,maxScore:0,
+   devices:g.devices,checkedAt:skippedEmpty.has(g.id)?knownEmpty.get(g.id)!.checkedAt:audit.at}));
+ return {record,audit,statsSamples,emptyTitles};
 }
