@@ -118,11 +118,20 @@ function App(){
      try{if(remember)await rememberDevice(password);else await forgetDevice();}
      catch{setStorageNotice('已解锁，但当前浏览器无法记住设备。');}
      setPassword('');setLogged(true);
-    }catch(e){setError((e as Error).message);}
+    }catch(e){setError((e as Error).message+(fromCache?' 如已更改应用密码，请选择“改用最新云端档案”。':''));}
     finally{setBusy(false);}
    }}>
     <p>游戏记录已加密。输入应用密码，在本机解密查看。</p>
     {fromCache&&<p className="note">已找到本机保存的加密历史记录。解锁后会在后台检查云端更新。</p>}
+    {fromCache&&<button type="button" className="text-button" disabled={busy} onClick={async()=>{
+     setBusy(true);setError('');
+     try{
+      const latest=await publishedVault();
+      if(latest===null)throw Error('云端还没有已发布的加密游戏档案。');
+      setEnvelope(latest);setFromCache(false);
+     }catch(e){setError(loadingMessage(e));}
+     finally{setBusy(false);}
+    }}>{busy?'正在读取云端档案…':'改用最新云端档案'}</button>}
     <label className="field">应用访问密码<input autoFocus type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label>
     <label style={{display:'flex',alignItems:'center',gap:8,marginTop:16,fontSize:12}}>
      <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/>在此设备记住我（30天）
