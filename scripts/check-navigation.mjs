@@ -170,6 +170,57 @@ try{
     await unlock();
     await page.locator('.recent-game-card').first().waitFor();
     console.log((mobile?'Mobile':'Desktop')+': PASS offline-first encrypted history, network outage versus first sync, retry, background newer-snapshot refresh');
+    // Xbox visibility is a game-library filter, never an achievement-history filter.
+    const xboxArchive=await decryptVault(envelope,password);
+    const xboxVisible={...structuredClone(xboxArchive.records[0].games[0]),officialHidden:false};
+    const makePrivate=(id,name,visibility,awardName,rarity)=>{
+      const g=structuredClone(xboxArchive.records[0].games[1]);
+      g.id=id;g.name=name;g.lastPlayed='2026-10-29T13:00:00Z';
+      if(visibility===undefined)delete g.officialHidden;else g.officialHidden=visibility;
+      g.achievements=[{...g.achievements[0],id:'private-earned',name:awardName,
+        unlocked:true,unlockedAt:'2026-10-29T12:24:00Z',rarity},
+        {...g.achievements[2],id:'private-locked',unlocked:false,unlockedAt:null}];
+      g.total=2;g.earned=1;g.groups=[];g.groupStatus='unavailable';
+      return g;
+    };
+    const hiddenArchive=makePrivate('900','Xbox Hidden Archive',true,'Private Hidden Unlock',0.5);
+    const unknownArchive=makePrivate('901','Xbox Unknown Archive',undefined,'Unknown Visibility Unlock',0.9);
+    xboxArchive.records[0].source='Xbox';
+    xboxArchive.records[0].games=[xboxVisible,hiddenArchive,unknownArchive];
+    xboxArchive.records[0].at='2026-11-03T00:00:00.000Z';
+    activeEnvelope=await encryptVault(xboxArchive,password);
+    await unlock();
+    await page.locator('.recent-game-card').first().waitFor();
+    const recentArchiveNames=await page.locator('.recent-game-card').allTextContents();
+    assert.ok(recentArchiveNames.every(t=>!t.includes('Xbox Hidden Archive')&&!t.includes('Xbox Unknown Archive')),
+      'Official hidden and unknown games never appear in Recently Played');
+    const hiddenDay=page.locator('.ah-preview-cell[data-day="2026-10-29"]');
+    assert.match(await hiddenDay.getAttribute('aria-label'),/解锁 2 个成就/,
+      'The overview achievement heatmap counts unlocks from hidden and unknown Xbox games');
+    await hiddenDay.click();
+    const hiddenDaySheet=page.getByRole('dialog',{name:'2026 年 10 月 29 日 成就摘要'});
+    await hiddenDaySheet.waitFor();
+    assert.ok((await hiddenDaySheet.innerText()).includes('Xbox Hidden Archive'));
+    assert.ok((await hiddenDaySheet.innerText()).includes('Xbox Unknown Archive'));
+    await hiddenDaySheet.getByRole('button',{name:'查看当天全部成就'}).click();
+    await page.locator('.ah-day-detail').waitFor();
+    assert.equal(await page.locator('.ah-day-detail .ah-achievement-card').count(),2,
+      'The daily achievement detail includes both private and unknown-visibility records');
+    assert.ok((await page.locator('.ah-day-detail').innerText()).includes('Private Hidden Unlock'));
+    assert.ok((await page.locator('.ah-day-detail').innerText()).includes('Unknown Visibility Unlock'));
+    await page.getByRole('button',{name:'打开 Xbox Hidden Archive 的游戏详情'}).click();
+    await page.getByRole('dialog',{name:'Xbox Hidden Archive · 游戏详情'}).waitFor();
+    await page.getByRole('button',{name:'关闭详情'}).click();
+    await page.locator('.ah-day-detail').waitFor();
+    await switchMainTab('游戏库');
+    await page.locator('.game-card').first().waitFor();
+    assert.deepEqual(await page.locator('.game-card').evaluateAll(els=>els.map(el=>el.dataset.gameId)),[xboxVisible.id],
+      'All Games remains restricted to Xbox titles explicitly marked visible');
+    await switchMainTab('概览');
+    activeEnvelope=envelope;
+    await unlock();
+    await page.locator('.recent-game-card').first().waitFor();
+    console.log((mobile?'Mobile':'Desktop')+': PASS hidden/unknown Xbox achievements in heatmap and daily detail, without exposure in recent/all games');
     // Manual sync is fully client-side, and the scoped Actions credential never reaches Playlog hosting.
     let manualDispatches=0,requestedId='';
     await page.route('https://api.github.com/repos/sonder98/xbox-playlog-pages/actions/workflows/**',route=>{
