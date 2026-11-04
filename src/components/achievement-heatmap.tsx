@@ -267,7 +267,7 @@ export function AchievementJourney({games,records=[],playtimeLedger,dayId,showca
    <Calendar activity={activity} year={year} month={month} selected={selected} played={played} onSelect={selectDay} onOpenGame={onOpenGame}/>
   </div>)}</div>
   {!activity.total&&<p className="ah-empty-day">尚无带有效解锁时间的成就。完成 Xbox 同步后会自动显示。</p>}
-  <p className="ah-footnote">统计来自已展示游戏中带解锁时间的成就；没有解锁时间的记录无法归入具体日期。时间采用北京时间。</p>
+  <p className="ah-footnote">统计来自所有已同步游戏（含 Xbox 官方隐藏或可见状态未知的游戏）中带解锁时间的成就；未取得解锁时间的记录无法归入具体日期。时间采用北京时间。</p>
   {sheetDay&&<Sheet day={sheetDay} activity={activity} playtimeLedger={playtimeLedger} onChangeDay={day=>{setSelected(day);setSheetDay(day);}} onClose={closeSheet} onDetail={()=>{setSheetDay(null);onOpenDay(sheetDay);}}/>}
  </section>;
 }
