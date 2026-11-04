@@ -67,15 +67,22 @@ try{
     await page.route('**/vault.json*',route=>route.fulfill({json:activeEnvelope}));
     // Most visual regressions inject a fresh network fixture on each login.
     // Clear only the encrypted local snapshot before those fixture resets.
+    async function clearCachedEnvelope(){
+      if(!page.url().startsWith('http://127.0.0.1:4173/xbox-playlog-pages/'))return;
+      await page.evaluate(()=>new Promise((resolve,reject)=>{
+        const request=indexedDB.open('playlog-encrypted-history-v1',1);
+        request.onupgradeneeded=()=>request.result.createObjectStore('snapshots');
+        request.onsuccess=()=>{
+          const db=request.result,tx=db.transaction('snapshots','readwrite');
+          tx.objectStore('snapshots').delete('latest');
+          tx.oncomplete=()=>{db.close();resolve(true);};
+          tx.onerror=()=>{db.close();reject(tx.error);};
+        };
+        request.onerror=()=>reject(request.error);
+      }));
+    }
     async function unlock(hash=''){
-      if(page.url().startsWith('http://127.0.0.1:4173/xbox-playlog-pages/')){
-        await page.evaluate(()=>new Promise((resolve,reject)=>{
-          const request=indexedDB.deleteDatabase('playlog-encrypted-history-v1');
-          request.onsuccess=()=>resolve(true);
-          request.onerror=()=>reject(request.error);
-          request.onblocked=()=>reject(Error('Encrypted fixture cache deletion blocked'));
-        }));
-      }
+      await clearCachedEnvelope();
       await page.goto('about:blank');
       await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/'+hash);
       await page.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
@@ -1197,6 +1204,13 @@ try{
     await page.locator('input[type="password"]').waitFor();
     await signInRemembered();
     activeEnvelope=await encryptVault(await decryptVault(envelope,password),'changed-fixture-password');
+    await page.reload();
+    await page.getByRole('button',{name:'锁定档案',exact:true}).waitFor();
+    assert.equal(await page.locator('.recent-game-card').count()>0,true,
+      'A password rotation in the cloud cannot lock the user out of previously decrypted encrypted history');
+    await page.getByText('当前显示本机保存的历史档案',{exact:false}).waitFor();
+    // When no valid cached archive remains, a remembered old password must not unlock new cloud ciphertext.
+    await clearCachedEnvelope();
     await page.reload();
     await page.locator('input[type="password"]').waitFor();
     await page.getByRole('alert').filter({hasText:'记住的密码已失效'}).waitFor();
