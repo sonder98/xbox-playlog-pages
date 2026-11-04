@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary} from '../scripts/microsoft-library.ts';
+import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue} from '../scripts/microsoft-library.ts';
 import type {Achievement,Game,RecordData} from '../src/data.ts';
 const config={clientId:'11111111-1111-1111-1111-111111111111',refreshToken:'PRIVATE-REFRESH'};
 const award=(id:string,unlocked=false):Achievement=>({id,name:'Award '+id,image:'',unlocked,unlockedAt:null,rarity:null,points:10});
@@ -351,6 +351,11 @@ test('daily catalog sweep is scheduled only once during its UTC hour',()=>{
  assert.equal(refreshCatalogToday('2026-11-01T02:05:00Z','2026-11-01T02:35:00Z'),false);
  assert.equal(refreshCatalogToday('2026-10-31T02:00:00Z','2026-11-01T02:00:00Z'),true);
  assert.equal(refreshCatalogToday('2026-11-01T01:55:00Z','2026-11-01T03:05:00Z'),false);
+ assert.equal(catalogRefreshDue('2026-11-01T00:17:00Z','2026-10-31T02:17:00Z','2026-11-01T02:17:00Z'),true,'Scheduled daily audit');
+ assert.equal(catalogRefreshDue('2026-11-02T00:17:00Z','2026-11-01T02:17:00Z','2026-11-02T06:17:00Z'),true,'If 02:17 is skipped, perform the overdue daily sweep');
+ assert.equal(catalogRefreshDue('2026-11-02T04:17:00Z','2026-11-02T02:17:00Z','2026-11-02T06:17:00Z'),false,'Do not repeat an already successful daily sweep');
+ assert.equal(catalogRefreshDue('2026-11-02T04:17:00Z','2026-11-01T02:17:00Z','2026-11-02T15:42:00Z',true),false,'Boundary playtime samples must not be delayed by full catalogs');
+ assert.equal(catalogRefreshDue('2026-11-02T04:17:00Z',undefined,'2026-11-02T06:17:00Z'),false,'No private full-scan marker uses the existing safe schedule');
  assert.equal(shouldReadPlaytime('2026-09-01T00:00:00Z',42,'2026-11-01T01:30:00Z'),false);
  assert.equal(shouldReadPlaytime('2026-10-31T00:00:00Z',42,'2026-11-01T01:30:00Z'),true);
  assert.equal(shouldReadPlaytime(null,null,'2026-11-01T01:30:00Z'),true);
