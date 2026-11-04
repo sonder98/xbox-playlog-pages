@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision} from '../scripts/microsoft-library.ts';
+import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue} from '../scripts/microsoft-library.ts';
 import type {Achievement,Game,RecordData} from '../src/data.ts';
 const config={clientId:'11111111-1111-1111-1111-111111111111',refreshToken:'PRIVATE-REFRESH'};
 const award=(id:string,unlocked=false):Achievement=>({id,name:'Award '+id,image:'',unlocked,unlockedAt:null,rarity:null,points:10});
@@ -229,7 +229,7 @@ test('missing summary falls back to an earned-only Xbox probe and detects newly 
    return Response.json({achievements:[{id:'1',name:'Award 1',progressState:'Achieved'},...(changed?[{id:'2',name:'Award 2',progressState:'Achieved'}]:[])]});
   return Response.json({achievements:[{id:'1',name:'Award 1',progressState:'Achieved',gamerscore:10},{id:'2',name:'Award 2',progressState:changed?'Achieved':'NotStarted',gamerscore:10}],completion:[{titleId:'1',groups:{base:{groupType:'BaseGame',achievementIds:['1','2']}}}]});
  };
- const fast=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([original]),now:at});
+ const fast=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([original]),now:at,onlyIds:new Set(['1'])});
  assert.equal(fast.audit.reusedDetails,1);
  assert.equal(fast.audit.detailedReads,0);
  assert.equal(fast.audit.statsSkipped,1);
@@ -237,7 +237,7 @@ test('missing summary falls back to an earned-only Xbox probe and detects newly 
  assert.equal(calls.length,1,'Only the earned-only check is needed for an unchanged dormant title');
  assert.ok(calls[0].includes('unlockedOnly=true'));
  changed=true;calls.length=0;
- const refreshed=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([original]),now:at});
+ const refreshed=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([original]),now:at,onlyIds:new Set(['1'])});
  assert.equal(refreshed.audit.reusedDetails,0);
  assert.equal(refreshed.audit.detailedReads,1);
  assert.equal(refreshed.audit.reuseReasons.missingSummary,1);
@@ -259,11 +259,103 @@ test('cached catalogs reuse missing-score summaries and real identical last-play
  assert.equal(detailCacheDecision(old,{...good,totalAchievements:undefined},old.lastPlayed,false),'missingSummary');
  assert.equal(detailCacheDecision(old,good,null,false),'playedAgain');
 });
+
+test('stale missing-summary probes are safely skipped only for inactive unchanged titles',async()=>{
+ const at='2026-11-01T01:30:00Z',inactive='2026-07-01T00:00:00Z',recent='2026-10-31T12:00:00Z';
+ const old={...game('1'),lastPlayed:inactive,officialHidden:false};
+ assert.equal(shouldProbeMissingSummary(old,{},inactive,at),false);
+ assert.equal(shouldProbeMissingSummary(old,{},inactive,at,true),true,'Daily/targeted scans still probe');
+ assert.equal(shouldProbeMissingSummary(old,{},recent,at),true,'A newly played old game probes immediately');
+ assert.equal(shouldProbeMissingSummary(old,{currentAchievements:old.earned+1},inactive,at),true);
+ assert.equal(shouldProbeMissingSummary(old,{totalAchievements:old.total+1},inactive,at),true);
+ assert.equal(shouldProbeMissingSummary(old,{currentGamerscore:old.score+1},inactive,at),true);
+ assert.equal(shouldProbeMissingSummary(old,{totalGamerscore:old.maxScore+1},inactive,at),true);
+ assert.equal(shouldProbeMissingSummary({...old,lastPlayed:null},{},null,at),true,'Unknown last played time stays conservative');
+ assert.equal(shouldProbeMissingSummary({...old,lastPlayed:recent},{},recent,at),true,'Recent play stays live');
+ const requestCalls:string[]=[];
+ const request:typeof fetch=async input=>{
+  const u=new URL(String(input));
+  if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});
+  if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
+  if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',titleHistory:{visible:true,lastTimePlayed:inactive},achievement:{}}]});
+  if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});
+  requestCalls.push(u.toString());
+  throw Error('Inactive unchanged title must not make an Xbox detail request');
+ };
+ const fast=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old]),now:at});
+ assert.equal(fast.audit.reuseReasons.inactiveReuse,1);
+ assert.equal(fast.audit.reusedDetails,1);
+ assert.equal(fast.audit.detailedReads,0);
+ assert.equal(fast.record.games[0].earned,1);
+ assert.equal(fast.record.games[0].minutes,42);
+ assert.deepEqual(requestCalls,[]);
+});
+
+test('encrypted empty-title cache suppresses repeated full reads but expires and detects game activity',async()=>{
+ const initial='2026-11-01T01:00:00Z',subsequent='2026-11-01T01:30:00Z';
+ let lastPlayed='2026-05-01T00:00:00Z',total=0,earned=0,minutes:null|number=null;
+ let detailCalls=0,statsCalls=0;
+ const request:typeof fetch=async input=>{
+  const u=new URL(String(input));
+  if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});
+  if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
+  if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'88',name:'PRIVATE-EMPTY',titleHistory:{visible:true,lastTimePlayed:lastPlayed},devices:['XboxOne'],achievement:{totalAchievements:total,currentAchievements:earned,currentGamerscore:earned*10,totalGamerscore:total*10}}]});
+  if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});
+  if(u.hostname==='userstats.xboxlive.com'){
+   statsCalls++;return Response.json({statlistscollection:[{stats:minutes===null?[]:[{name:'MinutesPlayed',value:minutes}]}]});
+  }
+  detailCalls++;
+  if(total===0)return Response.json({achievements:[]});
+  return Response.json({achievements:[{id:'1',name:'New Award',gamerscore:10,progressState:'Achieved'}],
+   completion:[{titleId:'88',groups:{base:{groupType:'BaseGame',achievementIds:['1'],unlockedAchievementIds:['1']}}}]});
+ };
+ const first=await scanMicrosoft(config,{request,pause:async()=>{},now:initial});
+ assert.ok(detailCalls>=2,'First ever full request detects an empty catalog');
+ assert.equal(first.emptyTitles.length,1);
+ assert.equal(first.emptyTitles[0].checkedAt,initial);
+ assert.equal(first.record.games.filter(g=>g.total>0||g.minutes!==null).length,0,
+  'Empty catalogs must not appear in the public snapshot');
+ assert.equal(first.audit.emptySkipped,0);
+ const initialReads=detailCalls; detailCalls=0;statsCalls=0;
+ const reused=await scanMicrosoft(config,{request,pause:async()=>{},now:subsequent,previous:first.record,emptyTitles:first.emptyTitles});
+ assert.equal(detailCalls,0,'An unchanged empty title does not trigger a complete achievement catalog');
+ assert.equal(statsCalls,0,'An unchanged empty title does not request playtime repeatedly');
+ assert.equal(reused.audit.emptySkipped,1);
+ assert.equal(reused.audit.reuseReasons.emptyCache,1);
+ assert.equal(reused.emptyTitles[0].checkedAt,initial,'Skipping must not extend the 24-hour expiry');
+ assert.equal(reused.record.games[0].total,0);
+ const expired=reusableEmptyTitle({...first.record.games[0],officialHidden:false},first.emptyTitles[0],
+  new Date(Date.parse(initial)+EMPTY_TITLE_RECHECK_MS).toISOString());
+ assert.equal(expired,false,'Expired zero-result cache is rechecked');
+ assert.equal(reusableEmptyTitle({...first.record.games[0],officialHidden:false},first.emptyTitles[0],subsequent,true),false,
+  'Daily full checks or forced boundary samples always bypass the empty cache');
+ assert.equal(reusableEmptyTitle({...first.record.games[0],officialHidden:undefined},first.emptyTitles[0],subsequent),false,
+  'Games without a verified visible flag may not reuse this cache');
+ // A newly played game must be discovered immediately, even inside the cache TTL.
+ lastPlayed='2026-11-01T01:35:00Z';total=1;earned=1;minutes=15;detailCalls=0;
+ const active=await scanMicrosoft(config,{request,pause:async()=>{},now:'2026-11-01T01:40:00Z',previous:reused.record,emptyTitles:reused.emptyTitles});
+ assert.ok(detailCalls>0,'A newly played game forces a full achievement read');
+ assert.equal(active.audit.emptySkipped,0);
+ assert.equal(active.record.games[0].earned,1);
+ assert.equal(active.record.games[0].minutes,15);
+ assert.equal(active.emptyTitles.length,0,'Recovered games leave the empty-title cache');
+ assert.ok(initialReads>0);
+});
+
 test('daily catalog sweep is scheduled only once during its UTC hour',()=>{
  assert.equal(refreshCatalogToday('2026-10-31T01:30:00Z','2026-11-01T02:00:00Z'),true);
  assert.equal(refreshCatalogToday('2026-11-01T02:05:00Z','2026-11-01T02:35:00Z'),false);
  assert.equal(refreshCatalogToday('2026-10-31T02:00:00Z','2026-11-01T02:00:00Z'),true);
  assert.equal(refreshCatalogToday('2026-11-01T01:55:00Z','2026-11-01T03:05:00Z'),false);
+ assert.equal(catalogRefreshDue('2026-11-01T00:17:00Z','2026-10-31T02:17:00Z','2026-11-01T02:17:00Z'),true,'Scheduled daily audit');
+ assert.equal(catalogRefreshDue('2026-11-02T00:17:00Z','2026-11-01T02:17:00Z','2026-11-02T06:17:00Z'),true,'If 02:17 is skipped, perform the overdue daily sweep');
+ assert.equal(catalogRefreshDue('2026-11-02T04:17:00Z','2026-11-02T02:17:00Z','2026-11-02T06:17:00Z'),false,'Do not repeat an already successful daily sweep');
+ assert.equal(catalogRefreshDue('2026-11-02T04:17:00Z','2026-11-01T02:17:00Z','2026-11-02T15:42:00Z',true),false,'Boundary playtime samples must not be delayed by full catalogs');
+ assert.equal(catalogRefreshDue('2026-11-02T04:17:00Z',undefined,'2026-11-02T06:17:00Z'),false,'No private full-scan marker uses the existing safe schedule');
  assert.equal(shouldReadPlaytime('2026-09-01T00:00:00Z',42,'2026-11-01T01:30:00Z'),false);
  assert.equal(shouldReadPlaytime('2026-10-31T00:00:00Z',42,'2026-11-01T01:30:00Z'),true);
  assert.equal(shouldReadPlaytime(null,null,'2026-11-01T01:30:00Z'),true);
