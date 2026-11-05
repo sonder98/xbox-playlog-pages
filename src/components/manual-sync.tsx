@@ -73,6 +73,8 @@ export function ManualSyncDialog({onClose,onUpdated,onPhase,lastAt}:{
      sessionStorage.removeItem(pendingKey);return;
     }
     const run=await findWorkflowRun('sync',id,fetch,token.current||undefined);
+    // A transient query error should disappear as soon as status polling recovers.
+    if(!cancelled)setError('');
     if(!run){update('queued');return;}
     const runUrl=githubRunUrl(run);
     if(run.status!=='completed'){
