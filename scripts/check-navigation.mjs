@@ -573,6 +573,44 @@ try{
     assert.ok(pairArtwork.newerLeft>pairArtwork.olderLeft && pairArtwork.newerLeft<pairArtwork.olderRight,
       'The two achievement pictures overlap but the earlier picture remains visible');
     assert.ok(pairArtwork.newerTop>pairArtwork.olderTop,'Later award overlaps at a lower layer position');
+    // Regression for gold frames overlapping the right tile edge on iPhone.
+    // Check every pair, not only #01: different achievement ratios/rarities
+    // must not push the rotated later thumbnail (including its gold glow) over the card border.
+    const originalGapViewport=page.viewportSize();
+    const gapWidths=mobile?[320,360,375,390,430]:[701,1024,1440];
+    for(const width of gapWidths){
+      await page.setViewportSize({width,height:originalGapViewport.height});
+      const bounds=await page.locator('[data-achievement-gap="preview"] .ah-gap-tile').evaluateAll(tiles=>tiles.map(tile=>{
+        const r=tile.getBoundingClientRect();
+        const stack=tile.querySelector('.ah-gap-stack').getBoundingClientRect();
+        const earlier=tile.querySelector('.ah-gap-image-back').getBoundingClientRect();
+        const later=tile.querySelector('.ah-gap-image-front').getBoundingClientRect();
+        const laterArt=tile.querySelector('.ah-gap-image-front .ah-gap-art').getBoundingClientRect();
+        return {
+          rank:tile.dataset.gapRank,
+          cardWidth:r.width,stackWidth:stack.width,
+          frontRightInset:r.right-later.right,
+          backLeftInset:earlier.left-r.left,
+          backRightInset:r.right-earlier.right,
+          laterLeft:later.left,earlierLeft:earlier.left,earlierRight:earlier.right,
+          laterTop:later.top,earlierTop:earlier.top,
+          frontArtWidth:laterArt.width,
+          tileOverflow:tile.scrollWidth-tile.clientWidth
+        };
+      }));
+      assert.equal(bounds.length,12,'All 12 gap preview pairs remain present at '+width+'px');
+      for(const b of bounds){
+        assert.ok(b.frontRightInset>=16,
+          'Gap #'+b.rank+' right achievement and glow must clear the outer card border at '+width+'px: '+JSON.stringify(b));
+        assert.ok(b.backLeftInset>=2&&b.backRightInset>=16,
+          'Gap #'+b.rank+' older artwork remains inside the card at '+width+'px: '+JSON.stringify(b));
+        assert.ok(b.laterLeft>b.earlierLeft&&b.laterLeft<b.earlierRight&&b.laterTop>b.earlierTop,
+          'Gap #'+b.rank+' retains the intentional layered artwork without crossing the edge at '+width+'px');
+        assert.ok(b.tileOverflow<=1,
+          'Gap #'+b.rank+' has no horizontal content overflow at '+width+'px: '+JSON.stringify(b));
+      }
+    }
+    await page.setViewportSize(originalGapViewport);
     await page.getByRole('button',{name:'向右滚动间隔成就展柜'}).click();
     await page.waitForFunction(()=>document.querySelector('.ah-gap-rail')?.scrollLeft>60);
     await page.getByRole('button',{name:'查看间隔最久成就详情'}).click();
