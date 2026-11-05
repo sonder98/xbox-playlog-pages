@@ -217,10 +217,33 @@ try{
     assert.deepEqual(await page.locator('.game-card').evaluateAll(els=>els.map(el=>el.dataset.gameId)),[xboxVisible.id],
       'All Games remains restricted to Xbox titles explicitly marked visible');
     await switchMainTab('概览');
+    await page.locator('.dusty-preview').waitFor();
+    assert.equal(await page.locator('.dusty-preview .dust-card').count(),1,
+      'Xbox titles without an explicit visibility flag appear in the dusty preview');
+    const dustyPreviewCard=page.locator('.dusty-preview .dust-card[data-game-id="901"]');
+    await dustyPreviewCard.click();
+    await page.getByRole('dialog',{name:'Xbox Unknown Archive · 游戏详情'}).waitFor();
+    assert.ok(page.url().endsWith('#overview/game/901'),'Dusty preview opens the selected game detail route');
+    await page.getByRole('button',{name:'关闭详情'}).click();
+    await page.locator('.dusty-preview').waitFor();
+    await page.locator('.dusty-preview .ah-showcase-open').click();
+    await page.locator('[data-dusty="detail"]').waitFor();
+    assert.ok(page.url().endsWith('#dusty'),'The preview heading action still opens the full dusty list');
+    const dustyDetailRow=page.locator('.dust-detail-row[data-game-id="901"]');
+    assert.equal(await dustyDetailRow.evaluate(el=>el.tagName),'BUTTON','Every full-list game row is a semantic button');
+    await dustyDetailRow.click();
+    await page.getByRole('dialog',{name:'Xbox Unknown Archive · 游戏详情'}).waitFor();
+    assert.ok(page.url().endsWith('#dusty/game/901'),'Full dusty list opens the selected game detail route');
+    await page.getByRole('button',{name:'关闭详情'}).click();
+    await page.locator('[data-dusty="detail"]').waitFor();
+    assert.ok(page.url().endsWith('#dusty'),'Closing a game detail returns to the full dusty list');
+    await page.getByRole('button',{name:'返回概览'}).click();
+    await page.locator('.dusty-preview').waitFor();
+    assert.ok(page.url().endsWith('#overview'),'Full dusty list returns to the overview');
     activeEnvelope=envelope;
     await unlock();
     await page.locator('.recent-game-card').first().waitFor();
-    console.log((mobile?'Mobile':'Desktop')+': PASS hidden/unknown Xbox achievements in heatmap and daily detail, without exposure in recent/all games');
+    console.log((mobile?'Mobile':'Desktop')+': PASS hidden/unknown Xbox achievements in heatmap and daily detail, without exposure in recent/all games, plus dusty game detail navigation');
     // Manual sync is fully client-side, and the scoped Actions credential never reaches Playlog hosting.
     let manualDispatches=0,requestedId='';
     await page.route('https://api.github.com/repos/sonder98/xbox-playlog-pages/actions/workflows/**',route=>{
