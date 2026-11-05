@@ -824,8 +824,20 @@ try{
     assert.equal(await page.locator('.top-card').count(),0,'No legacy most-played tiles remain');
     await page.locator('.recent-game-card').first().click();
     await page.getByRole('dialog').waitFor();
+    const compactHeader=await page.locator('.dialog.game-detail').evaluate(dialog=>{
+      const toolbar=dialog.querySelector('.dialog-toolbar').getBoundingClientRect();
+      const panel=dialog.getBoundingClientRect();
+      const cover=dialog.querySelector('.detail-cover').getBoundingClientRect();
+      const close=dialog.querySelector('button.close').getBoundingClientRect();
+      return {toolbarHeight:toolbar.height,coverOffset:cover.top-panel.top,closeTop:close.top,closeRight:close.right,panelRight:panel.right};
+    });
+    assert.ok(compactHeader.toolbarHeight<1,'Game detail has no empty toolbar height while Journey is disabled');
+    assert.ok(compactHeader.coverOffset<55,'Game cover starts near the top, without an empty black band');
+    assert.ok(Math.abs(compactHeader.panelRight-compactHeader.closeRight)<40,'Close floats at the top-right of game details');
     await page.locator('.dialog-body').evaluate(el=>{const spacer=document.createElement('div');spacer.style.height='2000px';el.append(spacer);el.scrollTop=el.scrollHeight;});
     const closeRect=await page.getByRole('button',{name:'关闭详情',exact:true}).boundingBox();
+    assert.ok(closeRect&&Math.abs(closeRect.y-compactHeader.closeTop)<2,
+      'Close remains fixed without an empty bar when the detail body scrolls');
     assert.ok(closeRect&&closeRect.y>=0&&closeRect.y+closeRect.height<(mobile?844:1000),'Close remains visible at the bottom of long details');
     await page.getByRole('button',{name:'关闭详情',exact:true}).click();
     await page.getByRole('dialog').waitFor({state:'hidden'});
