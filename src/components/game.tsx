@@ -3,6 +3,7 @@ import {Gamepad2,Trophy,X,Lock,Check,Clock3,Gem} from 'lucide-react';
 import {completion} from '../completion';
 import {GamerscoreIcon} from './gamerscore-icon';
 import {GameJourney} from './game-journey';
+import {MYTHIC_BADGE_URL} from '../mythic-posters';
 
 // Temporarily unpublished: retain the journey implementation for a future redesign.
 // Flip this flag only when the redesigned experience is approved for release.
@@ -99,7 +100,7 @@ function AchievementItem({achievement:a}:{achievement:Achievement}){
     </div>
   </article>;
 }
-export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
+export function GameDetail({game,onClose,onOpenMythic}:{game:Game;onClose:()=>void;onOpenMythic?:()=>void}){
   // Verified base/DLC memberships are the only source of truth for the category tabs.
   // A title with just one group or unverified grouping has no tabs at all.
   const groups=game.groupStatus==='verified'?game.groups||[]:[];
@@ -142,7 +143,14 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
     <div className="detail-heading"><h2>{game.name}</h2></div>
     <div className="detail-summary">
       <span className="detail-stat detail-playtime"><Clock3 size={16} aria-hidden="true"/><span>{hours(game.minutes)}</span></span>
-      <span className="detail-stat detail-achievements" aria-label={`已解锁 ${game.earned} / ${game.total} 成就`}><Trophy size={16} aria-hidden="true"/><span>{game.earned}/{game.total}</span></span>
+      {completion(game).mythic&&onOpenMythic?
+       <div className="detail-mythic-stack">
+        <button type="button" className="detail-mythic-trigger" onClick={onOpenMythic}
+          aria-label={`打开 ${game.name} 的Mythic纪念卡`}>
+         <img src={MYTHIC_BADGE_URL} alt="" loading="lazy"/>Mythic 勋章
+        </button>
+        <span className="detail-stat detail-achievements" aria-label={`已解锁 ${game.earned} / ${game.total} 成就`}><Trophy size={16} aria-hidden="true"/><span>{game.earned}/{game.total}</span></span>
+       </div>:<span className="detail-stat detail-achievements" aria-label={`已解锁 ${game.earned} / ${game.total} 成就`}><Trophy size={16} aria-hidden="true"/><span>{game.earned}/{game.total}</span></span>}
       <span className="detail-stat detail-gamerscore" aria-label={`已获得 ${numberFormat(game.score)} / ${numberFormat(game.maxScore)} 玩家积分`}><GamerscoreIcon size={16}/><span>{numberFormat(game.score)}/{numberFormat(game.maxScore)}</span></span>
     </div>
     {!!game.achievements?.length&&<>
