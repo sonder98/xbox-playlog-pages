@@ -1,6 +1,7 @@
 import {useEffect,useId,useRef,useState,type ReactNode} from 'react';
 import {ArrowDownUp,Check,ListFilter} from 'lucide-react';
 import type {AchievementSort,AchievementUnlockFilter} from '../achievement-sort';
+import {gameLibrarySortChoices,type GameLibraryFilter,type GameLibrarySort} from '../game-library-sort';
 
 type Option<T extends string>=[T,string];
 
@@ -14,18 +15,6 @@ const statusChoices:Option<AchievementUnlockFilter>[]=[
  ['all','全部'],
  ['unlocked','已解锁'],
  ['locked','未解锁'],
-];
-
-export type GameLibrarySort='recent'|'time'|'span-desc'|'span-asc'|'full-date-asc'|'full-date-desc'|'mythic-date-asc'|'mythic-date-desc';
-const gameLibraryChoices:Option<GameLibrarySort>[]=[
- ['recent','最近游玩'],
- ['time','游玩时长'],
- ['span-desc','时间跨度：长 → 短'],
- ['span-asc','时间跨度：短 → 长'],
- ['full-date-asc','全成就日期：早 → 晚'],
- ['full-date-desc','全成就日期：晚 → 早'],
- ['mythic-date-asc','Mythic 日期：早 → 晚'],
- ['mythic-date-desc','Mythic 日期：晚 → 早'],
 ];
 
 /** Same accessible dropdown, menu keyboard behavior, and appearance for both controls. */
@@ -85,12 +74,12 @@ export function AchievementUnlockFilterControl({filter,onChange}:{
 }
 
 /** The library uses the same custom menu, selection treatment and keyboard behavior as detail sorting. */
-export function GameLibrarySortControl({sort,onChange}:{
- sort:GameLibrarySort;onChange:(next:GameLibrarySort)=>void;
+export function GameLibrarySortControl({sort,filter,onChange}:{
+ sort:GameLibrarySort;filter:GameLibraryFilter;onChange:(next:GameLibrarySort)=>void;
 }){
  return <div className="game-library-sort">
   <AchievementDropdown title="排序" label="游戏排序" menuLabel="游戏排序方式"
-   value={sort} onChange={onChange} options={gameLibraryChoices}
+   value={sort} onChange={onChange} options={gameLibrarySortChoices(filter)}
    icon={<ArrowDownUp size={17} aria-hidden="true"/>}/>
  </div>;
 }

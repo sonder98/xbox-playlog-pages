@@ -12,14 +12,15 @@ import {achievementTimeSpan,compareAchievementTimeSpans} from './achievement-tim
 import {compareGameCompletionDates} from './game-completion-date';
 import {api,workflow,repo,playtimeLedgerForBackup,pcMetascoresForDisplay,refreshCloudRecords} from './vault';
 import {ManualSyncDialog} from './components/manual-sync';
-import {GameLibrarySortControl,type GameLibrarySort} from './components/achievement-sort-control';
+import {GameLibrarySortControl} from './components/achievement-sort-control';
+import {normalizeGameLibrarySort,type GameLibraryFilter,type GameLibrarySort} from './game-library-sort';
 import {usePageNavigation} from './navigation';
 import {PullToRefresh} from './pull-to-refresh';
 const fmt=(m:number|null)=>m===null?'暂无数据':(m/60).toLocaleString('zh-CN',{maximumFractionDigits:1})+' 小时';
 const dt=(s:string|null)=>s?new Date(s).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'尚未同步';
 function download(name:string,content:string,type:string){const u=URL.createObjectURL(new Blob([content],{type}));const a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
 export default function Dashboard({onLock,locking=false,refreshFromCache=false}:{onLock:()=>void;locking?:boolean;refreshFromCache?:boolean}){
- const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState(false),[busy,setBusy]=useState(false),[progress]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState<GameLibrarySort>('recent'),[filter,setFilter]=useState('all');
+ const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState(false),[busy,setBusy]=useState(false),[progress]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState<GameLibrarySort>('recent'),[filter,setFilter]=useState<GameLibraryFilter>('all');
  const [manualPhase,setManualPhase]=useState<'idle'|'queued'|'running'|'deploying'|'ready'|'error'>('idle');
   const [hiddenIds,setHiddenIds]=useState<string[]>([]),[manageDisplay,setManageDisplay]=useState(false),[draftHidden,setDraftHidden]=useState<string[]>([]),[displayQuery,setDisplayQuery]=useState(''),[onlyHidden,setOnlyHidden]=useState(false),[savingDisplay,setSavingDisplay]=useState(false),[displayError,setDisplayError]=useState('');
  const {tab,navigate:setTab,back,gameId,dayId,showcase,gapShowcase,openGame,openAchievementDay,openAchievementShowcase,openAchievementGapShowcase,openAchievementGame,changeAchievementDay}=usePageNavigation();
@@ -118,6 +119,10 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   }else if(sort==='time')return (b.minutes??-1)-(a.minutes??-1);
   return Date.parse(b.lastPlayed||'1970')-Date.parse(a.lastPlayed||'1970');
  });
+ function changeLibraryFilter(next:GameLibraryFilter){
+  setFilter(next);
+  setSort(current=>normalizeGameLibrarySort(next,current));
+ }
  function sync(){setModal(true);}
  async function importFile(f:File){setError('');if(f.size>4000000){setError('请选择小于 4MB 的 JSON 文件。');return;}setBusy(true);try{const data=JSON.parse(await f.text());const d=await api('/api/records',{...(data.records?.[0]||data),source:'导入'});setRecords(r=>[d.record,...r]);setNotice('导入成功，已在本机加密保存；云端记录不会被修改。');}catch(e){setError('导入失败：'+(e as Error).message);}finally{setBusy(false);if(input.current)input.current.value='';}}
  function exportCSV(){if(!current)return;const esc=(v:unknown)=>'"'+String(v??'').replaceAll('"','""')+'"';const rows=[['游戏','Title ID','游玩分钟','已解锁成就','总成就','玩家积分','总积分','最近游玩','快照时间'],...games.map(g=>[g.name,g.id,g.minutes,g.earned,g.total,g.score,g.maxScore,g.lastPlayed,current.at])];download('xbox-playlog.csv','\uFEFF'+rows.map(r=>r.map(v=>esc(typeof v==='string'&&/^[=+@\-\t\r]/.test(v)?"'"+v:v)).join(',')).join('\r\n'),'text/csv;charset=utf-8');}
@@ -138,7 +143,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
 </>}
  {tab==='dusty'&&<DustyDetails items={dusty} onBack={back}/>}
  {tab==='achievements'&&<AchievementJourney games={games} records={records} playtimeLedger={playtimeLedger} dayId={dayId} showcase={showcase} gapShowcase={gapShowcase} onBack={dayId?back:()=>setTab('overview')} onOpenDay={openAchievementDay} onChangeDay={changeAchievementDay} onOpenGame={openAchievementGame}/>} 
- {tab==='library'&&<section className="panel games-panel"><div className="toolbar"><label className="search"><Search size={17}/><input placeholder="搜索游戏名称…" aria-label="搜索游戏名称" value={query} onChange={e=>setQuery(e.target.value)}/></label><div className="filters"><div className="filter-pills" role="group" aria-label="筛选游戏">{[['all','全部'],['playing','未完成'],['mythic','Mythic'],['full','Full']].map(([id,label])=><button key={id} aria-pressed={filter===id} className={filter===id?'active':''} onClick={()=>setFilter(id)}>{label}</button>)}</div><GameLibrarySortControl sort={sort} onChange={setSort}/><button className="secondary" aria-label="管理展示" disabled={!current||loading} onClick={openDisplayManager}><SlidersHorizontal size={15}/>管理展示{hiddenCount>0&&<span className="hidden-count">{hiddenCount}</span>}</button></div></div>{renderGames(visible)}</section>}
+ {tab==='library'&&<section className="panel games-panel"><div className="toolbar"><label className="search"><Search size={17}/><input placeholder="搜索游戏名称…" aria-label="搜索游戏名称" value={query} onChange={e=>setQuery(e.target.value)}/></label><div className="filters"><div className="filter-pills" role="group" aria-label="筛选游戏">{([['all','全部'],['playing','未完成'],['mythic','Mythic'],['full','Full']] as const).map(([id,label])=><button key={id} aria-pressed={filter===id} className={filter===id?'active':''} onClick={()=>changeLibraryFilter(id)}>{label}</button>)}</div><GameLibrarySortControl sort={sort} filter={filter} onChange={setSort}/><button className="secondary" aria-label="管理展示" disabled={!current||loading} onClick={openDisplayManager}><SlidersHorizontal size={15}/>管理展示{hiddenCount>0&&<span className="hidden-count">{hiddenCount}</span>}</button></div></div>{renderGames(visible)}</section>}
  {tab==='manage'&&<div className="manage-page" data-page="manage">
   <section className="manage-section" aria-labelledby="manage-connection-title">
    <div className="manage-section-heading"><div><span className="eyebrow">ACCOUNT & DATA</span><h2 id="manage-connection-title">连接与数据</h2></div><p>账户同步、数据备份与使用说明</p></div>
