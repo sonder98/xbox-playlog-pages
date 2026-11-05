@@ -163,3 +163,10 @@ npm run build
 - **大陆域名限制：** 官方规定默认项目/部署域名在中国大陆网络需用有效期 3 小时的系统预览链接。无已备案自定义域名时只能免费测试，不能作为永久固定免 VPN 入口；长期稳定大陆访问需自定义域名及 ICP 备案。见 `docs/EDGEONE_MIGRATION.md`。
 - 商业化公告预计 2026-11-09 至 11-11 将构建额度从 500 次改为 300 分钟/月，Cloud Functions 调整为 5 万 GB-s/月。本项目 Blob 读取采用 Edge Functions；同步数据不触发 EdgeOne 构建。
 - **不要切换或删除 GitHub Pages。** 只有用户完成 Secrets 配置、预览工作流成功，且在中国大陆关闭 VPN 实测登录、封面、成就、热力图和手动同步后，才讨论正式切换。用户没有 ICP 域名时，应明确说明默认域名 3 小时预览限制。
+
+
+### 2026-11-05 游戏库完成日期排序
+- 「全部游戏」排序移除「成就完成度」，保留最近游玩、游玩时长、时间跨度长/短两项；新增「全成就日期：早→晚／晚→早」及「Mythic 日期：早→晚／晚→早」，共 8 项。
+- 全成就日期取本体、DLC、更新等全部成就中最后一项有效解锁时间；Mythic 日期只取已验证 BaseGame 成就集合中最后一项有效解锁时间。没有已完成对应集合、成就目录不完整或缺少任一解锁时间时，不推测日期并排在末尾。若分组未知但 Full 已完成，则全部成就完成可证明 Mythic 完成，复用 Full 日期。
+- 逻辑位于 `src/game-completion-date.ts`，选项和状态位于 `src/components/achievement-sort-control.tsx`，游戏库排序接入 `src/dashboard.tsx`。下拉菜单行高调整为 36px、缩小内边距与选项间距，并限制最大高度。
+- `tests/game-completion-date.test.ts` 覆盖日期推导、DLC 与本体边界、未知分组、缺失时间及升降序；`scripts/check-navigation.mjs` 覆盖 8 个菜单项、移除旧项、菜单高度和交互。
