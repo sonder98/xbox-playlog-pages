@@ -16,13 +16,16 @@ const statusChoices:Option<AchievementUnlockFilter>[]=[
  ['locked','未解锁'],
 ];
 
-export type GameLibrarySort='recent'|'time'|'completion'|'span-desc'|'span-asc';
+export type GameLibrarySort='recent'|'time'|'span-desc'|'span-asc'|'full-date-asc'|'full-date-desc'|'mythic-date-asc'|'mythic-date-desc';
 const gameLibraryChoices:Option<GameLibrarySort>[]=[
  ['recent','最近游玩'],
  ['time','游玩时长'],
- ['completion','成就完成度'],
  ['span-desc','时间跨度：长 → 短'],
  ['span-asc','时间跨度：短 → 长'],
+ ['full-date-asc','全成就日期：早 → 晚'],
+ ['full-date-desc','全成就日期：晚 → 早'],
+ ['mythic-date-asc','Mythic 日期：早 → 晚'],
+ ['mythic-date-desc','Mythic 日期：晚 → 早'],
 ];
 
 /** Same accessible dropdown, menu keyboard behavior, and appearance for both controls. */

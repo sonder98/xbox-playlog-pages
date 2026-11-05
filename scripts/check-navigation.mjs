@@ -880,16 +880,21 @@ try{
     let gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
     await gameSortMenu.waitFor();
     assert.deepEqual(await gameSortMenu.getByRole('menuitemradio').allTextContents(),
-      ['最近游玩','游玩时长','成就完成度','时间跨度：长 → 短','时间跨度：短 → 长'],
-      'Library sorting preserves all five existing sort choices');
+      ['最近游玩','游玩时长','时间跨度：长 → 短','时间跨度：短 → 长',
+       '全成就日期：早 → 晚','全成就日期：晚 → 早','Mythic 日期：早 → 晚','Mythic 日期：晚 → 早'],
+      'Library sorting removes completion percentage and exposes both completion dates in both directions');
+    assert.equal(await gameSortMenu.getByRole('menuitemradio',{name:'成就完成度'}).count(),0,
+      'The obsolete completion-percentage sort is removed');
     assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'最近游玩',
       'Library sorting keeps the recent-play default');
     const libraryMenuBounds=await gameSortMenu.evaluate(el=>{
       const r=el.getBoundingClientRect();
-      return {left:r.left,right:r.right,viewport:window.innerWidth};
+      return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,height:r.height,viewport:window.innerWidth};
     });
     assert.ok(libraryMenuBounds.left>=0&&libraryMenuBounds.right<=libraryMenuBounds.viewport,
       'The custom sort menu stays inside the viewport on desktop and mobile');
+    assert.ok(libraryMenuBounds.height<=330,
+      'Eight sort choices use compact rows instead of an excessively tall menu');
     await gameSortMenu.getByRole('menuitemradio',{name:'时间跨度：长 → 短'}).click();
     await gameSortMenu.waitFor({state:'hidden'});
     assert.equal(await page.locator('.game-card .game-time-span').first().innerText(),'时间跨度：1.0天');
@@ -899,6 +904,14 @@ try{
     assert.equal(await gameSort.getAttribute('aria-expanded'),'false');
     await gameSort.click();
     gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
+    await gameSortMenu.getByRole('menuitemradio',{name:'全成就日期：早 → 晚'}).click();
+    await gameSort.click();
+    gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
+    assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'全成就日期：早 → 晚');
+    await gameSortMenu.getByRole('menuitemradio',{name:'Mythic 日期：晚 → 早'}).click();
+    await gameSort.click();
+    gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
+    assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'Mythic 日期：晚 → 早');
     await gameSortMenu.getByRole('menuitemradio',{name:'游玩时长'}).click();
     await gameSort.click();
     gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});

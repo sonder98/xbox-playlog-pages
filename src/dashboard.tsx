@@ -9,6 +9,7 @@ import {rankDustyGames} from './dusty-games';
 import {AchievementPreview,AchievementJourney,AchievementShowcases} from './components/achievement-heatmap';
 import {completion} from './completion';
 import {achievementTimeSpan,compareAchievementTimeSpans} from './achievement-time-span';
+import {compareGameCompletionDates} from './game-completion-date';
 import {api,workflow,repo,playtimeLedgerForBackup,pcMetascoresForDisplay,refreshCloudRecords} from './vault';
 import {ManualSyncDialog} from './components/manual-sync';
 import {GameLibrarySortControl,type GameLibrarySort} from './components/achievement-sort-control';
@@ -108,8 +109,13 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   if(sort==='span-desc'||sort==='span-asc'){
    const difference=compareAchievementTimeSpans(achievementSpans.get(a.id)??null,achievementSpans.get(b.id)??null,sort==='span-desc'?'longest':'shortest');
    if(difference!==0)return difference;
+  }else if(sort==='full-date-asc'||sort==='full-date-desc'){
+   const difference=compareGameCompletionDates(a,b,'full',sort==='full-date-asc'?'asc':'desc');
+   if(difference!==0)return difference;
+  }else if(sort==='mythic-date-asc'||sort==='mythic-date-desc'){
+   const difference=compareGameCompletionDates(a,b,'mythic',sort==='mythic-date-asc'?'asc':'desc');
+   if(difference!==0)return difference;
   }else if(sort==='time')return (b.minutes??-1)-(a.minutes??-1);
-  else if(sort==='completion')return (b.total?b.earned/b.total:0)-(a.total?a.earned/a.total:0);
   return Date.parse(b.lastPlayed||'1970')-Date.parse(a.lastPlayed||'1970');
  });
  function sync(){setModal(true);}
