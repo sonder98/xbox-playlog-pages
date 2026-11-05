@@ -24,3 +24,9 @@ export function rankDustyGames(games:Game[],scores:PcMetascores,now=Date.now(),s
  }
  return ranked.sort((a,b)=>b.days-a.days||a.lastActiveAt.localeCompare(b.lastActiveAt)||a.game.name.localeCompare(b.game.name));
 }
+
+/** Returns a whole-number completion percentage, or null when no total is available. */
+export function achievementProgressPercent(earned:number,total:number):number|null{
+ if(!Number.isFinite(earned)||!Number.isFinite(total)||total<=0)return null;
+ return Math.round(Math.max(0,Math.min(earned,total))/total*100);
+}
