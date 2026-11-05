@@ -3135,11 +3135,11 @@ footer .dot {
 .mythic-wall-entry:hover,.detail-mythic-trigger:hover{border-color:#f8d996;box-shadow:0 0 17px #edb96544;}
 .mythic-wall-entry:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
 .mythic-wall-entry svg,.detail-mythic-trigger svg{color:#e4bf74;}
-.game-detail .detail-summary:has(.detail-mythic-trigger){margin-top:53px;}
+.game-detail .detail-summary:has(.detail-mythic-trigger){margin-top:53px;position:relative;z-index:5;}
 .game-detail .detail-summary .detail-mythic-stack{display:inline-flex;align-items:center;position:relative;min-width:0;flex:0 0 auto;}
 .game-detail .detail-summary .detail-mythic-stack .detail-stat{display:inline-flex;}
 .game-detail .detail-mythic-stack .detail-mythic-trigger{position:absolute;bottom:calc(100% + 8px);left:-8px;
- font-size:11px;min-height:29px;padding:4px 9px;}
+ font-size:11px;min-height:29px;padding:4px 9px;z-index:6;}
 .detail-mythic-trigger img{width:23px;height:23px;object-fit:contain;flex-shrink:0;}
 .mythic-wall-overlay{position:fixed;inset:0;z-index:130;display:flex;flex-direction:column;align-items:stretch;
  background:radial-gradient(ellipse at 50% 21%,#2e3020 0%,#101814 42%,#050a09 91%);color:#f9f4e7;overflow:hidden;}
