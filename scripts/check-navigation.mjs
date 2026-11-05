@@ -572,7 +572,10 @@ try{
     });
     assert.ok(pairArtwork.newerLeft>pairArtwork.olderLeft && pairArtwork.newerLeft<pairArtwork.olderRight,
       'The two achievement pictures overlap but the earlier picture remains visible');
-    assert.ok(pairArtwork.newerTop>pairArtwork.olderTop,'Later award overlaps at a lower layer position');
+    assert.ok(pairArtwork.newerTop-pairArtwork.olderTop>=30,
+      'Staggering exposes at least 30px of the older artwork above the later image');
+    assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-gap-stack-arrow').count(),0,
+      'The decorative white arrow between achievement images is removed');
     // Regression for gold frames overlapping the right tile edge on iPhone.
     // Check every pair, not only #01: different achievement ratios/rarities
     // must not push the rotated later thumbnail (including its gold glow) over the card border.
@@ -628,6 +631,24 @@ try{
     });
     assert.ok(Math.abs(dynamicGap.squareRightInset-dynamicGap.originalRightInset)<2,
       'Right-aligned artwork preserves a consistent right margin for square achievement images');
+    const widePair=await page.locator('.ah-gap-tile').first().evaluate(tile=>{
+      const back=tile.querySelector('.ah-gap-image-back .ah-gap-art');
+      const front=tile.querySelector('.ah-gap-image-front .ah-gap-art');
+      const prevBack=back.style.aspectRatio,prevFront=front.style.aspectRatio;
+      back.style.aspectRatio='16 / 9';front.style.aspectRatio='16 / 9';
+      const earlier=tile.querySelector('.ah-gap-image-back').getBoundingClientRect();
+      const later=tile.querySelector('.ah-gap-image-front').getBoundingClientRect();
+      const right=Math.max(0,Math.min(earlier.right,later.right)-Math.max(earlier.left,later.left));
+      const down=Math.max(0,Math.min(earlier.bottom,later.bottom)-Math.max(earlier.top,later.top));
+      const obscured=right*down/(earlier.width*earlier.height);
+      const topExposed=later.top-earlier.top;
+      back.style.aspectRatio=prevBack;front.style.aspectRatio=prevFront;
+      return {obscured,topExposed,rightGap:tile.getBoundingClientRect().right-later.right};
+    });
+    assert.ok(widePair.obscured<0.4&&widePair.topExposed>=30,
+      'Two full-size 16:9 artworks remain layered while less than 40% of the older bounds are covered: '+JSON.stringify(widePair));
+    assert.ok(widePair.rightGap>=7&&widePair.rightGap<=18,
+      'Reducing overlap does not change the previously accepted right-side spacing');
     await page.getByRole('button',{name:'向右滚动间隔成就展柜'}).click();
     await page.waitForFunction(()=>document.querySelector('.ah-gap-rail')?.scrollLeft>60);
     await page.getByRole('button',{name:'查看间隔最久成就详情'}).click();
