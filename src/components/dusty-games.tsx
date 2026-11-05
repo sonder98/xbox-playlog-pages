@@ -11,7 +11,7 @@ function Score({item}:{item:DustyGame}){
   {item.pcScore&&<small>PC</small>}
  </span>;
 }
-export function DustyPreview({items,onOpen}:{items:DustyGame[];onOpen:()=>void}){
+export function DustyPreview({items,onOpen,onGame}:{items:DustyGame[];onOpen:()=>void;onGame:(id:string)=>void}){
  return <section className="ah-showcase dusty-preview" data-overview-section="dusty" aria-label="吃灰游戏">
   <div className="ah-showcase-heading">
    <div className="ah-showcase-title-group">
@@ -23,7 +23,7 @@ export function DustyPreview({items,onOpen}:{items:DustyGame[];onOpen:()=>void})
     <ChevronRight size={22}/></button>
   </div>
   {items.length?<div className="dusty-rail" role="region" aria-label="吃灰游戏 TOP 5 横向滑动" tabIndex={0}>
-   {items.slice(0,5).map((item,i)=><button key={item.game.id} type="button" className="dust-card" onClick={onOpen} data-game-id={item.game.id} aria-label={item.game.name+' 已吃灰 '+item.days+' 天'}>
+   {items.slice(0,5).map((item,i)=><button key={item.game.id} type="button" className="dust-card" onClick={()=>onGame(item.game.id)} data-game-id={item.game.id} aria-label={`查看 ${item.game.name} 的游戏详情，已吃灰 ${item.days} 天`}>
      <span className="dust-cover"><GameCover game={item.game}/></span>
      <span className="dust-rank">#{String(i+1).padStart(2,'0')}</span>
      <span className="dust-title" title={item.game.name}>{item.game.name}</span>
@@ -33,7 +33,7 @@ export function DustyPreview({items,onOpen}:{items:DustyGame[];onOpen:()=>void})
   </div>:<p className="ah-showcase-empty">暂无可确定最后活跃时间的官方未标记可见游戏。</p>}
  </section>;
 }
-export function DustyDetails({items,onBack}:{items:DustyGame[];onBack:()=>void}){
+export function DustyDetails({items,onBack,onGame}:{items:DustyGame[];onBack:()=>void;onGame:(id:string)=>void}){
  return <section className="ah-page dusty-detail" data-dusty="detail">
   <button className="ah-back" onClick={onBack} type="button"><ArrowLeft size={20}/> 返回概览</button>
   <div className="ah-intro-block"><span className="eyebrow">LEFT ON THE SHELF</span>
@@ -41,7 +41,7 @@ export function DustyDetails({items,onBack}:{items:DustyGame[];onBack:()=>void})
   </div>
   <div className="ah-showcase-detail-count"><span>可计算最后活跃日期</span><strong>{items.length} 款</strong></div>
   {items.length?<div className="dust-detail-list">
-   {items.map((item,i)=><article className="dust-detail-row" key={item.game.id} data-game-id={item.game.id}>
+   {items.map((item,i)=><button type="button" className="dust-detail-row" key={item.game.id} data-game-id={item.game.id} onClick={()=>onGame(item.game.id)} aria-label={`查看 ${item.game.name} 的游戏详情`}>
     <span className="dust-detail-rank">{String(i+1).padStart(2,'0')}</span>
     <span className="dust-detail-cover"><GameCover game={item.game}/></span>
     <div className="dust-detail-body">
@@ -50,7 +50,7 @@ export function DustyDetails({items,onBack}:{items:DustyGame[];onBack:()=>void})
      {item.pcScore?.note&&<span className="dust-detail-note">{item.pcScore.note}</span>}
     </div>
     <div className="dust-detail-numbers"><span><b>{item.days.toLocaleString('zh-CN')}</b> 天</span><Score item={item}/></div>
-   </article>)}
+   </button>)}
   </div>:<p className="ah-empty-day">暂无符合条件的游戏。</p>}
   <p className="ah-footnote">吃灰天数按照北京时间的自然日差计算。M 分是截至 2026-11-01 人工核实的 Metacritic PC 专业媒体评分；无可用媒体综合分则显示 M —，不会用单篇评测或玩家分数替代。数据不会随每半小时的 Xbox 同步自动改分。</p>
  </section>;
