@@ -86,7 +86,15 @@ test('Completion dates sort in both directions while unavailable dates always re
   achievement('base-1','2026-02-01T10:00:00.000Z'),achievement('base-2','2026-02-03T10:00:00.000Z'),
   achievement('dlc-1','2026-02-04T10:00:00.000Z'),achievement('dlc-2','2026-02-06T10:00:00.000Z')
  ]});
- const incomplete=makeGame({id:'incomplete'});
+ const incomplete=makeGame({id:'incomplete',earned:1,achievements:[
+  achievement('base-1','2026-01-01T10:00:00.000Z'),
+  achievement('base-2',null,false),
+  achievement('dlc-1',null,false),
+  achievement('dlc-2',null,false)
+ ],groups:[
+  {id:'base',name:'本体',kind:'base',achievementIds:['base-1','base-2'],earned:1,total:2},
+  {id:'dlc',name:'DLC',kind:'dlc',achievementIds:['dlc-1','dlc-2'],earned:0,total:2}
+ ]});
  const items=[incomplete,newer,older];
  assert.deepEqual([...items].sort((a,b)=>compareGameCompletionDates(a,b,'full','asc')).map(g=>g.id),['older','newer','incomplete']);
  assert.deepEqual([...items].sort((a,b)=>compareGameCompletionDates(a,b,'full','desc')).map(g=>g.id),['newer','older','incomplete']);
