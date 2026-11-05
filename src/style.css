@@ -2837,8 +2837,11 @@ footer .dot {
   max-width:min(270px,calc(100vw - 48px));
   display:flex;
   flex-direction:column;
-  gap:4px;
-  padding:7px;
+  gap:2px;
+  padding:6px;
+  max-height:min(340px,calc(100vh - 140px));
+  overflow-y:auto;
+  overscroll-behavior:contain;
   border:1px solid var(--border);
   border-radius:16px;
   background:var(--surface-raised);
@@ -2850,8 +2853,8 @@ footer .dot {
   align-items:center;
   justify-content:space-between;
   gap:16px;
-  min-height:40px;
-  padding:9px 15px;
+  min-height:36px;
+  padding:6px 12px;
   border:0;
   border-radius:10px;
   background:transparent;
