@@ -1,10 +1,9 @@
 import {useEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
-import {ArrowLeft,ArrowRight,ChevronLeft,ChevronRight,CircleUserRound,Sparkles,X} from 'lucide-react';
+import {ChevronLeft,ChevronRight,CircleUserRound,Sparkles,X} from 'lucide-react';
 import type {Profile,Game,Achievement} from '../data';
 import type {MythicPoster} from '../mythic-posters';
-import {posterLocalDate} from '../mythic-posters';
+import {MYTHIC_BADGE_URL,posterLocalDate} from '../mythic-posters';
 
-const MYTHIC_BADGE='https://xct.live/static/mythic/mythic_unlocked_hd_360.png';
 const GOLD='#e6c47b';
 const confetti=Array.from({length:76},(_,i)=>{
  const random=(n:number)=>((i*1037+n*719+43)%997)/997;
@@ -24,7 +23,7 @@ function MythicEmblem({className=''}:{className?:string}){
  const [failed,setFailed]=useState(false);
  return <span className={'mythic-poster-emblem '+className}>
   <Sparkles size={42} strokeWidth={1.4} aria-hidden="true"/>
-  {!failed&&<img src={MYTHIC_BADGE} alt="Xbox Mythic 勋章" loading="eager"
+  {!failed&&<img src={MYTHIC_BADGE_URL} alt="Xbox Mythic 勋章" loading="eager"
    onError={()=>setFailed(true)}/>}
  </span>;
 }
@@ -65,7 +64,7 @@ function MythicPosterCard({entry,profile,index,total,active}:{
   <div className="mythic-poster-backdrop-shade"/>
   <OrnateBorder/>
   <div className="mythic-poster-stars" aria-hidden="true">
-   {Array.from({length:15},(_,i)=><span key={i} style={{'--i':i} as CSSProperties}>✦</span>)}
+   {Array.from({length:15},(_,i)=><span key={i} style={{'--i':i,left:`${12+(i*37)%74}%`,top:`${7+(i*31)%78}%`} as CSSProperties}>✦</span>)}
   </div>
   <header className="mythic-poster-caption"><span>MYTHIC</span><span>NO. {String(total-index).padStart(3,'0')}</span></header>
   <div className="mythic-poster-portrait">
@@ -122,7 +121,6 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
  const [celebrate,setCelebrate]=useState(()=>!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
  const touchStart=useRef<{x:number;y:number}|null>(null);
  const dismiss=useRef(onClose);dismiss.current=onClose;
- const indexRef=useRef(index);indexRef.current=index;
  useEffect(()=>{
   const previous=document.body.style.overflow,focused=document.activeElement as HTMLElement|null;
   document.body.style.overflow='hidden';
