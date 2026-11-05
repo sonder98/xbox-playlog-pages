@@ -18,3 +18,12 @@ test('Only explicit Xbox visibility allows display; archived unknown games retai
  assert.equal(officialGameVisible(hidden,'导入'),false);
  assert.equal(validateRecord(record([unknown])).games.length,1);
 });
+
+test('independent promotional backdrop URLs are retained only when safe, not conflated with square covers',()=>{
+ const poster={...game,posterImage:'https://store-images.s-microsoft.com/hero',cachedPosterImage:'https://sonder98.github.io/xbox-playlog-pages/media/asset.webp',posterImagePurpose:'SuperHeroArt'};
+ const result=validateRecord(record([poster])).games[0];
+ assert.equal(result.posterImage,poster.posterImage);
+ assert.equal(result.cachedPosterImage,poster.cachedPosterImage);
+ assert.equal(result.posterImagePurpose,'SuperHeroArt');
+ assert.equal(validateRecord(record([{...poster,posterImage:'javascript:alert(1)'}])).games[0].posterImage,undefined);
+});
