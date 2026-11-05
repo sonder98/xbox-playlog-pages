@@ -600,17 +600,34 @@ try{
       }));
       assert.equal(bounds.length,12,'All 12 gap preview pairs remain present at '+width+'px');
       for(const b of bounds){
-        assert.ok(b.frontRightInset>=16,
-          'Gap #'+b.rank+' right achievement and glow must clear the outer card border at '+width+'px: '+JSON.stringify(b));
+        assert.ok(b.frontRightInset>=7&&b.frontRightInset<=18,
+          'Gap #'+b.rank+' right image must sit close to, but clear, the tile border at '+width+'px: '+JSON.stringify(b));
+        assert.ok(b.frontArtWidth>=(mobile?100:110),
+          'Gap #'+b.rank+' must retain its original large artwork size at '+width+'px: '+JSON.stringify(b));
         assert.ok(b.backLeftInset>=2&&b.backRightInset>=16,
           'Gap #'+b.rank+' older artwork remains inside the card at '+width+'px: '+JSON.stringify(b));
         assert.ok(b.laterLeft>b.earlierLeft&&b.laterLeft<b.earlierRight&&b.laterTop>b.earlierTop,
-          'Gap #'+b.rank+' retains the intentional layered artwork without crossing the edge at '+width+'px');
+          'Gap #'+b.rank+' retains intentional artwork overlap at '+width+'px');
         assert.ok(b.tileOverflow<=1,
           'Gap #'+b.rank+' has no horizontal content overflow at '+width+'px: '+JSON.stringify(b));
       }
     }
     await page.setViewportSize(originalGapViewport);
+    // The later art must stay right-aligned even for square or narrow Xbox artwork.
+    // It previously had a fixed left offset, creating disproportionate empty space.
+    const dynamicGap=await page.locator('.ah-gap-tile').first().evaluate(tile=>{
+      const front=tile.querySelector('.ah-gap-image-front');
+      const art=front.querySelector('.ah-gap-art');
+      const edge=()=>tile.getBoundingClientRect().right-front.getBoundingClientRect().right;
+      const oldAspect=art.style.aspectRatio;
+      const originalRightInset=edge();
+      art.style.aspectRatio='1';
+      const squareRightInset=edge();
+      art.style.aspectRatio=oldAspect;
+      return {originalRightInset,squareRightInset};
+    });
+    assert.ok(Math.abs(dynamicGap.squareRightInset-dynamicGap.originalRightInset)<2,
+      'Right-aligned artwork preserves a consistent right margin for square achievement images');
     await page.getByRole('button',{name:'向右滚动间隔成就展柜'}).click();
     await page.waitForFunction(()=>document.querySelector('.ah-gap-rail')?.scrollLeft>60);
     await page.getByRole('button',{name:'查看间隔最久成就详情'}).click();
