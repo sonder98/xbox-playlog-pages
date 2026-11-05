@@ -47,7 +47,6 @@ export function AchievementGapRail({items,onOpen}:{items:AchievementGap[];onOpen
       <span className="ah-gap-image-back"><GapArt achievement={item.earlier}/></span>
       <span className="ah-gap-image-front"><GapArt achievement={item.later}/></span>
       <span className="ah-gap-stack-rank">#{String(index+1).padStart(2,'0')}</span>
-      <ArrowRight className="ah-gap-stack-arrow" size={14} aria-hidden="true"/>
      </span>
      <span className="ah-gap-tile-game" title={item.game.name}>{item.game.name}</span>
      <span className="ah-gap-tile-duration"><Clock3 size={13} aria-hidden="true"/>间隔 <strong>{formattedGapDays(item.gapDays)}</strong> 天</span>
