@@ -1182,6 +1182,43 @@ try{
     assert.ok(!(await page.getByRole('dialog').innerText()).includes('玩家解锁'));
     console.log((mobile?'Mobile':'Desktop')+': PASS achievement image size, typography, inline rarity, 0/9.9/10 thresholds, unknown rarity and long wrapping');
 
+    // The new game journey is a second view of the same dialog, not an additional overlay.
+    const journeySwitch=page.getByRole('group',{name:'详情页面切换'});
+    assert.deepEqual(await journeySwitch.getByRole('button').allTextContents(),['游戏详情','游戏历程']);
+    await tabs.getByRole('tab',{name:'本体成就'}).click();
+    await journeySwitch.getByRole('button',{name:'游戏历程'}).click();
+    const journey=page.locator('.game-journey-content');
+    await journey.waitFor();
+    assert.equal(await journeySwitch.getByRole('button',{name:'游戏历程'}).getAttribute('aria-pressed'),'true');
+    assert.equal(await page.getByRole('dialog').count(),1,'Journey reuses the existing detail modal');
+    assert.equal(await journey.locator('.journey-moment-featured').getAttribute('data-kind'),'rare',
+      'Without midnight or burst unlocks the hero switches to the rarest recorded achievement');
+    assert.equal(await journey.locator('.journey-metrics strong').nth(2).innerText(),'—',
+      'Missing Full dates do not fabricate a first-achievement-to-Full duration');
+    assert.equal(await journey.locator('.journey-month').count(),1);
+    await journey.locator('.journey-moment-featured').click();
+    const firstJourneyDay=journey.locator('[data-journey-day="2026-10-27"]');
+    assert.equal(await firstJourneyDay.locator('.journey-day-toggle').getAttribute('aria-expanded'),'true',
+      'Moment cards reveal the associated dated achievements');
+    assert.equal(await firstJourneyDay.locator('.journey-achievement').count(),1);
+    await journey.locator('.journey-milestone-event').filter({hasText:'Mythic 达成'}).click();
+    const mythicDay=journey.locator('[data-journey-day="2026-10-28"]');
+    assert.equal(await mythicDay.locator('.journey-day-toggle').getAttribute('aria-expanded'),'true',
+      'Milestones navigate to the correct day');
+    await journey.locator('.journey-month-toggle').first().click();
+    assert.equal(await journey.locator('.journey-month-toggle').first().getAttribute('aria-expanded'),'false');
+    await journey.locator('.journey-month-toggle').first().click();
+    await mythicDay.locator('.journey-day-toggle').click();
+    assert.equal(await mythicDay.locator('.journey-day-toggle').getAttribute('aria-expanded'),'false',
+      'Individual dated achievement groups can collapse independently');
+    const journeyFits=await journey.evaluate(el=>el.scrollWidth<=el.clientWidth+1);
+    assert.ok(journeyFits,'The interactive journey fits its modal on desktop and mobile');
+    await journeySwitch.getByRole('button',{name:'游戏详情'}).click();
+    assert.equal(await page.locator('.achievement-group').getAttribute('data-group-id'),'base',
+      'Returning to the game detail preserves its previous achievement-category selection');
+    assert.equal(await journeySwitch.getByRole('button',{name:'游戏详情'}).getAttribute('aria-pressed'),'true');
+    console.log((mobile?'Mobile':'Desktop')+': PASS journey switch, data-driven hero, date jumps, month/day accordion and retained detail state');
+
     await page.goBack();
     await page.getByRole('dialog').waitFor({state:'hidden'});
     assert.equal(await page.getByRole('textbox',{name:'搜索游戏名称'}).inputValue(),'Test Game 1');
