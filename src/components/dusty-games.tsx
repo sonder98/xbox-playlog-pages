@@ -1,5 +1,5 @@
 import {ArrowLeft,ChevronRight,Clock3,Gamepad2} from 'lucide-react';
-import type {DustyGame} from '../dusty-games';
+import {achievementProgressPercent,type DustyGame} from '../dusty-games';
 import {GameCover} from './game';
 
 const date=(value:string)=>new Date(value).toLocaleDateString('zh-CN',{
@@ -33,6 +33,21 @@ export function DustyPreview({items,onOpen,onGame}:{items:DustyGame[];onOpen:()=
   </div>:<p className="ah-showcase-empty">暂无可确定最后活跃时间的官方未标记可见游戏。</p>}
  </section>;
 }
+function AchievementRing({game}:{game:DustyGame['game']}) {
+ const percent=achievementProgressPercent(game.earned,game.total);
+ return <svg className="dust-achievement-ring" viewBox="0 0 48 48" role="progressbar"
+  aria-label={game.name+' 成就完成度'} aria-valuemin={0} aria-valuemax={100}
+  aria-valuenow={percent??undefined} aria-valuetext={percent===null?'暂无成就数据':percent+'%'}
+  data-progress={percent??'unknown'} focusable="false">
+  <circle className="dust-achievement-ring-track" cx="24" cy="24" r="20" fill="none" strokeWidth="3.5"/>
+  {percent!==null&&<circle className="dust-achievement-ring-progress" cx="24" cy="24" r="20"
+   fill="none" strokeWidth="3.5" pathLength="100" strokeDasharray={percent+' 100'}
+   transform="rotate(-90 24 24)"/>}
+  <text className="dust-achievement-ring-value" x="24" y="24" textAnchor="middle" dominantBaseline="central">
+   {percent===null?'—':percent+'%'}
+  </text>
+ </svg>;
+}
 export function DustyDetails({items,onBack,onGame}:{items:DustyGame[];onBack:()=>void;onGame:(id:string)=>void}){
  return <section className="ah-page dusty-detail" data-dusty="detail">
   <button className="ah-back" onClick={onBack} type="button"><ArrowLeft size={20}/> 返回概览</button>
@@ -50,6 +65,7 @@ export function DustyDetails({items,onBack,onGame}:{items:DustyGame[];onBack:()=
      {item.pcScore?.note&&<span className="dust-detail-note">{item.pcScore.note}</span>}
     </div>
     <div className="dust-detail-numbers"><span><b>{item.days.toLocaleString('zh-CN')}</b> 天</span><Score item={item}/></div>
+    <AchievementRing game={item.game}/>
    </button>)}
   </div>:<p className="ah-empty-day">暂无符合条件的游戏。</p>}
   <p className="ah-footnote">吃灰天数按照北京时间的自然日差计算。M 分是截至 2026-11-01 人工核实的 Metacritic PC 专业媒体评分；无可用媒体综合分则显示 M —，不会用单篇评测或玩家分数替代。数据不会随每半小时的 Xbox 同步自动改分。</p>
