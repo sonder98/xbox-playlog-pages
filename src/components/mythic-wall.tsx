@@ -126,8 +126,8 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
   document.body.style.overflow='hidden';
   const onKey=(event:KeyboardEvent)=>{
    if(event.key==='Escape'){event.preventDefault();dismiss.current();}
-   if(event.key==='ArrowLeft'){event.preventDefault();setIndex(i=>Math.max(0,i-1));}
-   if(event.key==='ArrowRight'){event.preventDefault();setIndex(i=>Math.min(posters.length-1,i+1));}
+   if(event.key==='ArrowLeft'){event.preventDefault();setCelebrate(false);setIndex(i=>Math.max(0,i-1));}
+   if(event.key==='ArrowRight'){event.preventDefault();setCelebrate(false);setIndex(i=>Math.min(posters.length-1,i+1));}
   };
   document.addEventListener('keydown',onKey);
   return()=>{document.removeEventListener('keydown',onKey);document.body.style.overflow=previous;focused?.focus({preventScroll:true});};
@@ -146,6 +146,7 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
   const dx=event.changedTouches[0].clientX-start.x;
   const dy=event.changedTouches[0].clientY-start.y;
   if(Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.2)return;
+  setCelebrate(false);
   setIndex(i=>Math.max(0,Math.min(posters.length-1,i+(dx<0?1:-1))));
  }
  return <div className="mythic-wall-overlay" role="dialog" aria-modal="true" aria-label="Mythic纪念墙">
@@ -165,12 +166,12 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
    </div>
   </div>
   <nav className="mythic-wall-controls" aria-label="切换Mythic纪念卡">
-   <button type="button" onClick={()=>setIndex(i=>Math.max(0,i-1))} disabled={index===0} aria-label="上一张Mythic纪念卡"><ChevronLeft size={22}/></button>
+   <button type="button" onClick={()=>{setCelebrate(false);setIndex(i=>Math.max(0,i-1));}} disabled={index===0} aria-label="上一张Mythic纪念卡"><ChevronLeft size={22}/></button>
    <span>左右滑动，回顾每一次 Mythic</span>
-   <button type="button" onClick={()=>setIndex(i=>Math.min(posters.length-1,i+1))}
+   <button type="button" onClick={()=>{setCelebrate(false);setIndex(i=>Math.min(posters.length-1,i+1));}}
     disabled={index===posters.length-1} aria-label="下一张Mythic纪念卡"><ChevronRight size={22}/></button>
   </nav>
-  {celebrate&&<div className="mythic-wall-confetti" data-confetti="opening" aria-hidden="true">
+  {celebrate&&index===initial&&<div className="mythic-wall-confetti" data-confetti="opening" aria-hidden="true">
    {confetti.map((piece,i)=><i key={i} style={{
     left:piece.left,backgroundColor:piece.color,width:piece.width,height:piece.height,
     animationDelay:piece.delay,animationDuration:piece.duration,
