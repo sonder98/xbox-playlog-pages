@@ -1,7 +1,8 @@
-import {useEffect,useRef,useState,useId,type ReactNode} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState,useId,type ReactNode,type RefObject} from 'react';
 import {Gamepad2,Trophy,X,Lock,Check,Clock3,Gem} from 'lucide-react';
 import {completion} from '../completion';
 import {GamerscoreIcon} from './gamerscore-icon';
+import {GameJourney} from './game-journey';
 import {AchievementSortControl,AchievementUnlockFilterControl} from './achievement-sort-control';
 import {sortAchievements,filterAchievements,type AchievementSort,type AchievementUnlockFilter} from '../achievement-sort';
 import type {Game,Achievement} from '../data';
@@ -52,7 +53,7 @@ export function GameCard({game,onOpen,priority=false}:{game:Game;onOpen:()=>void
     <span className="game-progress"><span className="game-achievement"><span className="achievement-metric" aria-label={`${state.base?'本体':'已同步'}成就 ${state.earned}/${state.total}`} title={state.base?'本体成就':'成就总数 · 本体分组待确认'}><Trophy size={14}/><span>{state.earned}/{state.total}</span></span>{extra&&extra.total>0&&<span className="achievement-metric" aria-label={`追加内容成就 ${extra.earned}/${extra.total}`} title="DLC 与更新成就"><span className="dlc-mark">DLC</span><span>{extra.earned}/{extra.total}</span></span>}<span className="achievement-metric game-playtime" aria-label={'游玩时长 '+hours(game.minutes)}><Clock3 size={13}/>{hours(game.minutes)}</span></span><Progress earned={state.earned} total={state.total} complete={state.mythic} label={game.name+' 成就完成度'}/></span>
   </button>;
 }
-export function Modal({title,onClose,children,className=''}:{title:string;onClose:()=>void;children:ReactNode;className?:string}){
+export function Modal({title,onClose,children,className='',toolbarContent,bodyRef}:{title:string;onClose:()=>void;children:ReactNode;className?:string;toolbarContent?:ReactNode;bodyRef?:RefObject<HTMLDivElement|null>}){
   const panel=useRef<HTMLElement>(null),close=useRef(onClose);close.current=onClose;
   useEffect(()=>{
     const original=document.activeElement as HTMLElement|null,overflow=document.body.style.overflow;
@@ -69,7 +70,7 @@ export function Modal({title,onClose,children,className=''}:{title:string;onClos
     document.addEventListener('keydown',key);
     return ()=>{document.body.style.overflow=overflow;document.removeEventListener('keydown',key);original?.focus({preventScroll:true});};
   },[]);
-  return <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)onClose();}}><section ref={panel} className={'dialog '+className} role="dialog" aria-modal="true" aria-label={title}><div className="dialog-toolbar"><button className="icon-button close" aria-label="关闭详情" onClick={onClose}><X size={20}/></button></div><div className="dialog-body">{children}</div></section></div>;
+  return <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)onClose();}}><section ref={panel} className={'dialog '+className} role="dialog" aria-modal="true" aria-label={title}><div className="dialog-toolbar">{toolbarContent}<button className="icon-button close" aria-label="关闭详情" onClick={onClose}><X size={20}/></button></div><div className="dialog-body" ref={bodyRef}>{children}</div></section></div>;
 }
 function AchievementItem({achievement:a}:{achievement:Achievement}){
   const rare=a.rarity!==null&&a.rarity<10;
@@ -104,6 +105,16 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
   const [order,setOrder]=useState<AchievementSort>('date-desc');
   const [unlockFilter,setUnlockFilter]=useState<AchievementUnlockFilter>('all');
   const [category,setCategory]=useState<'all'|'base'|'dlc'>('all');
+  const [view,setView]=useState<'detail'|'journey'>('detail');
+  const scrollRef=useRef<HTMLDivElement>(null);
+  const scrollHistory=useRef({detail:0,journey:0});
+  const viewId=useId();
+  useLayoutEffect(()=>{if(scrollRef.current)scrollRef.current.scrollTop=scrollHistory.current[view];},[view]);
+  function changeView(next:'detail'|'journey'){
+    if(next===view)return;
+    scrollHistory.current[view]=scrollRef.current?.scrollTop??0;
+    setView(next);
+  }
   function changeUnlockFilter(next:AchievementUnlockFilter){
     if(next==='locked'&&order.startsWith('date'))setOrder('rarity-asc');
     setUnlockFilter(next);
@@ -116,7 +127,13 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
   const total=selectedCategory==='all'?game.total:selectedGroups.reduce((sum,g)=>sum+g.total,0);
   const categories=[{id:'all',name:'全部成就'},{id:'base',name:'本体成就'},{id:'dlc',name:'DLC成就'}] as const;
   const numberFormat=(value:number)=>value.toLocaleString('zh-CN');
-  return <Modal title={game.name+' · 游戏详情'} onClose={onClose} className="game-detail">
+  return <Modal title={game.name+' · 游戏详情'} onClose={onClose} className="game-detail"
+    bodyRef={scrollRef}
+    toolbarContent={<div className="journey-view-switch" role="group" aria-label="详情页面切换">
+      <button type="button" aria-pressed={view==='detail'} onClick={()=>changeView('detail')}>游戏详情</button>
+      <button type="button" aria-pressed={view==='journey'} onClick={()=>changeView('journey')}>游戏历程</button>
+    </div>}>
+    <section className="game-detail-content" id={viewId+'-detail'} hidden={view!=='detail'}>
     <GameCover game={game} wide/>
     <div className="detail-heading"><h2>{game.name}</h2></div>
     <div className="detail-summary">
@@ -155,5 +172,9 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
       </section>
     </>}
     {!game.achievements?.length&&<div className="empty"><Trophy/><h3>成就明细尚未同步</h3><p>下一次同步成功后将在这里展示。</p></div>}
+    </section>
+    <section className="game-journey-content" id={viewId+'-journey'} hidden={view!=='journey'}>
+      <GameJourney game={game} cover={<GameCover game={game}/>} bodyRef={scrollRef}/>
+    </section>
   </Modal>;
 }
