@@ -23,6 +23,9 @@ test('AU catalog selects TitledHeroArt before higher-resolution SuperHeroArt, ne
  assert.equal(record.games[0].image,'https://store-images.s-microsoft.com/square');
  assert.equal(record.games[0].detailImage,'https://store-images.s-microsoft.com/titled');
  assert.equal(record.games[0].detailImagePurpose,'TitledHeroArt');
+ assert.equal(record.games[0].posterImage,'https://store-images.s-microsoft.com/hero');
+ assert.equal(record.games[0].posterImagePurpose,'SuperHeroArt',
+  'Promotional poster uses title-free Store art over screenshot and titled hero');
  assert.equal(record.games[0].achievements![0].name,'中文成就');
 });
 test('Missing TitledHeroArt uses SuperHeroArt, then BoxArt if no hero exists',async()=>{
@@ -37,15 +40,19 @@ test('Missing TitledHeroArt uses SuperHeroArt, then BoxArt if no hero exists',as
  await australianArtwork(square,request);
  assert.equal(titled.games[0].detailImagePurpose,'SuperHeroArt');
  assert.equal(titled.games[0].detailImage,'https://store-images.s-microsoft.com/hero');
+ assert.equal(titled.games[0].posterImage,'https://store-images.s-microsoft.com/hero');
  assert.equal(square.games[0].image,'https://store-images.s-microsoft.com/box');
  assert.equal(square.games[0].detailImage,undefined);
  assert.equal(square.games[0].detailImagePurpose,undefined);
+ assert.equal(square.games[0].posterImage,'https://store-images.s-microsoft.com/shot');
+ assert.equal(square.games[0].posterImagePurpose,'Screenshot');
 });
 test('Verified AU TitledHeroArt remains reusable for incremental sync',async()=>{
- const old={games:[{id:'123',name:'Game',image:'https://store-images.s-microsoft.com/image/square',detailImage:'https://store-images.s-microsoft.com/image/hero',detailImagePurpose:'TitledHeroArt'}]} as RecordData;
+ const old={games:[{id:'123',name:'Game',image:'https://store-images.s-microsoft.com/image/square',detailImage:'https://store-images.s-microsoft.com/image/hero',detailImagePurpose:'TitledHeroArt',posterImage:'https://store-images.s-microsoft.com/image/wide',posterImagePurpose:'SuperHeroArt'}]} as RecordData;
  const next={games:[{id:'123',name:'Game',image:''}]} as RecordData;
  await australianArtwork(next,async()=>{throw Error('should not contact catalog');},old);
  assert.equal(next.games[0].detailImage,old.games[0].detailImage);
+ assert.equal(next.games[0].posterImage,old.games[0].posterImage);
 });
 
 test('An existing untitled SuperHeroArt is replaced by a titled image on refresh',async()=>{
@@ -64,4 +71,6 @@ test('An existing untitled SuperHeroArt is replaced by a titled image on refresh
  assert.equal(next.games[0].detailImagePurpose,'TitledHeroArt');
  assert.equal(next.games[0].detailImage,'https://store-images.s-microsoft.com/image/titled');
  assert.equal(next.games[0].cachedDetailImage,undefined);
+ assert.equal(next.games[0].posterImagePurpose,'SuperHeroArt');
+ assert.equal(next.games[0].posterImage,'https://store-images.s-microsoft.com/image/untitled');
 });

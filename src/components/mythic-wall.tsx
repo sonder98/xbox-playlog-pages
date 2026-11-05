@@ -3,22 +3,9 @@ import {ChevronLeft,ChevronRight,CircleUserRound,Sparkles,X} from 'lucide-react'
 import type {Profile,Game,Achievement} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {MYTHIC_BADGE_URL,posterLocalDate} from '../mythic-posters';
+import {MythicOpeningFireworks} from './mythic-fireworks';
 
 const GOLD='#e6c47b';
-const confetti=Array.from({length:76},(_,i)=>{
- const random=(n:number)=>((i*1037+n*719+43)%997)/997;
- return {
-  left:(random(1)*100).toFixed(2)+'%',
-  delay:(random(2)*1.35).toFixed(2)+'s',
-  duration:(2.3+random(3)*1.9).toFixed(2)+'s',
-  drift:(-240+random(4)*480).toFixed(0)+'px',
-  rotate:(random(5)*1200-600).toFixed(0)+'deg',
-  width:(3+random(6)*8).toFixed(0)+'px',
-  height:(7+random(7)*13).toFixed(0)+'px',
-  color:['#e7ba65','#fff0ac','#b2fb5a','#f5e9d7','#f7d38d','#91cfad'][i%6]
- };
-});
-
 function MythicEmblem({className=''}:{className?:string}){
  const [failed,setFailed]=useState(false);
  return <span className={'mythic-poster-emblem '+className}>
@@ -38,16 +25,21 @@ function MomentArt({achievement}:{achievement:Achievement|null}){
 }
 function OrnateBorder(){
  return <svg className="mythic-poster-ornament" viewBox="0 0 420 748" preserveAspectRatio="none" aria-hidden="true">
-  <rect x="4" y="4" width="412" height="740" rx="24" stroke={GOLD} fill="none" strokeWidth="1.25"/>
-  <rect x="12" y="12" width="396" height="724" rx="20" stroke="#c99a4c" opacity=".48" fill="none" strokeWidth=".7"/>
-  <path d="M17 103 Q17 40 65 36 Q93 35 87 65 Q84 78 72 73 Q65 67 72 61 M403 103 Q403 40 355 36 Q327 35 333 65 Q336 78 348 73 Q355 67 348 61
-   M17 645 Q17 708 65 712 Q93 713 87 683 Q84 670 72 675 Q65 681 72 687 M403 645 Q403 708 355 712 Q327 713 333 683 Q336 670 348 675 Q355 681 348 687"
-   stroke="#deb774" strokeWidth="1.15" fill="none" opacity=".8"/>
-  <path d="M20 374h25M375 374h25M205 14l5-8 5 8-5 8zM205 734l5-8 5 8-5 8zM8 374l8-4 8 4-8 4zM412 374l-8-4-8 4 8 4z" fill="#f5dda0" opacity=".85"/>
-  {Array.from({length:14},(_,i)=><g key={i} fill="#d8b36a" opacity=".6">
-   <path d={`M${24+i*28} 13l3 3-3 3-3-3z`}/>
-   <path d={`M${24+i*28} 735l3-3-3-3-3 3z`}/>
+  <rect x="4" y="4" width="412" height="740" rx="22" stroke="#dcc084" strokeOpacity=".95" fill="none" strokeWidth="1.1"/>
+  <rect x="12" y="12" width="396" height="724" rx="17" stroke="#e2c383" strokeOpacity=".42" fill="none" strokeWidth=".7"/>
+  <path d="M25 87V48Q25 26 47 26H92 M395 87V48Q395 26 373 26H328
+           M25 661V700Q25 722 47 722H92 M395 661V700Q395 722 373 722H328"
+   fill="none" stroke="#d8b374" strokeWidth="1.15" strokeOpacity=".78"/>
+  <path d="M22 374h21M377 374h21M210 9l5 6-5 6-5-6zM210 739l5-6-5-6-5 6z
+           M7 374l7-4 7 4-7 4zM413 374l-7-4-7 4 7 4z"
+   fill="#e9cb8b" stroke="#e9cb8b" strokeWidth=".75"/>
+  {Array.from({length:12},(_,i)=><g key={i} fill="#d6b777" opacity=".58">
+   <path d={`M${41+i*31} 14l2.6 2.6-2.6 2.6-2.6-2.6z`}/>
+   <path d={`M${41+i*31} 734l2.6-2.6-2.6-2.6-2.6 2.6z`}/>
   </g>)}
+  <g fill="#f0d9a2">
+   <path d="M25 25l6-6 6 6-6 6zM395 25l6-6 6 6-6 6zM25 723l6-6 6 6-6 6zM395 723l6-6 6 6-6 6z"/>
+  </g>
  </svg>;
 }
 function MythicPosterCard({entry,profile,index,total,active}:{
@@ -55,12 +47,17 @@ function MythicPosterCard({entry,profile,index,total,active}:{
 }){
  const {game,firstAt,mythicAt,firstAchievement,lastBaseAchievement,daysToMythic,baseTotal}=entry;
  const first=posterLocalDate(firstAt),finish=posterLocalDate(mythicAt);
- const background=game.cachedDetailImage||game.detailImage||game.imageWide||
-  game.cachedImageLarge||game.image3x||game.cachedImage||game.image;
+ // Collectible uses *landscape* first-party Store promotional art or screenshot.
+ // Do not stretch the 1:1 library cover across a tall commemorative poster.
+ const background=game.cachedPosterImage||game.posterImage||
+  (game.detailImagePurpose==='SuperHeroArt'||game.detailImagePurpose==='TitledHeroArt'?
+   (game.cachedDetailImage||game.detailImage):undefined);
  const cover=game.cachedImageLarge||game.cachedImage||game.image3x||game.image2x||game.image;
  return <article className={'mythic-poster'+(active?' is-active':'')} data-poster-game={game.id}
   aria-label={game.name+' Mythic 纪念卡'}>
-  <div className="mythic-poster-backdrop" style={background?{backgroundImage:`url("${background.replaceAll('"','%22')}")`}:undefined}/>
+  <div className={'mythic-poster-backdrop'+(background?' has-promotional-art':'')}
+   data-art-source={game.posterImage?'store-poster':background?'store-hero':'no-promotional-art'}
+   style={background?{backgroundImage:`url("${background.replaceAll('"','%22')}")`}:undefined}/>
   <div className="mythic-poster-backdrop-shade"/>
   <OrnateBorder/>
   <div className="mythic-poster-stars" aria-hidden="true">
@@ -73,7 +70,7 @@ function MythicPosterCard({entry,profile,index,total,active}:{
   <MythicEmblem/>
   <div className="mythic-poster-congratulations">
    <span className="mythic-poster-gold-line">✧</span>
-   <strong>恭喜 MYTHIC</strong>
+   <strong>恭喜 <span>MYTHIC</span></strong>
    <span className="mythic-poster-gold-line">✧</span>
   </div>
   <h2 className="mythic-poster-title">{game.name}</h2>
@@ -171,12 +168,6 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
    <button type="button" onClick={()=>{setCelebrate(false);setIndex(i=>Math.min(posters.length-1,i+1));}}
     disabled={index===posters.length-1} aria-label="下一张Mythic纪念卡"><ChevronRight size={22}/></button>
   </nav>
-  {celebrate&&index===initial&&<div className="mythic-wall-confetti" data-confetti="opening" aria-hidden="true">
-   {confetti.map((piece,i)=><i key={i} style={{
-    left:piece.left,backgroundColor:piece.color,width:piece.width,height:piece.height,
-    animationDelay:piece.delay,animationDuration:piece.duration,
-    '--mythic-drift':piece.drift,'--mythic-turn':piece.rotate
-   } as CSSProperties}/>)}
-  </div>}
+  {celebrate&&index===initial&&<MythicOpeningFireworks/>}
  </div>;
 }
