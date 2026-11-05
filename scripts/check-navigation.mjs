@@ -1225,9 +1225,13 @@ try{
     assert.equal(await mythicDay.locator('.journey-achievement-rarity').innerText(),'9.9%');
     const backgroundOk=await journey.locator('.journey-moment-featured').evaluate(el=>{
       const image=getComputedStyle(el,'::before').backgroundImage;
-      return image.includes('data:image/webp')||image.includes('journey-moments');
+      return image.includes('data:image/webp')||/\/assets\/(night|burst|rare|full)-[^"]+\.webp/.test(image);
     });
-    assert.ok(backgroundOk,'The special moment hero uses the bundled generated image atlas');
+    assert.ok(backgroundOk,'The highlighted moment uses a separately generated high-resolution background');
+    const milestoneDate=journey.locator('.journey-calendar-date').first();
+    assert.equal(await milestoneDate.locator('small').innerText(),'2026','Milestones include their year');
+    assert.match(await milestoneDate.locator('strong').innerText(),/^10\.2[78]$/,
+      'Milestone date is compact month and day in the second row');
     await journey.locator('.journey-month-toggle').first().click();
     assert.equal(await journey.locator('.journey-month-toggle').first().getAttribute('aria-expanded'),'false');
     await journey.locator('.journey-month-toggle').first().click();
