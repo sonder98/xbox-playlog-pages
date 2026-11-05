@@ -3,6 +3,10 @@ import {Gamepad2,Trophy,X,Lock,Check,Clock3,Gem} from 'lucide-react';
 import {completion} from '../completion';
 import {GamerscoreIcon} from './gamerscore-icon';
 import {GameJourney} from './game-journey';
+
+// Temporarily unpublished: retain the journey implementation for a future redesign.
+// Flip this flag only when the redesigned experience is approved for release.
+const GAME_JOURNEY_ENABLED = false;
 import {AchievementSortControl,AchievementUnlockFilterControl} from './achievement-sort-control';
 import {sortAchievements,filterAchievements,type AchievementSort,type AchievementUnlockFilter} from '../achievement-sort';
 import type {Game,Achievement} from '../data';
@@ -129,10 +133,10 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
   const numberFormat=(value:number)=>value.toLocaleString('zh-CN');
   return <Modal title={game.name+' · 游戏详情'} onClose={onClose} className="game-detail"
     bodyRef={scrollRef}
-    toolbarContent={<div className="journey-view-switch" role="group" aria-label="详情页面切换">
+    toolbarContent={GAME_JOURNEY_ENABLED?<div className="journey-view-switch" role="group" aria-label="详情页面切换">
       <button type="button" aria-pressed={view==='detail'} onClick={()=>changeView('detail')}>游戏详情</button>
       <button type="button" aria-pressed={view==='journey'} onClick={()=>changeView('journey')}>游戏历程</button>
-    </div>}>
+    </div>:undefined}>
     <section className="game-detail-content" id={viewId+'-detail'} hidden={view!=='detail'}>
     <GameCover game={game} wide/>
     <div className="detail-heading"><h2>{game.name}</h2></div>
@@ -173,8 +177,8 @@ export function GameDetail({game,onClose}:{game:Game;onClose:()=>void}){
     </>}
     {!game.achievements?.length&&<div className="empty"><Trophy/><h3>成就明细尚未同步</h3><p>下一次同步成功后将在这里展示。</p></div>}
     </section>
-    <section className="game-journey-content" id={viewId+'-journey'} hidden={view!=='journey'}>
+    {GAME_JOURNEY_ENABLED&&<section className="game-journey-content" id={viewId+'-journey'} hidden={view!=='journey'}>
       <GameJourney game={game} cover={<GameCover game={game}/>} bodyRef={scrollRef}/>
-    </section>
+    </section>}
   </Modal>;
 }
