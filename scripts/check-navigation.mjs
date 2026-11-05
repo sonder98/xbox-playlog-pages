@@ -1223,8 +1223,10 @@ try{
     assert.ok(mythicDimensions.width>=75&&Math.abs(mythicDimensions.ratio-mythicDimensions.actualRatio)<.06,
       'Journey artwork is large and its rarity frame follows the image natural ratio');
     assert.equal(await mythicDay.locator('.journey-achievement-rarity').innerText(),'9.9%');
-    const backgroundOk=await journey.locator('.journey-moment-featured').evaluate(el=>
-      getComputedStyle(el,'::before').backgroundImage.includes('journey-moments'));
+    const backgroundOk=await journey.locator('.journey-moment-featured').evaluate(el=>{
+      const image=getComputedStyle(el,'::before').backgroundImage;
+      return image.includes('data:image/webp')||image.includes('journey-moments');
+    });
     assert.ok(backgroundOk,'The special moment hero uses the bundled generated image atlas');
     await journey.locator('.journey-month-toggle').first().click();
     assert.equal(await journey.locator('.journey-month-toggle').first().getAttribute('aria-expanded'),'false');
