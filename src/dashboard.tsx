@@ -1,8 +1,10 @@
 'use client';
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Download,Upload,Search,Clock3,Trophy,ShieldCheck,X,ArrowRight,Plug,ChevronRight,Loader2,SlidersHorizontal,EyeOff} from 'lucide-react';
+import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Download,Upload,Search,Clock3,Trophy,ShieldCheck,X,ArrowRight,Plug,ChevronRight,Loader2,SlidersHorizontal,EyeOff,Medal} from 'lucide-react';
 import {compareRecords,officialGameVisible,type Game,type RecordData} from './data';
 import {GameCard,GameCover,GameDetail,Modal} from './components/game';
+import {MythicPosterWall} from './components/mythic-wall';
+import {mythicPosterWall} from './mythic-posters';
 import {RecentGamesRail} from './components/recent-games';
 import {DustyPreview,DustyDetails} from './components/dusty-games';
 import {rankDustyGames} from './dusty-games';
@@ -22,6 +24,7 @@ function download(name:string,content:string,type:string){const u=URL.createObje
 export default function Dashboard({onLock,locking=false,refreshFromCache=false}:{onLock:()=>void;locking?:boolean;refreshFromCache?:boolean}){
  const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState(false),[busy,setBusy]=useState(false),[progress]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState<GameLibrarySort>('recent'),[filter,setFilter]=useState<GameLibraryFilter>('all');
  const [manualPhase,setManualPhase]=useState<'idle'|'queued'|'running'|'deploying'|'ready'|'error'>('idle');
+ const [mythicWallStart,setMythicWallStart]=useState<{gameId:string|null}|null>(null);
   const [hiddenIds,setHiddenIds]=useState<string[]>([]),[manageDisplay,setManageDisplay]=useState(false),[draftHidden,setDraftHidden]=useState<string[]>([]),[displayQuery,setDisplayQuery]=useState(''),[onlyHidden,setOnlyHidden]=useState(false),[savingDisplay,setSavingDisplay]=useState(false),[displayError,setDisplayError]=useState('');
  const {tab,navigate:setTab,back,gameId,dayId,showcase,gapShowcase,openGame,openAchievementDay,openAchievementShowcase,openAchievementGapShowcase,openAchievementGame,changeAchievementDay}=usePageNavigation();
  const [mobileNavVisible,setMobileNavVisible]=useState(false);
@@ -100,6 +103,8 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  const officialAvailableIds=new Set(officialAvailableGames.map(g=>g.id));
  const displayGames=officialAvailableGames.filter(g=>!hiddenSet.has(g.id));
  const hiddenCount=officialAvailableGames.length-displayGames.length;
+ const mythicPosters=useMemo(()=>mythicPosterWall((current?.games||[]).filter(g=>
+  officialGameVisible(g,current?.source||'')&&!hiddenIds.includes(g.id))),[current,hiddenIds]);
  const managementGames=officialAvailableGames.filter(g=>g.name.toLowerCase().includes(displayQuery.trim().toLowerCase())&&(!onlyHidden||draftHidden.includes(g.id)));
  function openDisplayManager(){setDisplayError('');setDraftHidden([...hiddenIds]);setDisplayQuery('');setOnlyHidden(false);setManageDisplay(true);}
  async function saveDisplay(){setSavingDisplay(true);setDisplayError('');try{const saved=await api('/api/display-preferences',{hiddenGameIds:draftHidden});setHiddenIds(saved.hiddenGameIds);setManageDisplay(false);setNotice('游戏库显示设置已保存。');}catch(e){setDisplayError('显示设置保存失败：'+(e as Error).message);}finally{setSavingDisplay(false);}}
@@ -129,7 +134,13 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  function loadAchievements(g:Game){openGame(g.id);}
  const nav=[['overview','概览',LayoutDashboard],['library','游戏库',Library],['achievements','成就',CalendarDays],['manage','管理',Settings]] as const;
  const recent=[...displayGames].filter(g=>g.lastPlayed).sort((a,b)=>Date.parse(b.lastPlayed!)-Date.parse(a.lastPlayed!)||a.name.localeCompare(b.name)).slice(0,10);
- return <div className="shell"><PullToRefresh onUpdated={setRecords}/><aside className="sidebar"><a className="brand" href={import.meta.env.BASE_URL}><span className="brand-icon"><Gamepad2 size={24}/></span><span>XBOX Playlog<small>PERSONAL GAME ARCHIVE</small></span></a><div className="nav-caption">我的游戏空间</div><nav>{nav.map(([id,label,Icon])=><button key={id} onClick={()=>setTab(id)} className={tab===id?'active':''}><Icon size={19}/>{label}{tab===id&&<span className="nav-dot"/>}</button>)}</nav><div className="side-bottom"><ShieldCheck size={19}/><div>私人游戏档案<small>密码解密后查看</small></div></div></aside><main><header><span className="breadcrumb">我的空间 <ChevronRight size={14}/> {tab==='achievements'?'成就热力图':tab==='dusty'?'吃灰游戏':nav.find(n=>n[0]===tab)?.[1]}</span><div className="account"><button className="account-lock secondary" onClick={onLock} disabled={locking}>锁定档案</button><span className={'dot '+(current?'green':'')}/><span className="gamertag">{current?.profile.gamertag||'Xbox 尚未连接'}</span><span className="avatar">{current?.profile.avatar&&<img src={current.profile.avatar} alt="玩家头像" onError={e=>{e.currentTarget.style.display='none';}}/>}<Gamepad2 size={18} aria-hidden="true"/></span></div></header><div className="content">{tab==='library'&&<button className="text-button" style={{marginBottom:16}} onClick={back}><ArrowLeft size={17}/>返回上一页</button>}{tab!=='achievements'&&tab!=='dusty'&&<div className="title-row"><div><div className="eyebrow">YOUR GAMES, YOUR STORY</div><h1>{tab==='overview'?'我的游戏档案':tab==='library'?'我的游戏库':'管理中心'}</h1><p>{tab==='overview'?'从第一小时，到最后一个成就。收藏属于你的游戏旅程。':tab==='library'?`${displayGames.length} 个游戏展示中${hiddenCount?` · ${hiddenCount} 个已隐藏`:``}。`:'连接账号、管理数据，并回顾每次同步记录。'}</p></div><button className="primary overview-refresh" aria-label={['queued','running','deploying'].includes(manualPhase)?'查看同步进度':'立即同步'} disabled={busy||loading} onClick={sync}><RefreshCw size={18} aria-hidden="true" className={['queued','running','deploying'].includes(manualPhase)?'spin':''}/><span className="refresh-label">{['queued','running','deploying'].includes(manualPhase)?'同步中…':'立即同步'}</span></button></div>}
+ return <div className="shell"><PullToRefresh onUpdated={setRecords}/><aside className="sidebar"><a className="brand" href={import.meta.env.BASE_URL}><span className="brand-icon"><Gamepad2 size={24}/></span><span>XBOX Playlog<small>PERSONAL GAME ARCHIVE</small></span></a><div className="nav-caption">我的游戏空间</div><nav>{nav.map(([id,label,Icon])=><button key={id} onClick={()=>setTab(id)} className={tab===id?'active':''}><Icon size={19}/>{label}{tab===id&&<span className="nav-dot"/>}</button>)}</nav><div className="side-bottom"><ShieldCheck size={19}/><div>私人游戏档案<small>密码解密后查看</small></div></div></aside><main><header><span className="breadcrumb">我的空间 <ChevronRight size={14}/> {tab==='achievements'?'成就热力图':tab==='dusty'?'吃灰游戏':nav.find(n=>n[0]===tab)?.[1]}</span><div className="account"><button className="account-lock secondary" onClick={onLock} disabled={locking}>锁定档案</button><span className={'dot '+(current?'green':'')}/><span className="gamertag">{current?.profile.gamertag||'Xbox 尚未连接'}</span><span className="avatar">{current?.profile.avatar&&<img src={current.profile.avatar} alt="玩家头像" onError={e=>{e.currentTarget.style.display='none';}}/>}<Gamepad2 size={18} aria-hidden="true"/></span></div></header><div className="content">{tab==='library'&&<button className="text-button" style={{marginBottom:16}} onClick={back}><ArrowLeft size={17}/>返回上一页</button>}{tab!=='achievements'&&tab!=='dusty'&&<div className="title-row"><div><div className="eyebrow">YOUR GAMES, YOUR STORY</div>{tab==='library'?<div className="library-heading-actions">
+ <h1>我的游戏库</h1>
+ <button type="button" className="mythic-wall-entry" onClick={()=>setMythicWallStart({gameId:null})}
+  disabled={!mythicPosters.length} aria-label="打开Mythic纪念墙">
+  <Medal size={17}/><span>Mythic纪念墙</span>
+ </button>
+ </div>:<h1>{tab==='overview'?'我的游戏档案':'管理中心'}</h1>}<p>{tab==='overview'?'从第一小时，到最后一个成就。收藏属于你的游戏旅程。':tab==='library'?`${displayGames.length} 个游戏展示中${hiddenCount?` · ${hiddenCount} 个已隐藏`:``}。`:'连接账号、管理数据，并回顾每次同步记录。'}</p></div><button className="primary overview-refresh" aria-label={['queued','running','deploying'].includes(manualPhase)?'查看同步进度':'立即同步'} disabled={busy||loading} onClick={sync}><RefreshCw size={18} aria-hidden="true" className={['queued','running','deploying'].includes(manualPhase)?'spin':''}/><span className="refresh-label">{['queued','running','deploying'].includes(manualPhase)?'同步中…':'立即同步'}</span></button></div>}
  {error&&<div className="alert error" role="alert">{error}{error.includes('登录')&&<a href={import.meta.env.BASE_URL} target="_top">前往登录</a>}<button aria-label="关闭错误" onClick={()=>setError('')}><X size={16}/></button></div>}{notice&&<div className="alert success" role="status">{notice}<button aria-label="关闭提示" onClick={()=>setNotice('')}><X size={16}/></button></div>}{busy&&<div className="alert" role="status"><Loader2 size={17} className="spin"/>{progress||'正在保存…'}</div>}
  {tab==='overview'&&<>
  <AchievementPreview games={games} records={records} playtimeLedger={playtimeLedger} onOpen={()=>setTab('achievements')} onOpenDay={openAchievementDay} onOpenGame={openAchievementGame}/>
@@ -164,7 +175,12 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
    {displayError&&<p className="inline-error" role="alert">{displayError}</p>}
    <div className="display-manager-footer"><button className="secondary" disabled={savingDisplay} onClick={()=>setManageDisplay(false)}>取消</button><button className="primary" disabled={savingDisplay} onClick={saveDisplay}>{savingDisplay?'保存中…':'保存展示设置'}</button></div>
  </Modal>}
- {selected&&<GameDetail game={selected} onClose={back}/>}
+ {selected&&!mythicWallStart&&<GameDetail game={selected} onClose={back}
+   onOpenMythic={mythicPosters.some(p=>p.game.id===selected.id)?
+    ()=>setMythicWallStart({gameId:selected.id}):undefined}/>}
+  {mythicWallStart&&current&&mythicPosters.length>0&&
+   <MythicPosterWall posters={mythicPosters} profile={current.profile}
+    initialGameId={mythicWallStart.gameId} onClose={()=>setMythicWallStart(null)}/>} 
  <nav className={'mobile-nav'+(mobileNavVisible?' is-visible':'')} aria-label="主导航">{nav.map(([id,label,Icon])=><button key={id} onClick={event=>{
    event.currentTarget.blur();
    ignoreMobileScrollUntil.current=performance.now()+350;
