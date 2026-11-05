@@ -47,18 +47,31 @@ export async function dispatchXboxSync(token:string,requestId:string,request:typ
   throw Error('GitHub 未接受同步请求（HTTP '+response.status+'）。');
  }
 }
-async function runs(path:string,request:typeof fetch):Promise<WorkflowRun[]>{
+async function runs(path:string,request:typeof fetch,token?:string):Promise<WorkflowRun[]>{
  let response:Response;
- try{response=await request(api+path,{headers:{Accept:accept,'X-GitHub-Api-Version':apiVersion},cache:'no-store'});}
+ // The same Actions:read/write token that dispatched this request may read
+ // its status. Anonymous polling can receive 403 even after dispatch succeeds.
+ const headers:Record<string,string>={Accept:accept,'X-GitHub-Api-Version':apiVersion};
+ if(token)headers.Authorization='Bearer '+token;
+ try{response=await request(api+path,{headers,cache:'no-store'});}
  catch{throw Error('获取 GitHub 任务状态失败，请检查网络。');}
- if(!response.ok)throw Error('获取 GitHub 任务状态失败（HTTP '+response.status+'）。');
+ if(!response.ok){
+  if(response.status===403){
+   if(response.headers.get('x-ratelimit-remaining')==='0'){
+    throw Error('GitHub 任务状态查询被限流（HTTP 403），同步任务不受影响。');
+   }
+   throw Error('GitHub 任务状态查询暂时被拒绝（HTTP 403），不代表 Xbox 同步失败。');
+  }
+  if(response.status===401)throw Error('GitHub 查询令牌已失效（HTTP 401），已提交的同步任务仍可能正常运行。');
+  throw Error('获取 GitHub 任务状态失败（HTTP '+response.status+'）。');
+ }
  const body=await response.json() as RunList;
  return Array.isArray(body.workflow_runs)?body.workflow_runs:[];
 }
 /** Request IDs travel through the workflow run name; no other user's run is mistaken for ours. */
-export async function findWorkflowRun(kind:'sync'|'pages',requestId:string,request:typeof fetch=fetch):Promise<WorkflowRun|undefined>{
+export async function findWorkflowRun(kind:'sync'|'pages',requestId:string,request:typeof fetch=fetch,token?:string):Promise<WorkflowRun|undefined>{
  const workflow=kind==='sync'?'sync.yml':'pages.yml';
- const all=await runs('/actions/workflows/'+workflow+'/runs?event=workflow_dispatch&per_page=20',request);
+ const all=await runs('/actions/workflows/'+workflow+'/runs?event=workflow_dispatch&per_page=20',request,token);
  return all.find(run=>run.event==='workflow_dispatch'&&run.display_title?.includes(requestId));
 }
 export const githubRunUrl=(run:WorkflowRun)=>run.html_url.startsWith(githubRepo+'/actions/runs/')?run.html_url:githubRepo+'/actions/workflows/sync.yml';
