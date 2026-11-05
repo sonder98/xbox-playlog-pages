@@ -1201,10 +1201,33 @@ try{
     assert.equal(await firstJourneyDay.locator('.journey-day-toggle').getAttribute('aria-expanded'),'true',
       'Moment cards reveal the associated dated achievements');
     assert.equal(await firstJourneyDay.locator('.journey-achievement').count(),1);
+    const journeyArt=firstJourneyDay.locator('.journey-award-icon');
+    assert.equal(await journeyArt.getAttribute('data-frame-tier'),'ultra',
+      'Journey achievement artwork reuses the existing Xbox ultra-rare gold frame');
+    assert.equal(await firstJourneyDay.locator('.journey-achievement-rarity').innerText(),'0%',
+      'Journey rarity is shown with the compact trophy/gem icon, including 0%');
+    assert.equal(await firstJourneyDay.locator('.journey-achievement-rarity svg').count(),1,
+      'Journey rarity uses an icon rather than the textual rarity label');
     await journey.locator('.journey-milestone-event').filter({hasText:'Mythic 达成'}).click();
     const mythicDay=journey.locator('[data-journey-day="2026-10-28"]');
     assert.equal(await mythicDay.locator('.journey-day-toggle').getAttribute('aria-expanded'),'true',
       'Milestones navigate to the correct day');
+    const mythicArt=mythicDay.locator('.journey-award-icon');
+    await mythicArt.locator('img').evaluate(img=>img.decode());
+    assert.equal(await mythicArt.getAttribute('data-frame-tier'),'rare');
+    const mythicDimensions=await mythicArt.evaluate(el=>{
+      const rect=el.getBoundingClientRect();
+      const img=el.querySelector('img');
+      return {width:rect.width,height:rect.height,ratio:rect.width/rect.height,actualRatio:img.naturalWidth/img.naturalHeight};
+    });
+    assert.ok(mythicDimensions.width>=75&&Math.abs(mythicDimensions.ratio-mythicDimensions.actualRatio)<.06,
+      'Journey artwork is large and its rarity frame follows the image natural ratio');
+    assert.equal(await mythicDay.locator('.journey-achievement-rarity').innerText(),'9.9%');
+    const backgroundOk=await journey.locator('.journey-moment-featured').evaluate(el=>{
+      const image=getComputedStyle(el,'::before').backgroundImage;
+      return image.includes('data:image/webp')||image.includes('journey-moments');
+    });
+    assert.ok(backgroundOk,'The special moment hero uses the bundled generated image atlas');
     await journey.locator('.journey-month-toggle').first().click();
     assert.equal(await journey.locator('.journey-month-toggle').first().getAttribute('aria-expanded'),'false');
     await journey.locator('.journey-month-toggle').first().click();
