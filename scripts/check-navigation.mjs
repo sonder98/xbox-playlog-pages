@@ -63,6 +63,8 @@ try{
       const width=original?1920:medium?480:wide?160:64,height=wide?90:original?1800:width;
       return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#789"/></svg>`});
     });
+    await page.route('https://xct.live/static/mythic/**',route=>route.fulfill({contentType:'image/svg+xml',
+      body:'<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360"><path d="M180 30L220 140 330 180 220 220 180 330 140 220 30 180 140 140Z" fill="#baff78"/></svg>'}));
     await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
     await page.route('**/vault.json*',route=>route.fulfill({json:activeEnvelope}));
     // Most visual regressions inject a fresh network fixture on each login.
@@ -902,6 +904,43 @@ try{
     await page.waitForFunction(y=>Math.abs(window.scrollY-y)<5,originalScroll);
     await page.goForward();
     await page.getByRole('heading',{name:'我的游戏库',exact:true}).waitFor();
+    const wallEntry=page.getByRole('button',{name:'打开Mythic纪念墙'});
+    await wallEntry.click();
+    const posterWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
+    await posterWall.waitFor();
+    assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'100',
+      'The global entry opens the newest Mythic based on its verified completion date');
+    assert.equal(await posterWall.locator('.mythic-poster.is-active .mythic-poster-title').innerText(),'Test Game 0',
+      'The poster displays its game name without a platform tag');
+    assert.ok(await posterWall.locator('.mythic-wall-confetti i').count()>50,
+      'Only the first open shows the celebratory confetti');
+    const posterGeometry=await posterWall.locator('.mythic-poster.is-active').evaluate(el=>{
+      const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,vw:innerWidth,vh:innerHeight};
+    });
+    assert.ok(posterGeometry.left>=0&&posterGeometry.right<=posterGeometry.vw+1&&posterGeometry.top>=0&&posterGeometry.bottom<=posterGeometry.vh+1,
+      'One vertical poster fits completely within mobile and desktop screens');
+    await posterWall.getByRole('button',{name:'下一张Mythic纪念卡'}).click();
+    assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'101');
+    assert.equal(await posterWall.locator('.mythic-wall-confetti').count(),0,
+      'Swiping to subsequent posters stops the one-off confetti');
+    assert.ok(await posterWall.locator('.mythic-poster.is-active .mythic-poster-stars span').count()>5,
+      'Subsequent posters retain ambient gold sparkles');
+    await posterWall.getByRole('button',{name:'上一张Mythic纪念卡'}).click();
+    assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'100');
+    assert.equal(await posterWall.locator('.mythic-wall-confetti').count(),0,
+      'Returning to the initial poster does not replay the celebration');
+    if(mobile){
+      await posterWall.locator('.mythic-wall-viewport').evaluate(el=>{
+        const start=new Touch({identifier:1,target:el,clientX:310,clientY:400});
+        const end=new Touch({identifier:1,target:el,clientX:95,clientY:407});
+        el.dispatchEvent(new TouchEvent('touchstart',{touches:[start],changedTouches:[start],bubbles:true}));
+        el.dispatchEvent(new TouchEvent('touchend',{touches:[],changedTouches:[end],bubbles:true}));
+      });
+      assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'101',
+        'A horizontal swipe advances exactly one poster');
+    }
+    await posterWall.getByRole('button',{name:'关闭Mythic纪念墙'}).click();
+    await posterWall.waitFor({state:'hidden'});
     await page.getByRole('button',{name:'返回上一页',exact:true}).click();
     await page.getByRole('heading',{name:'我的游戏档案',exact:true}).waitFor();
     await page.waitForFunction(y=>Math.abs(window.scrollY-y)<5,originalScroll);
@@ -991,8 +1030,25 @@ try{
     await page.keyboard.press('Escape');
     assert.equal(await gameSort.getAttribute('aria-expanded'),'false');
     const beforeDetail=await page.evaluate(()=>window.scrollY);
+    const chosenMythicId=await page.locator('.game-card').first().getAttribute('data-game-id');
     await page.locator('.game-card').first().click();
     await page.getByRole('dialog').waitFor();
+    const medal=page.locator('.game-detail .detail-mythic-trigger');
+    assert.equal(await medal.count(),1,'Completed Mythic details display the medal action');
+    const medalPlacement=await medal.evaluate(el=>{
+      const button=el.getBoundingClientRect(),count=el.closest('.detail-mythic-stack').querySelector('.detail-achievements').getBoundingClientRect();
+      return {buttonBottom:button.bottom,countTop:count.top};
+    });
+    assert.ok(medalPlacement.buttonBottom<medalPlacement.countTop+1,
+      'The Mythic medal is positioned above the achievement count');
+    await medal.click();
+    const detailWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
+    await detailWall.waitFor();
+    assert.equal(await detailWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),chosenMythicId,
+      'The medal entry focuses the currently opened game instead of the global first poster');
+    assert.equal(await page.getByRole('dialog').count(),1,'The wall replaces the detail modal rather than stacking dialogs');
+    await detailWall.getByRole('button',{name:'关闭Mythic纪念墙'}).click();
+    await page.getByRole('dialog',{name:/游戏详情/}).waitFor();
     // Gamerscore shares Lucide's transparent, 2px stroke vocabulary and aligned 24px grid.
     const scoreSummary=page.locator('.game-detail .detail-gamerscore');
     assert.equal(await scoreSummary.count(),1);
