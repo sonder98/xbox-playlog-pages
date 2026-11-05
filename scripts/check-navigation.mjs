@@ -879,10 +879,11 @@ try{
     await gameSort.press('ArrowDown');
     let gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
     await gameSortMenu.waitFor();
-    assert.deepEqual(await gameSortMenu.getByRole('menuitemradio').allTextContents(),
-      ['最近游玩','游玩时长','时间跨度：长 → 短','时间跨度：短 → 长',
-       '全成就日期：早 → 晚','全成就日期：晚 → 早','Mythic 日期：早 → 晚','Mythic 日期：晚 → 早'],
-      'Library sorting removes completion percentage and exposes both completion dates in both directions');
+    const sharedGameSorts=['最近游玩','游玩时长','时间跨度：长 → 短','时间跨度：短 → 长'];
+    const fullGameSorts=[...sharedGameSorts,'全成就日期：早 → 晚','全成就日期：晚 → 早'];
+    const mythicGameSorts=[...sharedGameSorts,'Mythic 日期：早 → 晚','Mythic 日期：晚 → 早'];
+    assert.deepEqual(await gameSortMenu.getByRole('menuitemradio').allTextContents(),sharedGameSorts,
+      'All games exposes only recent play, playtime and time-span sorting');
     assert.equal(await gameSortMenu.getByRole('menuitemradio',{name:'成就完成度'}).count(),0,
       'The obsolete completion-percentage sort is removed');
     assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'最近游玩',
@@ -893,25 +894,55 @@ try{
     });
     assert.ok(libraryMenuBounds.left>=0&&libraryMenuBounds.right<=libraryMenuBounds.viewport,
       'The custom sort menu stays inside the viewport on desktop and mobile');
-    assert.ok(libraryMenuBounds.height<=330,
-      'Eight sort choices use compact rows instead of an excessively tall menu');
+    assert.ok(libraryMenuBounds.height<=220,
+      'The All games menu stays compact with only shared sort choices');
     await gameSortMenu.getByRole('menuitemradio',{name:'时间跨度：长 → 短'}).click();
     await gameSortMenu.waitFor({state:'hidden'});
     assert.equal(await page.locator('.game-card .game-time-span').first().innerText(),'时间跨度：1.0天');
     await gameSort.click();
     gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
     await gameSortMenu.getByRole('menuitemradio',{name:'时间跨度：短 → 长'}).click();
-    assert.equal(await gameSort.getAttribute('aria-expanded'),'false');
     await gameSort.click();
     gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
-    await gameSortMenu.getByRole('menuitemradio',{name:'全成就日期：早 → 晚'}).click();
+    await gameSortMenu.getByRole('menuitemradio',{name:'游玩时长'}).click();
+
+    await page.locator('.filter-pills').getByRole('button',{name:'Mythic',exact:true}).click();
     await gameSort.click();
     gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
-    assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'全成就日期：早 → 晚');
+    assert.deepEqual(await gameSortMenu.getByRole('menuitemradio').allTextContents(),mythicGameSorts,
+      'Mythic adds only Mythic completion date sorting');
+    assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'游玩时长',
+      'Shared sort selections survive a group change');
     await gameSortMenu.getByRole('menuitemradio',{name:'Mythic 日期：晚 → 早'}).click();
+
+    await page.locator('.filter-pills').getByRole('button',{name:'Full',exact:true}).click();
     await gameSort.click();
     gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
-    assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'Mythic 日期：晚 → 早');
+    assert.deepEqual(await gameSortMenu.getByRole('menuitemradio').allTextContents(),fullGameSorts,
+      'Full adds only Full completion date sorting');
+    assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'最近游玩',
+      'Switching from Mythic to Full resets the unavailable Mythic date sort');
+    await gameSortMenu.getByRole('menuitemradio',{name:'全成就日期：早 → 晚'}).click();
+
+    await page.locator('.filter-pills').getByRole('button',{name:'全部',exact:true}).click();
+    await gameSort.click();
+    gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
+    assert.deepEqual(await gameSortMenu.getByRole('menuitemradio').allTextContents(),sharedGameSorts,
+      'Returning to All hides both group-specific date sorts');
+    assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'最近游玩',
+      'Leaving Full resets its unavailable completion date sort');
+
+    await page.locator('.filter-pills').getByRole('button',{name:'Mythic',exact:true}).click();
+    await gameSort.click();
+    gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
+    assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'最近游玩');
+    await gameSortMenu.getByRole('menuitemradio',{name:'Mythic 日期：晚 → 早'}).click();
+    await page.locator('.filter-pills').getByRole('button',{name:'全部',exact:true}).click();
+    await gameSort.click();
+    gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
+    assert.deepEqual(await gameSortMenu.getByRole('menuitemradio').allTextContents(),sharedGameSorts);
+    assert.equal(await gameSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'最近游玩',
+      'Leaving Mythic resets its unavailable completion date sort');
     await gameSortMenu.getByRole('menuitemradio',{name:'游玩时长'}).click();
     await gameSort.click();
     gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
