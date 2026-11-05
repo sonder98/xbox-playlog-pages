@@ -1,5 +1,5 @@
 import {useEffect,useId,useMemo,useState,type ReactNode,type RefObject} from 'react';
-import {ArrowUpRight,CalendarDays,CheckCircle2,ChevronDown,Clock3,Flame,Gamepad2,Gem,MoonStar,Sunrise,Trophy} from 'lucide-react';
+import {ArrowUpRight,CalendarDays,CheckCircle2,ChevronDown,Clock3,Flame,Gamepad2,Gem,MoonStar,Trophy} from 'lucide-react';
 import type {Achievement,Game} from '../data';
 import {buildGameJourney,type JourneyHighlight} from '../game-journey';
 
@@ -37,6 +37,7 @@ export function GameJourney({game,cover,bodyRef}:{game:Game;cover:ReactNode;body
  const [monthsOpen,setMonthsOpen]=useState<string[]>(model.months[0]?[model.months[0].month]:[]);
  const [daysOpen,setDaysOpen]=useState<string[]>([]);
  const [focusedDay,setFocusedDay]=useState<string|null>(null);
+ const [jumpNumber,setJumpNumber]=useState(0);
  useEffect(()=>{
   if(!focusedDay)return;
   const frame=requestAnimationFrame(()=>{
@@ -47,12 +48,13 @@ export function GameJourney({game,cover,bodyRef}:{game:Game;cover:ReactNode;body
    container.scrollTo({top:Math.max(0,target),behavior:'smooth'});
   });
   return ()=>cancelAnimationFrame(frame);
- },[focusedDay,monthsOpen,daysOpen,bodyRef]);
+ },[focusedDay,monthsOpen,daysOpen,bodyRef,jumpNumber]);
  function jumpToDay(day:string){
   const month=day.slice(0,7);
   setMonthsOpen(current=>current.includes(month)?current:[...current,month]);
   setDaysOpen(current=>current.includes(day)?current:[...current,day]);
   setFocusedDay(day);
+  setJumpNumber(n=>n+1);
  }
  function toggleMonth(month:string){
   setMonthsOpen(current=>current.includes(month)?current.filter(x=>x!==month):[...current,month]);
