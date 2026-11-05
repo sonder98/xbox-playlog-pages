@@ -86,8 +86,8 @@ test('missing unlock times never create guessed thresholds or completion dates',
  const result=buildGameJourney(game([
   award('1','2026-03-01T02:00:00Z'),
   award('2',null),
-  award('3',null,false),
-  award('4',null,false)
+  award('3',null,null,false),
+  award('4',null,null,false)
  ]));
  assert.equal(result.datedUnlocks,1);
  assert.equal(result.missingUnlockTimes,1);
@@ -98,7 +98,7 @@ test('missing unlock times never create guessed thresholds or completion dates',
 });
 
 test('no timestamped achievements yields no highlights, milestones, or dated activity',()=>{
- const result=buildGameJourney(game([award('1',null),award('2',null,false)]));
+ const result=buildGameJourney(game([award('1',null),award('2',null,null,false)]));
  assert.deepEqual(result.highlights,[]);
  assert.deepEqual(result.milestones,[]);
  assert.deepEqual(result.months,[]);
