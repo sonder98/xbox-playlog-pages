@@ -3034,7 +3034,7 @@ footer .dot {
  .dialog-toolbar:has(.journey-view-switch){padding:6px 10px;}
  .journey-view-switch{padding:3px;}
  .journey-view-switch button{min-height:34px;padding:6px 11px;font-size:12px;}
- .game-detail .dialog-body{padding:12px;}
+ .dialog.game-detail .dialog-body{padding:12px;}
  .journey-hero{grid-template-columns:76px minmax(0,1fr);gap:12px;padding:12px;border-radius:15px;}
  .journey-hero-cover{width:76px;height:85px;border-radius:10px;}
  .journey-hero-copy{gap:5px;}
