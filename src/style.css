@@ -3124,3 +3124,150 @@ footer .dot {
  .journey-moment,.journey-day-toggle>svg,.journey-month-meta svg{transition:none;}
  .journey-award-icon.ah-rarity-gold::after{animation:none;}
 }
+
+
+/* The Mythic wall is a separate, full-screen collectible experience. */
+.library-heading-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.library-heading-actions h1{margin:0;}
+.mythic-wall-entry,.detail-mythic-trigger{display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;
+ border:1px solid #b78d47;border-radius:99px;color:#f0d493;background:linear-gradient(120deg,#332819,#171c1a);
+ padding:8px 13px;min-height:38px;font-size:13px;font-weight:750;transition:border-color .18s,box-shadow .18s;}
+.mythic-wall-entry:hover,.detail-mythic-trigger:hover{border-color:#f8d996;box-shadow:0 0 17px #edb96544;}
+.mythic-wall-entry:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
+.mythic-wall-entry svg,.detail-mythic-trigger svg{color:#e4bf74;}
+.game-detail .detail-summary:has(.detail-mythic-trigger){align-items:flex-end;}
+.game-detail .detail-summary .detail-mythic-stack{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;flex:0 0 auto;}
+.game-detail .detail-summary .detail-mythic-stack .detail-stat{display:inline-flex;}
+.game-detail .detail-mythic-stack .detail-mythic-trigger{position:static;
+ font-size:11px;min-height:29px;padding:4px 9px;}
+.detail-mythic-trigger img{width:23px;height:23px;object-fit:contain;flex-shrink:0;}
+.mythic-wall-overlay{position:fixed;inset:0;z-index:130;display:flex;flex-direction:column;align-items:stretch;
+ background:radial-gradient(ellipse at 50% 21%,#2e3020 0%,#101814 42%,#050a09 91%);color:#f9f4e7;overflow:hidden;}
+.mythic-wall-header{flex:0 0 auto;min-height:66px;display:flex;align-items:center;justify-content:center;gap:18px;
+ padding:12px max(16px,env(safe-area-inset-left));position:relative;z-index:7;}
+.mythic-wall-header>div{display:flex;flex-direction:column;gap:3px;text-align:center;}
+.mythic-wall-header strong{font-size:16px;letter-spacing:1px;color:#f6dfa9;}
+.mythic-wall-eyebrow{font-size:9px;letter-spacing:2px;color:#ad8e59;}
+.mythic-wall-counter{font-size:12px;color:#c5ad80;font-variant-numeric:tabular-nums;position:absolute;left:22px;bottom:12px;}
+.mythic-wall-close{position:absolute;right:16px;top:16px;z-index:9;width:42px;height:42px;border-radius:50%;
+ border:1px solid #5a4b38;background:#161a18dd;color:#f4e0af;display:grid;place-items:center;}
+.mythic-wall-close:hover{border-color:#d5b476;background:#303024;}
+.mythic-wall-viewport{flex:1 1 auto;min-height:0;width:100%;display:flex;align-items:center;touch-action:pan-y;overflow:hidden;}
+.mythic-wall-track{height:100%;width:100%;display:flex;align-items:center;transition:transform .42s cubic-bezier(.2,.78,.16,1);will-change:transform;}
+.mythic-wall-slide{flex:0 0 100%;width:100%;height:100%;display:flex;align-items:center;justify-content:center;min-width:0;overflow:hidden;}
+.mythic-wall-controls{display:flex;align-items:center;justify-content:center;gap:16px;min-height:56px;
+ padding:3px 14px max(8px,env(safe-area-inset-bottom));flex:0 0 auto;z-index:7;}
+.mythic-wall-controls button{width:40px;height:40px;display:grid;place-items:center;border:1px solid #7c6641;
+ color:#f2d58e;border-radius:100%;background:#171e19;}
+.mythic-wall-controls button:hover:not(:disabled){border-color:#ecc27e;background:#3b3525;}
+.mythic-wall-controls button:disabled{opacity:.25;cursor:default;}
+.mythic-wall-controls>span{font-size:11px;color:#b8a886;letter-spacing:.3px;}
+.mythic-poster{width:min(408px,calc(100vw - 48px),calc((100dvh - 142px)*.563));
+ aspect-ratio:420/748;max-height:calc(100dvh - 142px);position:relative;flex-shrink:0;
+ isolation:isolate;container-type:inline-size;border-radius:5.5%;
+ overflow:hidden;background:#060b09;color:#f7efe0;
+ box-shadow:0 0 0 1px #a07a46,0 0 0 3px #171711,0 18px 80px #000b,0 0 40px #ac85452d;}
+.mythic-poster-backdrop{position:absolute;inset:0;z-index:-4;background-position:center top;background-size:cover;
+ background-color:#11211a;}
+.mythic-poster-backdrop-shade{position:absolute;inset:0;z-index:-3;
+ background:linear-gradient(180deg,rgba(4,10,9,.05) 0%,rgba(5,10,9,.18) 23%,rgba(4,9,8,.75) 41%,#030a08 63%,#020907 100%),
+ linear-gradient(90deg,rgba(5,12,9,.26),transparent 52%,rgba(4,10,9,.28));}
+.mythic-poster-ornament{position:absolute;inset:0;width:100%;height:100%;z-index:6;pointer-events:none;
+ filter:drop-shadow(0 0 1px #e3c882);}
+.mythic-poster-caption{position:absolute;z-index:2;left:10.5%;right:10.5%;top:3.2%;display:flex;justify-content:space-between;
+ color:#f5d48d;font-size:3.5cqw;font-weight:750;letter-spacing:.12em;text-shadow:0 1px 5px #000;}
+.mythic-poster-caption span:last-child{font-variant-numeric:tabular-nums;letter-spacing:.03em;}
+.mythic-poster-portrait{position:absolute;top:10%;left:50%;transform:translateX(-50%);width:37%;aspect-ratio:1;
+ border-radius:50%;overflow:hidden;display:grid;place-items:center;border:4px solid #dfc587;
+ box-shadow:0 0 0 4px #2a2b21,0 0 0 6px #c39a52,0 0 24px #e7c7796b;background:#172320;z-index:2;}
+.mythic-poster-portrait img{height:100%;width:100%;object-fit:cover;}
+.mythic-poster-emblem{display:flex;align-items:center;justify-content:center;color:#b3ffa2;background:#12311e;
+ border:2px solid #bca267;box-shadow:0 0 0 3px #243721,0 0 28px #c5dc9a6b;
+ border-radius:50%;width:23%;aspect-ratio:1;position:absolute;top:27.5%;left:50%;transform:translateX(-50%);z-index:3;}
+.mythic-poster-emblem img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:50%;}
+.mythic-poster-congratulations{position:absolute;left:13%;right:13%;top:43%;
+ display:flex;justify-content:center;align-items:center;gap:8px;text-align:center;
+ font-family:Georgia,"Noto Serif SC",serif;color:#ffe3a2;text-shadow:0 2px 13px #000;font-size:6.5cqw;font-weight:700;white-space:nowrap;}
+.mythic-poster-gold-line{flex:1;max-width:38px;font-size:4cqw;position:relative;}
+.mythic-poster-gold-line:before{content:"";position:absolute;top:50%;right:0;left:0;height:1px;background:#b8985c77;}
+.mythic-poster-congratulations strong{font-weight:750;}
+.mythic-poster-title{position:absolute;top:49.5%;left:8%;right:8%;max-height:8.3%;overflow:hidden;
+ text-align:center;margin:0;font-size:6.5cqw;line-height:1.1;font-weight:750;
+ text-shadow:0 2px 10px #000;color:#fff9f0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.mythic-poster-player{position:absolute;top:57.5%;left:7.5%;right:7.5%;height:8.7%;border:1px solid #7e785e96;
+ background:linear-gradient(110deg,#1c2524dc,#131916ec);border-radius:12px;
+ display:flex;align-items:center;justify-content:center;gap:12px;padding:5px 14px;}
+.mythic-poster-player strong{font-size:5cqw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mythic-poster-avatar{height:70%;max-height:36px;aspect-ratio:1;border-radius:50%;object-fit:cover;border:1px solid #dfc47b;}
+.mythic-poster-achievement-pair{position:absolute;top:67.4%;left:7.5%;right:7.5%;height:16.2%;
+ background:#080e0fbd;border:1px solid #7567487d;border-radius:13px;display:grid;grid-template-columns:1fr 18px 1fr;
+ align-items:center;justify-items:center;padding:7px 5px;gap:4px;}
+.mythic-poster-achievement{display:flex;flex-direction:column;align-items:center;min-width:0;gap:2px;width:100%;
+ text-align:center;font-size:3.3cqw;font-variant-numeric:tabular-nums;}
+.mythic-poster-achievement-art{display:grid;place-items:center;width:36%;min-width:35px;max-width:52px;aspect-ratio:1;
+ border:1.5px solid #d8ae6c;border-radius:10px;overflow:hidden;background:#0a1714;color:#e7cc87;margin-bottom:2px;}
+.mythic-poster-achievement-art img{width:100%;height:100%;object-fit:cover;}
+.mythic-poster-achievement small{font-size:2.8cqw;color:#baad91;white-space:nowrap;}
+.mythic-poster-achievement:nth-child(3) small{color:#e9d29a;}
+.mythic-poster-achievement b{font-size:3.65cqw;line-height:1.2;font-weight:700;white-space:nowrap;}
+.mythic-poster-achievement>span:last-child{font-size:2.7cqw;color:#ada996;}
+.mythic-poster-bridge{color:#d5b169;font-size:4cqw;}
+.mythic-poster-stats{position:absolute;top:84.6%;left:8%;right:8%;height:8.5%;
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;}
+.mythic-poster-stats>div{display:flex;align-items:baseline;justify-content:center;flex-wrap:wrap;gap:2px;position:relative;text-align:center;min-width:0;}
+.mythic-poster-stats>div+div:before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:1px;background:#70634e6a;}
+.mythic-poster-stats strong{font-size:7.1cqw;line-height:1.1;font-weight:550;font-variant-numeric:tabular-nums;}
+.mythic-poster-stats small{font-size:2.85cqw;color:#bbb1a1;}
+.mythic-poster-stats span{display:block;width:100%;font-size:2.45cqw;color:#a89d8c;}
+.mythic-poster-footer{position:absolute;left:12%;right:12%;top:93.6%;display:flex;align-items:center;justify-content:center;
+ gap:9px;font-size:2.5cqw;color:#e3c38c;white-space:nowrap;}
+.mythic-poster-brand{font-size:2.6cqw;letter-spacing:.07em;font-weight:750;border:1px solid #a88954;border-radius:5px;padding:3px 6px;}
+.mythic-poster-gamepad{position:absolute;bottom:1.05%;left:0;right:0;display:flex;justify-content:center;gap:12px;font-size:2.9cqw;}
+.mythic-poster-gamepad span{border:1px solid currentColor;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;}
+.mythic-poster-gamepad span:nth-child(1){color:#74c04c;}
+.mythic-poster-gamepad span:nth-child(2){color:#c94e48;}
+.mythic-poster-gamepad span:nth-child(3){color:#519bd0;}
+.mythic-poster-gamepad span:nth-child(4){color:#d6ac3e;}
+.mythic-poster-stars{position:absolute;inset:0;z-index:3;pointer-events:none;}
+.mythic-poster-stars span{position:absolute;color:#fff3c4;left:calc(15% + var(--i)*4%);top:calc(6% + var(--i)*4.9%);
+ opacity:.12;font-size:4cqw;text-shadow:0 0 8px #e8b967;animation:mythic-twinkle calc(3.8s + var(--i)*.2s) ease-in-out infinite;
+ animation-delay:calc(var(--i)*-.65s);}
+.mythic-poster-shimmer{position:absolute;inset:-30% 0;z-index:5;pointer-events:none;opacity:0;
+ background:linear-gradient(110deg,transparent 40%,#fff0af00 45%,#f7d9a736 50%,transparent 55%);
+ transform:translateX(-110%);animation:mythic-sweep 10s ease-in-out infinite;}
+.mythic-poster:not(.is-active) .mythic-poster-stars span,
+.mythic-poster:not(.is-active) .mythic-poster-shimmer{animation-play-state:paused;}
+@keyframes mythic-twinkle{0%,100%{opacity:.12;transform:scale(.65)}45%{opacity:.95;transform:scale(1.15)}}
+@keyframes mythic-sweep{0%,60%{opacity:0;transform:translateX(-110%)}66%{opacity:.8}75%{opacity:0;transform:translateX(125%)}100%{opacity:0}}
+.mythic-wall-confetti{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden;}
+.mythic-wall-confetti i{display:block;position:absolute;top:-5%;border-radius:1px;opacity:0;
+ box-shadow:0 0 5px #f9deb38b;animation:mythic-confetti-fall 3.2s cubic-bezier(.15,.35,.5,1) forwards;}
+@keyframes mythic-confetti-fall{
+ 0%{opacity:0;transform:translate3d(0,-35px,0) rotate(0)}
+ 10%{opacity:1}
+ 75%{opacity:.95}
+ 100%{opacity:0;transform:translate3d(var(--mythic-drift),105dvh,0) rotate(var(--mythic-turn))}
+}
+@media(max-width:700px){
+ .library-heading-actions{gap:8px;align-items:center;}
+ .library-heading-actions h1{font-size:25px;}
+ .mythic-wall-entry{font-size:11px;min-height:31px;padding:5px 8px;}
+ .title-row:has(.library-heading-actions){gap:7px;}
+ .title-row:has(.library-heading-actions) .primary{width:38px;height:38px;}
+ .game-detail .detail-summary:has(.detail-mythic-trigger){gap:12px;align-items:flex-end;}
+ .game-detail .detail-mythic-stack .detail-mythic-trigger{font-size:10px;min-height:27px;padding:3px 7px;}
+ .mythic-wall-header{min-height:60px;}
+ .mythic-wall-controls{min-height:52px;}
+ .mythic-poster{width:min(408px,calc(100vw - 32px),calc((100dvh - 132px)*.563));
+ max-height:calc(100dvh - 132px);}
+}
+@media(max-width:365px){
+ .library-heading-actions h1{font-size:23px;}
+ .mythic-wall-entry span{display:none;}
+ .mythic-poster-footer{font-size:2.25cqw;}
+}
+@media(prefers-reduced-motion:reduce){
+ .mythic-wall-track{transition:none;}
+ .mythic-wall-confetti{display:none;}
+ .mythic-poster-stars span,.mythic-poster-shimmer{animation:none;opacity:0;}
+}
