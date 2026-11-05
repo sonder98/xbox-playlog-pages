@@ -1,7 +1,9 @@
-import {useEffect,useId,useMemo,useState,type ReactNode,type RefObject} from 'react';
+import {useEffect,useId,useMemo,useState,type CSSProperties,type ReactNode,type RefObject} from 'react';
 import {ArrowUpRight,CalendarDays,CheckCircle2,ChevronDown,Clock3,Flame,Gamepad2,Gem,MoonStar,Trophy} from 'lucide-react';
 import type {Achievement,Game} from '../data';
 import {buildGameJourney,type JourneyHighlight} from '../game-journey';
+import {achievementRarityTier} from '../rare-achievements';
+import momentAtlas from '../assets/journey-moments.webp';
 
 const dateLabel=(day:string)=>day.slice(0,4)+' 年 '+Number(day.slice(5,7))+' 月 '+Number(day.slice(8))+' 日';
 const shortDay=(day:string)=>day.slice(5,7)+'.'+day.slice(8);
@@ -9,16 +11,26 @@ const monthLabel=(month:string)=>month.slice(0,4)+' 年 '+Number(month.slice(5))
 const highlightIcons={night:MoonStar,burst:Flame,rare:Gem,full:CheckCircle2,mythic:Trophy,first:Gamepad2};
 
 function AchievementThumbnail({achievement}:{achievement:Achievement}){
- const [failed,setFailed]=useState(false);
- const image=achievement.cachedImage||achievement.image;
- return <span className="journey-award-icon">
-  {image&&!failed?<img src={image} alt="" loading="lazy" decoding="async" onError={()=>setFailed(true)}/>:<Trophy size={20} aria-hidden="true"/>}
+ const [attempt,setAttempt]=useState(0);
+ const [artRatio,setArtRatio]=useState<number|null>(null);
+ const images=[achievement.cachedImage,achievement.image].filter((url,index,all):url is string=>
+  !!url&&all.indexOf(url)===index);
+ const tier=achievementRarityTier(achievement.rarity);
+ useEffect(()=>{setAttempt(0);setArtRatio(null);},[achievement.id,achievement.cachedImage,achievement.image]);
+ const image=images[attempt];
+ const square=artRatio!==null&&artRatio<1.35;
+ return <span className={'journey-award-icon ah-rarity-'+tier+(tier!=='common'?' ah-rarity-gold':'')+(square?' is-square':'')}
+  data-frame-tier={tier} style={artRatio?{aspectRatio:String(artRatio)}:undefined}>
+  {image?<img src={image} alt="" loading="lazy" decoding="async"
+    onLoad={e=>{const img=e.currentTarget;setArtRatio(Math.min(2.5,Math.max(.8,img.naturalWidth/img.naturalHeight)));}}
+    onError={()=>{setArtRatio(null);setAttempt(n=>n+1);}}/>:<Trophy size={23} aria-hidden="true"/>}
  </span>;
 }
 function MomentCard({moment,primary,onOpen}:{moment:JourneyHighlight;primary:boolean;onOpen:()=>void}){
  const Icon=highlightIcons[moment.kind];
  return <button type="button" className={'journey-moment '+(primary?'journey-moment-featured':'journey-moment-small')}
-  data-kind={moment.kind} onClick={onOpen} aria-label={'查看 '+dateLabel(moment.day)+' · '+moment.title}>
+  data-kind={moment.kind} style={primary?{'--journey-atlas':`url("${momentAtlas}")`} as CSSProperties:undefined}
+  onClick={onOpen} aria-label={'查看 '+dateLabel(moment.day)+' · '+moment.title}>
   <span className="journey-moment-icon"><Icon size={primary?23:18} aria-hidden="true"/></span>
   <span className="journey-moment-copy">
    <span className="journey-moment-label">{moment.title}</span>
@@ -138,7 +150,15 @@ export function GameJourney({game,cover,bodyRef}:{game:Game;cover:ReactNode;body
           <span className="journey-achievement-content">
            <strong>{e.achievement.name}</strong>
            {e.achievement.description&&<span>{e.achievement.description}</span>}
-           {e.achievement.rarity!==null&&e.achievement.rarity<10&&<small>稀有度 {e.achievement.rarity}%</small>}
+           {e.achievement.rarity!==null&&Number.isFinite(e.achievement.rarity)?
+            <span className={'journey-achievement-rarity'+(e.achievement.rarity<10?' is-rare':'')}
+             data-rarity-tier={achievementRarityTier(e.achievement.rarity)}
+             aria-label={'稀有度 '+e.achievement.rarity+'%'}>
+             {e.achievement.rarity<10?<Gem size={14} aria-hidden="true"/>:<Trophy size={13} aria-hidden="true"/>}
+             {e.achievement.rarity}%
+            </span>:<span className="journey-achievement-rarity is-unknown" aria-label="稀有度暂无数据">
+             <Trophy size={13} aria-hidden="true"/> —
+            </span>}
           </span>
           <time dateTime={new Date(e.timestamp).toISOString()}>{e.clock}</time>
          </div>)}
