@@ -231,6 +231,11 @@ try{
     assert.ok(page.url().endsWith('#dusty'),'The preview heading action still opens the full dusty list');
     const dustyDetailRow=page.locator('.dust-detail-row[data-game-id="901"]');
     assert.equal(await dustyDetailRow.evaluate(el=>el.tagName),'BUTTON','Every full-list game row is a semantic button');
+    const dustyRing=dustyDetailRow.locator('.dust-achievement-ring');
+    assert.equal(await dustyRing.getAttribute('aria-valuenow'),'50','Dusty list progress is earned achievements divided by total achievements');
+    assert.equal((await dustyRing.locator('text').textContent())?.trim(),'50%','The ring percentage is shown in its center');
+    assert.equal(await dustyDetailRow.evaluate(el=>el.lastElementChild?.classList.contains('dust-achievement-ring')),true,
+      'The achievement ring is placed at the far right of each row');
     await dustyDetailRow.click();
     await page.getByRole('dialog',{name:'Xbox Unknown Archive · 游戏详情'}).waitFor();
     assert.ok(page.url().endsWith('#dusty/game/901'),'Full dusty list opens the selected game detail route');
