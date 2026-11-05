@@ -3,12 +3,16 @@ import {ArrowUpRight,CalendarDays,CheckCircle2,ChevronDown,Clock3,Flame,Gamepad2
 import type {Achievement,Game} from '../data';
 import {buildGameJourney,type JourneyHighlight} from '../game-journey';
 import {achievementRarityTier} from '../rare-achievements';
-import momentAtlas from '../assets/journey-moments.webp';
+import nightArt from '../assets/journey/night.webp';
+import burstArt from '../assets/journey/burst.webp';
+import rareArt from '../assets/journey/rare.webp';
+import fullArt from '../assets/journey/full.webp';
 
 const dateLabel=(day:string)=>day.slice(0,4)+' 年 '+Number(day.slice(5,7))+' 月 '+Number(day.slice(8))+' 日';
 const shortDay=(day:string)=>day.slice(5,7)+'.'+day.slice(8);
 const monthLabel=(month:string)=>month.slice(0,4)+' 年 '+Number(month.slice(5))+' 月';
 const highlightIcons={night:MoonStar,burst:Flame,rare:Gem,full:CheckCircle2,mythic:Trophy,first:Gamepad2};
+const highlightBackgrounds={night:nightArt,burst:burstArt,rare:rareArt,full:fullArt,mythic:fullArt,first:burstArt};
 
 function AchievementThumbnail({achievement}:{achievement:Achievement}){
  const [attempt,setAttempt]=useState(0);
@@ -29,7 +33,7 @@ function AchievementThumbnail({achievement}:{achievement:Achievement}){
 function MomentCard({moment,primary,onOpen}:{moment:JourneyHighlight;primary:boolean;onOpen:()=>void}){
  const Icon=highlightIcons[moment.kind];
  return <button type="button" className={'journey-moment '+(primary?'journey-moment-featured':'journey-moment-small')}
-  data-kind={moment.kind} style={primary?{'--journey-atlas':`url("${momentAtlas}")`} as CSSProperties:undefined}
+  data-kind={moment.kind} style={primary?{'--journey-art':`url("${highlightBackgrounds[moment.kind]}")`} as CSSProperties:undefined}
   onClick={onOpen} aria-label={'查看 '+dateLabel(moment.day)+' · '+moment.title}>
   <span className="journey-moment-icon"><Icon size={primary?23:18} aria-hidden="true"/></span>
   <span className="journey-moment-copy">
@@ -103,7 +107,7 @@ export function GameJourney({game,cover,bodyRef}:{game:Game;cover:ReactNode;body
    <h3 className="journey-section-title">重要里程碑 <small>Milestones</small></h3>
    <div className="journey-milestone-list">
     {model.milestones.map(m=><div className={'journey-milestone'+(m.important?' is-major':'')} key={m.id}>
-     <div className="journey-calendar-date"><small>{Number(m.day.slice(5,7))} 月</small><strong>{m.day.slice(8)}</strong></div>
+     <div className="journey-calendar-date"><small>{m.day.slice(0,4)}</small><strong>{m.day.slice(5,7)+'.'+m.day.slice(8)}</strong></div>
      <span className="journey-milestone-track" aria-hidden="true"/>
      <button type="button" className="journey-milestone-event" onClick={()=>jumpToDay(m.day)}
       aria-label={'定位里程碑 '+m.title+'，'+dateLabel(m.day)}>

@@ -2957,12 +2957,10 @@ footer .dot {
 .journey-moment{display:flex;text-align:left;color:var(--text-primary);position:relative;overflow:hidden;border:1px solid #40513b;background:var(--journey-surface);border-radius:16px;width:100%;transition:border-color .16s,background .16s;}
 .journey-moment:hover,.journey-moment:focus-visible{border-color:var(--accent);}
 .journey-moment-featured{flex-direction:column;align-items:flex-start;min-height:190px;padding:22px;background:#101b19;border-color:#8aaa4a;isolation:isolate;}
-/* A single locally stored 2×2 image atlas provides 4 curated backgrounds without extra requests. */
+/* Four independent 1920×1080 original illustrations with legible subjects; never upscale a tiny atlas. */
 .journey-moment-featured::before{content:"";position:absolute;z-index:-2;inset:0;pointer-events:none;
- background-image:var(--journey-atlas);background-repeat:no-repeat;background-size:200% 200%;background-position:0 0;}
-.journey-moment-featured[data-kind="burst"]::before,.journey-moment-featured[data-kind="first"]::before{background-position:100% 0;}
-.journey-moment-featured[data-kind="rare"]::before{background-position:0 100%;}
-.journey-moment-featured[data-kind="full"]::before,.journey-moment-featured[data-kind="mythic"]::before{background-position:100% 100%;}
+ background-image:var(--journey-art);background-repeat:no-repeat;background-size:cover;background-position:right center;}
+@media(max-width:700px){.journey-moment-featured::before{background-position:65% center;}}
 .journey-moment-featured::after{content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;
  background:linear-gradient(90deg,rgba(8,17,18,.83) 0%,rgba(8,17,18,.63) 48%,rgba(8,17,18,.15) 100%);}
 .journey-moment-icon{display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#aecf6240;color:var(--accent);width:37px;height:37px;flex:0 0 37px;position:relative;z-index:1;}
@@ -2981,10 +2979,10 @@ footer .dot {
 .journey-moment-small .journey-moment-date{font-size:10px;}
 .journey-moment-arrow{flex-shrink:0;margin-left:auto;color:#aace75;}
 .journey-milestone-list{display:flex;flex-direction:column;gap:0;}
-.journey-milestone{display:grid;grid-template-columns:56px 18px minmax(0,1fr);gap:8px;align-items:stretch;min-height:88px;}
-.journey-calendar-date{width:56px;height:61px;border:1px solid #426847;background:linear-gradient(#233b2c,#151e1c);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.journey-calendar-date small{font-size:10px;color:#c2d1bb;}
-.journey-calendar-date strong{font-size:27px;font-weight:800;line-height:1.12;font-variant-numeric:tabular-nums;}
+.journey-milestone{display:grid;grid-template-columns:74px 18px minmax(0,1fr);gap:8px;align-items:stretch;min-height:88px;}
+.journey-calendar-date{width:74px;height:61px;border:1px solid #426847;background:linear-gradient(#233b2c,#151e1c);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.journey-calendar-date small{font-size:11px;font-weight:650;color:#a9bcac;line-height:1.3;}
+.journey-calendar-date strong{font-size:22px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums;letter-spacing:-.7px;white-space:nowrap;}
 .journey-milestone-track{position:relative;}
 .journey-milestone-track:before{content:"";position:absolute;top:0;bottom:0;left:8px;width:2px;background:#609b42;}
 .journey-milestone:first-child .journey-milestone-track:before{top:26px;}
@@ -3076,9 +3074,9 @@ footer .dot {
  .journey-moment-featured strong{font-size:23px;}
  .journey-moments-more{grid-template-columns:1fr;gap:7px;}
  .journey-moment-small{min-height:65px;padding:10px;}
- .journey-milestone{grid-template-columns:44px 14px minmax(0,1fr);gap:7px;min-height:85px;}
- .journey-calendar-date{width:44px;height:54px;border-radius:9px;}
- .journey-calendar-date strong{font-size:22px;}
+ .journey-milestone{grid-template-columns:62px 14px minmax(0,1fr);gap:7px;min-height:85px;}
+ .journey-calendar-date{width:62px;height:56px;border-radius:9px;}
+ .journey-calendar-date strong{font-size:18px;}
  .journey-milestone-track:before{left:6px;}
  .journey-milestone-track:after{left:1px;}
  .journey-milestone-event{padding:10px;min-height:62px;}
