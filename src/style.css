@@ -1533,6 +1533,24 @@ footer .dot {
 .dialog-body { overflow:auto; overscroll-behavior:contain; min-height:0; padding:24px; scrollbar-gutter:stable; }
 .display-manager .dialog-body { padding-top:8px; }
 .dialog.game-detail .dialog-body { padding-top:16px; }
+/* When Game Journey is unpublished there is no tab switch. Keep the close
+   control accessible without reserving an empty sticky toolbar above the cover. */
+.dialog.game-detail .dialog-toolbar:not(:has(.journey-view-switch)) {
+  position:relative;
+  flex:0 0 0;
+  height:0;
+  min-height:0;
+  padding:0;
+  border:0;
+  background:transparent;
+  overflow:visible;
+}
+.dialog.game-detail .dialog-toolbar:not(:has(.journey-view-switch)) .close {
+  position:absolute;
+  top:12px;
+  right:12px;
+  z-index:4;
+}
 .overview-moment { grid-template-columns:1fr; }
 
 @media(max-width:700px) {
