@@ -233,6 +233,8 @@ try{
         requestedId=body.inputs.request_id;
         return route.fulfill({status:204,body:''});
       }
+      assert.equal(req.headers().authorization,'Bearer github_pat_fixture_only',
+        'Manual sync status polling uses the existing Actions token instead of anonymous requests');
       return route.fulfill({json:{workflow_runs:requestedId?[{id:123,display_title:'Xbox sync (workflow_dispatch · '+requestedId+')',name:'Sync Xbox records',event:'workflow_dispatch',status:'queued',conclusion:null,html_url:'https://github.com/sonder98/xbox-playlog-pages/actions/runs/123',created_at:new Date().toISOString(),updated_at:new Date().toISOString()}]:[]}});
     });
     await page.locator('.title-row .overview-refresh').click();
