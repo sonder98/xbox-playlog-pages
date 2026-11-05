@@ -1182,69 +1182,20 @@ try{
     assert.ok(!(await page.getByRole('dialog').innerText()).includes('玩家解锁'));
     console.log((mobile?'Mobile':'Desktop')+': PASS achievement image size, typography, inline rarity, 0/9.9/10 thresholds, unknown rarity and long wrapping');
 
-    // The new game journey is a second view of the same dialog, not an additional overlay.
-    const journeySwitch=page.getByRole('group',{name:'详情页面切换'});
-    assert.deepEqual(await journeySwitch.getByRole('button').allTextContents(),['游戏详情','游戏历程']);
+    // Journey is unpublished pending redesign. Keep the underlying code, but no
+    // route or button may expose it in either desktop or mobile game details.
+    assert.equal(await page.getByRole('group',{name:'详情页面切换'}).count(),0,
+      'The game journey view switch is not available on the production UI');
+    assert.equal(await page.getByRole('button',{name:'游戏历程'}).count(),0,
+      'No game journey entry can be clicked');
+    assert.equal(await page.locator('.game-journey-content').count(),0,
+      'The game journey is not mounted while disabled');
     await tabs.getByRole('tab',{name:'本体成就'}).click();
-    await journeySwitch.getByRole('button',{name:'游戏历程'}).click();
-    const journey=page.locator('.game-journey-content');
-    await journey.waitFor();
-    assert.equal(await journeySwitch.getByRole('button',{name:'游戏历程'}).getAttribute('aria-pressed'),'true');
-    assert.equal(await page.getByRole('dialog').count(),1,'Journey reuses the existing detail modal');
-    assert.equal(await journey.locator('.journey-moment-featured').getAttribute('data-kind'),'rare',
-      'Without midnight or burst unlocks the hero switches to the rarest recorded achievement');
-    assert.equal(await journey.locator('.journey-metrics strong').nth(2).innerText(),'—',
-      'Missing Full dates do not fabricate a first-achievement-to-Full duration');
-    assert.equal(await journey.locator('.journey-month').count(),1);
-    await journey.locator('.journey-moment-featured').click();
-    const firstJourneyDay=journey.locator('[data-journey-day="2026-10-27"]');
-    assert.equal(await firstJourneyDay.locator('.journey-day-toggle').getAttribute('aria-expanded'),'true',
-      'Moment cards reveal the associated dated achievements');
-    assert.equal(await firstJourneyDay.locator('.journey-achievement').count(),1);
-    const journeyArt=firstJourneyDay.locator('.journey-award-icon');
-    assert.equal(await journeyArt.getAttribute('data-frame-tier'),'ultra',
-      'Journey achievement artwork reuses the existing Xbox ultra-rare gold frame');
-    assert.equal(await firstJourneyDay.locator('.journey-achievement-rarity').innerText(),'0%',
-      'Journey rarity is shown with the compact trophy/gem icon, including 0%');
-    assert.equal(await firstJourneyDay.locator('.journey-achievement-rarity svg').count(),1,
-      'Journey rarity uses an icon rather than the textual rarity label');
-    await journey.locator('.journey-milestone-event').filter({hasText:'Mythic 达成'}).click();
-    const mythicDay=journey.locator('[data-journey-day="2026-10-28"]');
-    assert.equal(await mythicDay.locator('.journey-day-toggle').getAttribute('aria-expanded'),'true',
-      'Milestones navigate to the correct day');
-    const mythicArt=mythicDay.locator('.journey-award-icon');
-    await mythicArt.locator('img').evaluate(img=>img.decode());
-    assert.equal(await mythicArt.getAttribute('data-frame-tier'),'rare');
-    const mythicDimensions=await mythicArt.evaluate(el=>{
-      const rect=el.getBoundingClientRect();
-      const img=el.querySelector('img');
-      return {width:rect.width,height:rect.height,ratio:rect.width/rect.height,actualRatio:img.naturalWidth/img.naturalHeight};
-    });
-    assert.ok(mythicDimensions.width>=75&&Math.abs(mythicDimensions.ratio-mythicDimensions.actualRatio)<.06,
-      'Journey artwork is large and its rarity frame follows the image natural ratio');
-    assert.equal(await mythicDay.locator('.journey-achievement-rarity').innerText(),'9.9%');
-    const backgroundOk=await journey.locator('.journey-moment-featured').evaluate(el=>{
-      const image=getComputedStyle(el,'::before').backgroundImage;
-      return image.includes('data:image/webp')||/\/assets\/(night|burst|rare|full)-[^"]+\.webp/.test(image);
-    });
-    assert.ok(backgroundOk,'The highlighted moment uses a separately generated high-resolution background');
-    const milestoneDate=journey.locator('.journey-calendar-date').first();
-    assert.equal(await milestoneDate.locator('small').innerText(),'2026','Milestones include their year');
-    assert.match(await milestoneDate.locator('strong').innerText(),/^10\.2[78]$/,
-      'Milestone date is compact month and day in the second row');
-    await journey.locator('.journey-month-toggle').first().click();
-    assert.equal(await journey.locator('.journey-month-toggle').first().getAttribute('aria-expanded'),'false');
-    await journey.locator('.journey-month-toggle').first().click();
-    await mythicDay.locator('.journey-day-toggle').click();
-    assert.equal(await mythicDay.locator('.journey-day-toggle').getAttribute('aria-expanded'),'false',
-      'Individual dated achievement groups can collapse independently');
-    const journeyFits=await journey.evaluate(el=>el.scrollWidth<=el.clientWidth+1);
-    assert.ok(journeyFits,'The interactive journey fits its modal on desktop and mobile');
-    await journeySwitch.getByRole('button',{name:'游戏详情'}).click();
     assert.equal(await page.locator('.achievement-group').getAttribute('data-group-id'),'base',
-      'Returning to the game detail preserves its previous achievement-category selection');
-    assert.equal(await journeySwitch.getByRole('button',{name:'游戏详情'}).getAttribute('aria-pressed'),'true');
-    console.log((mobile?'Mobile':'Desktop')+': PASS journey switch, data-driven hero, date jumps, month/day accordion and retained detail state');
+      'The original game detail category controls remain functional');
+    assert.equal(await page.getByRole('dialog').count(),1,
+      'The existing game details open normally');
+    console.log((mobile?'Mobile':'Desktop')+': PASS unpublished game journey and intact original details');
 
     await page.goBack();
     await page.getByRole('dialog').waitFor({state:'hidden'});
