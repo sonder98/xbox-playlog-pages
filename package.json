@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "node scripts/generate-journey-art.mjs && vite --host 0.0.0.0",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "build": "node --experimental-strip-types scripts/generate-pwa-icons.ts && tsc --noEmit && vite build",
+    "build": "node scripts/generate-journey-art.mjs && node --experimental-strip-types scripts/generate-pwa-icons.ts && tsc --noEmit && vite build",
     "sync": "node --experimental-strip-types scripts/microsoft-sync.ts"
   },
   "dependencies": {
