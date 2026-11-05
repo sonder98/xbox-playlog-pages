@@ -147,7 +147,7 @@ export function GameDetail({game,onClose,onOpenMythic}:{game:Game;onClose:()=>vo
        <div className="detail-mythic-stack">
         <button type="button" className="detail-mythic-trigger" onClick={onOpenMythic}
           aria-label={`打开 ${game.name} 的Mythic纪念卡`}>
-         <img src={MYTHIC_BADGE_URL} alt="" loading="lazy"/>Mythic 勋章
+         <img src={MYTHIC_BADGE_URL} alt="" loading="lazy"/>Mythic
         </button>
         <span className="detail-stat detail-achievements" aria-label={`已解锁 ${game.earned} / ${game.total} 成就`}><Trophy size={16} aria-hidden="true"/><span>{game.earned}/{game.total}</span></span>
        </div>:<span className="detail-stat detail-achievements" aria-label={`已解锁 ${game.earned} / ${game.total} 成就`}><Trophy size={16} aria-hidden="true"/><span>{game.earned}/{game.total}</span></span>}
