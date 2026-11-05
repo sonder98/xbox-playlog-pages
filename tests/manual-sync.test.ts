@@ -45,3 +45,30 @@ test('run monitoring matches only the clicked request and not an unrelated sched
  const absent=await findWorkflowRun('pages',id,async()=>Response.json({workflow_runs:[]}));
  assert.equal(absent,undefined);
 });
+test('manual sync run tracking uses the same scoped authorization as dispatch',async()=>{
+ for(const kind of ['sync','pages'] as const){
+  let calls=0;
+  const result=await findWorkflowRun(kind,id,async(input,init)=>{
+   calls++;
+   assert.match(String(input),new RegExp('/actions/workflows/'+(kind==='sync'?'sync':'pages')+'\\.yml/runs'));
+   assert.equal((init?.headers as Record<string,string>).Authorization,'Bearer github_pat_fixture');
+   assert.equal((init?.headers as Record<string,string>).Accept,'application/vnd.github+json');
+   return Response.json({workflow_runs:[{
+    id:123,name:'Xbox sync',display_title:kind+' workflow_dispatch · '+id,
+    event:'workflow_dispatch',status:'in_progress',conclusion:null,
+    html_url:'https://github.com/sonder98/xbox-playlog-pages/actions/runs/123',
+    created_at:new Date().toISOString(),updated_at:new Date().toISOString()
+   }]});
+  },'github_pat_fixture');
+  assert.equal(calls,1);
+  assert.equal(result?.id,123);
+ }
+});
+test('read-only polling 403 is not reported as failed Xbox sync or necessarily a bad token',async()=>{
+ await assert.rejects(findWorkflowRun('sync',id,async()=>new Response('',{status:403}),'github_pat_fixture'),
+  /暂时被拒绝（HTTP 403），不代表 Xbox 同步失败/);
+ await assert.rejects(findWorkflowRun('sync',id,async()=>new Response('',{status:403,headers:{'x-ratelimit-remaining':'0'}}),'github_pat_fixture'),
+  /任务状态查询被限流（HTTP 403）/);
+ await assert.rejects(findWorkflowRun('sync',id,async()=>new Response('',{status:401}),'github_pat_fixture'),
+  /查询令牌已失效/);
+});
