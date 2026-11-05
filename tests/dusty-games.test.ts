@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import type {Game} from '../src/data.ts';
-import {rankDustyGames} from '../src/dusty-games.ts';
+import {achievementProgressPercent,rankDustyGames} from '../src/dusty-games.ts';
 import {validatedPcMetascores} from '../src/metascores.ts';
 import {fixedPcScoreCount} from '../scripts/fixed-pc-metascores.ts';
 const game=(id:string,lastPlayed:string|null,other:Partial<Game>={}):Game=>({
@@ -28,4 +28,16 @@ test('missing-flag Xbox games are ranked by latest played or earned achievement'
  assert.equal(list[0].pcScore?.score,86);
  assert.equal(list[1].days,12);
  assert.deepEqual(rankDustyGames(games,scores,Date.now(),'Exophase'),[]);
+});
+
+test('achievement progress percentage is safe and reflects earned over total',()=>{
+ assert.equal(achievementProgressPercent(1,2),50);
+ assert.equal(achievementProgressPercent(7,13),54);
+ assert.equal(achievementProgressPercent(0,10),0);
+ assert.equal(achievementProgressPercent(10,10),100);
+ assert.equal(achievementProgressPercent(12,10),100);
+ assert.equal(achievementProgressPercent(-2,10),0);
+ assert.equal(achievementProgressPercent(0,0),null);
+ assert.equal(achievementProgressPercent(1,-1),null);
+ assert.equal(achievementProgressPercent(Number.NaN,10),null);
 });
