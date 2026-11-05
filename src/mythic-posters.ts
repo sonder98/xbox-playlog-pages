@@ -1,6 +1,7 @@
 import type {Achievement,Game} from './data.ts';
 import {completion} from './completion.ts';
 import {gameCompletionTimestamp} from './game-completion-date.ts';
+export const MYTHIC_BADGE_URL='https://xct.live/static/mythic/mythic_unlocked_hd_360.png';
 
 export type MythicPoster={
  game:Game;
