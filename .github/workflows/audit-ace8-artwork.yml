@@ -1,0 +1,53 @@
+name: Audit ACE8 Australian Xbox Store images
+
+on:
+  pull_request:
+    paths:
+      - scripts/audit-ace8-artwork.mjs
+      - .github/workflows/audit-ace8-artwork.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/audit-ace8-artwork.mjs
+      - .github/workflows/audit-ace8-artwork.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ace8-store-artwork-audit
+  cancel-in-progress: false
+
+jobs:
+  gallery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Inspect the live public Microsoft AU Store catalog and save actual images
+        run: node scripts/audit-ace8-artwork.mjs
+      - name: Upload preview gallery artifact for PR inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: ace8-microsoft-au-official-images
+          path: public/artwork-audit/ace8/
+          retention-days: 14
+      - name: Save all returned artwork and HTML gallery into GitHub
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A public/artwork-audit/ace8
+          if git diff --cached --quiet; then
+            echo "ACE8 images unchanged."
+            exit 0
+          fi
+          git commit -m "Archive Microsoft AU Store ACE8 art and refresh browsable gallery"
+          git pull --rebase origin main
+          git push origin HEAD:main
