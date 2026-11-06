@@ -936,6 +936,10 @@ try{
       'The latest Mythic appears first in the showcase');
     assert.equal(await showcase.locator('.mythic-showcase-backdrop').first().getAttribute('loading'),'lazy',
       'The cabinet uses native lazy-loading for cinematic preview images');
+    await page.waitForFunction(()=>document.querySelector(
+      '.mythic-showcase-item[data-showcase-game="100"]')?.getAttribute('data-poster-prepared')==='true');
+    assert.equal(await showcase.locator('[data-showcase-game="100"]').getAttribute('data-poster-prepared'),'true',
+      'The first visible collectible is fully predecoded before it is tapped');
     await showcase.getByRole('button',{name:'放大 Test Game 0 纪念卡'}).click();
     const posterWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
     await posterWall.waitFor();
@@ -961,6 +965,9 @@ try{
       });
       assert.ok(transitionPaint.animations>0,
         'The full poster itself transforms as one layer, without a separate flying thumbnail');
+      const openDelay=Number(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-open-delay-ms'));
+      assert.ok(openDelay>=0&&openDelay<350,
+        'A preheated poster begins expanding immediately after the tap (<350ms), not after a 1s resource wait: '+openDelay+'ms');
       assert.ok(transitionPaint.cover&&transitionPaint.emblem&&transitionPaint.backdrop&&
         transitionPaint.fontReady&&transitionPaint.outline&&
         transitionPaint.coverOpacity>.95&&transitionPaint.emblemOpacity>.95&&
@@ -1213,6 +1220,8 @@ try{
     // Scroll deep into the cabinet, choose a non-first collectible and return
     // to precisely the same scroll offset after swiping the large poster.
     await showcase.locator('[data-showcase-game="107"]').scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>document.querySelector(
+      '.mythic-showcase-item[data-showcase-game="107"]')?.getAttribute('data-poster-prepared')==='true');
     const cabinetScroll=await showcase.evaluate(el=>el.scrollTop);
     await showcase.getByRole('button',{name:'放大 Test Game 7 纪念卡'}).click();
     await posterWall.waitFor();
@@ -1220,6 +1229,9 @@ try{
       ?.getAttribute('data-transition')==='idle');
     assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'107',
       'The selected cabinet card determines the initial full-size slide');
+    const scrolledTapDelay=Number(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-open-delay-ms'));
+    assert.ok(scrolledTapDelay>=0&&scrolledTapDelay<350,
+      'After scrolling, nearby full-size cards are already warmed and animate without a loading gap: '+scrolledTapDelay+'ms');
     assert.equal(await posterWall.locator('canvas.mythic-wall-fireworks').count(),1,
       'Opening a non-first poster from the cabinet also triggers the initial fireworks');
     await posterWall.getByRole('button',{name:'下一张Mythic纪念卡'}).click();
