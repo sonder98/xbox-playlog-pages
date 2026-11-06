@@ -23,7 +23,7 @@ test('rotation changes at Beijing midnight, not UTC midnight, and wraps in API o
 
 test('each game has its own screenshot count and start date',()=>{
  const first=base();
- const second={...base(),id:'2',posterRotationStartDay:'2026-11-07',
+ const second={...base(),id:'2',posterRotationStartDay:'2026-11-08',
   posterScreenshots:['https://other.test/a','https://other.test/b'],
   cachedPosterScreenshots:['https://cache.test/a.webp','https://cache.test/b.webp']};
  const day=from('2026-11-08T16:00:00Z');
