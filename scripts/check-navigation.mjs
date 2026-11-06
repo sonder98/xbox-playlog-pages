@@ -929,6 +929,37 @@ try{
       'ABXY controls sit inside the engraved bottom frame instead of overlapping it');
     assert.ok(posterBottomLayout.padTop>=posterBottomLayout.footerBottom-2,
       'ABXY motifs have their own space below the XBOX Playlog footer: '+JSON.stringify(posterBottomLayout));
+    const posterSections=await posterWall.locator('.mythic-poster.is-active').evaluate(el=>{
+      const b=selector=>el.querySelector(selector).getBoundingClientRect();
+      const pair=b('.mythic-poster-achievement-pair');
+      const lastTime=el.querySelectorAll('.mythic-poster-achievement>span:last-child');
+      const times=[...lastTime].map(t=>t.getBoundingClientRect());
+      const stats=b('.mythic-poster-stats');
+      const statLabels=[...el.querySelectorAll('.mythic-poster-stats>div>span')].map(t=>t.getBoundingClientRect());
+      const footer=b('.mythic-poster-footer');
+      const footerText=[...el.querySelectorAll('.mythic-poster-footer>span')].map(t=>t.getBoundingClientRect());
+      const abxy=b('.mythic-poster-gamepad');
+      return {pairBottom:pair.bottom,latestTimeBottom:Math.max(...times.map(t=>t.bottom)),
+        statsTop:stats.top,statsBottom:stats.bottom,statsTextBottom:Math.max(...statLabels.map(t=>t.bottom)),
+        footerTop:footer.top,footerBottom:footer.bottom,
+        footerTextTop:Math.min(...footerText.map(t=>t.top)),footerTextBottom:Math.max(...footerText.map(t=>t.bottom)),
+        abxyTop:abxy.top};
+    });
+    assert.ok(posterSections.latestTimeBottom<=posterSections.pairBottom+1,
+      'Both unlocked-at times fit inside the achievement comparison card: '+JSON.stringify(posterSections));
+    assert.ok(posterSections.pairBottom<=posterSections.statsTop+1,
+      'Achievement card never overlaps the summary stats: '+JSON.stringify(posterSections));
+    assert.ok(posterSections.statsTextBottom<=posterSections.statsBottom+1,
+      'All three summary labels fit inside their statistics panel: '+JSON.stringify(posterSections));
+    assert.ok(posterSections.statsBottom<=posterSections.footerTop+1,
+      'The inscription starts below the statistics panel: '+JSON.stringify(posterSections));
+    assert.ok(posterSections.footerTextTop>=posterSections.footerTop-1&&
+      posterSections.footerTextBottom<=posterSections.footerBottom+1,
+      'The visible XBOX Playlog text fits inside its dedicated inscription: '+JSON.stringify(posterSections));
+    assert.ok(posterSections.footerBottom<=posterSections.abxyTop+1,
+      'ABXY begins below the complete, unobscured inscription: '+JSON.stringify(posterSections));
+    assert.ok((await posterWall.locator('.mythic-poster.is-active .mythic-poster-footer').innerText()).includes('值得一张纪念卡'),
+      'The inscription has readable, meaningful copy');
     assert.equal(await posterWall.locator('canvas.mythic-wall-fireworks').count(),1,
       'Only the initial opening creates the radial firework particle canvas');
     const posterBackdrop=posterWall.locator('.mythic-poster.is-active .mythic-poster-backdrop');

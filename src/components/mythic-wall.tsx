@@ -99,10 +99,10 @@ function MythicPosterCard({entry,profile,index,total,active,opening}:{
    <div><strong>{daysToMythic===null?'—':daysToMythic}</strong><small>天</small><span>首项成就至 Mythic</span></div>
    <div><strong>{baseTotal}</strong><small>个</small><span>本体成就数</span></div>
   </div>
-  <footer className="mythic-poster-footer">
+  <div className="mythic-poster-footer" role="note">
    <span className="mythic-poster-brand">✳ XBOX PLAYLOG</span>
-   <span>这份 Mythic，值得一张奖牌</span>
-  </footer>
+   <span>这份 Mythic，值得一张纪念卡</span>
+  </div>
   <div className="mythic-poster-gamepad" aria-hidden="true">
    <span>A</span><span>B</span><span>X</span><span>Y</span>
   </div>
