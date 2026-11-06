@@ -15,7 +15,7 @@ function useDecodedArt(url:string|undefined){
   if(url)void warmMythicImage(url).then(ok=>{if(active)setReady(ok);});
   return()=>{active=false;};
  },[url]);
- return ready;
+ return [ready,()=>setReady(true)] as const;
 }
 function MythicEmblem({className=''}:{className?:string}){
  return <span className={'mythic-poster-emblem '+className} aria-label="Mythic 徽章">
@@ -26,11 +26,11 @@ function MomentArt({achievement,active}:{achievement:Achievement|null;active:boo
  const [failed,setFailed]=useState(false);
  useEffect(()=>setFailed(false),[achievement?.id]);
  const image=achievement?.cachedImage||achievement?.image;
- const ready=useDecodedArt(image);
+ const [ready,onLoaded]=useDecodedArt(image);
  return <span className="mythic-poster-achievement-art">
   <Sparkles size={25} strokeWidth={1.3} aria-hidden="true"/>
   {image&&!failed&&<img src={image} alt="" loading={active?'eager':'lazy'} decoding="async"
-   className={ready?'is-loaded':''} onError={()=>setFailed(true)}/>}
+   className={ready?'is-loaded':''} onLoad={onLoaded} onError={()=>setFailed(true)}/>}
  </span>;
 }
 function OrnateBorder(){
@@ -63,9 +63,9 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady}:{
  const screenshot=game.posterImagePurpose==='Screenshot';
  const background=mythicBackdrop(game);
  const cover=mythicCover(game);
- const backdropReady=useDecodedArt(background);
- const coverReady=useDecodedArt(cover);
- const avatarReady=useDecodedArt(profile.avatar);
+ const [backdropReady]=useDecodedArt(background);
+ const [coverReady,onCoverLoaded]=useDecodedArt(cover);
+ const [avatarReady,onAvatarLoaded]=useDecodedArt(profile.avatar);
  return <article className={'mythic-poster'+(active?' is-active':'')+(opening?' is-opening':'')+(!fontReady?' is-type-loading':'')} data-poster-game={game.id}
   aria-label={game.name+' Mythic 纪念卡'}>
   <div className={'mythic-poster-backdrop'+(background?' has-promotional-art':'')+(backdropReady?' is-loaded':'')}
@@ -80,7 +80,8 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady}:{
   <div className="mythic-poster-portrait">
    <Sparkles className="mythic-poster-image-placeholder" size={54} color={GOLD}/>
    {cover&&<img src={cover} alt="" width={256} height={256} loading={active?'eager':'lazy'}
-    fetchPriority={active?'high':'auto'} decoding="async" className={coverReady?'is-loaded':''}/>}
+    fetchPriority={active?'high':'auto'} decoding="async" className={coverReady?'is-loaded':''}
+    onLoad={onCoverLoaded}/>}
   </div>
   <MythicEmblem/>
   <div className="mythic-poster-congratulations">
@@ -93,7 +94,7 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady}:{
    {profile.avatar?<span className="mythic-poster-avatar-frame">
     <CircleUserRound size={24} color={GOLD} aria-hidden="true"/>
     <img src={profile.avatar} alt="" className={'mythic-poster-avatar'+(avatarReady?' is-loaded':'')}
-     width={36} height={36} decoding="async"/>
+     width={36} height={36} decoding="async" onLoad={onAvatarLoaded}/>
    </span>:<CircleUserRound size={33} color={GOLD} aria-hidden="true"/>}
    <strong>{profile.gamertag||'Xbox 玩家'}</strong>
   </div>
