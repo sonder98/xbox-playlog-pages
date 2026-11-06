@@ -937,6 +937,28 @@ try{
       'Original Mythic badge preserves its own aspect ratio inside the square frame');
     assert.ok(Math.abs(posterFrame.avatar.width-posterFrame.avatar.height)<1,
       'Player avatar reserves exactly the same width and height before its image loads');
+    // Simulate a delayed Google Fonts response after the avatar is ready.
+    // The stable frame and decoded player image must stay visible even while
+    // the username and typography wait for their final font.
+    const fontLoadingPlayer=await posterWall.locator('.mythic-poster.is-active').evaluate(card=>{
+      const hadLoading=card.classList.contains('is-type-loading');
+      card.classList.add('is-type-loading');
+      const frame=card.querySelector('.mythic-poster-avatar-frame');
+      const name=card.querySelector('.mythic-poster-player strong');
+      const result={
+        avatarVisibility:getComputedStyle(frame).visibility,
+        nameVisibility:getComputedStyle(name).visibility,
+        imagePriority:frame.querySelector('img').fetchPriority
+      };
+      if(!hadLoading)card.classList.remove('is-type-loading');
+      return result;
+    });
+    assert.equal(fontLoadingPlayer.avatarVisibility,'visible',
+      'The player avatar must never wait for Marcellus or Chinese fonts');
+    assert.equal(fontLoadingPlayer.nameVisibility,'hidden',
+      'The player name may wait for its font without affecting the avatar');
+    assert.equal(fontLoadingPlayer.imagePriority,'high',
+      'Player avatars should load ahead of the large screenshot artwork');
     assert.ok(Math.abs(posterFrame.card.width-posterFrame.card.height)<1&&
       Math.abs(posterFrame.achievement.width-posterFrame.achievement.height)<1,
       'Cover and achievement artwork occupy stable square frames');

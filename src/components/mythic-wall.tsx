@@ -4,14 +4,17 @@ import type {Profile,Game,Achievement} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {posterLocalDate} from '../mythic-posters';
 import {MythicBadgeArt} from './mythic-badge';
-import {mythicBackdrop,mythicCover,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
+import {mythicBackdrop,mythicCover,mythicImageAlreadyDecoded,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
 import {MythicOpeningFireworks} from './mythic-fireworks';
 
 const GOLD='#e6c47b';
 function useDecodedArt(url:string|undefined){
- const [ready,setReady]=useState(false);
+ // Do not flash a placeholder on every reopen when the image was already
+ // decoded by the dashboard's warmup or a previous visit.
+ const [ready,setReady]=useState(()=>mythicImageAlreadyDecoded(url));
  useEffect(()=>{
-  let active=true;setReady(false);
+  let active=true;
+  setReady(mythicImageAlreadyDecoded(url));
   if(url)void warmMythicImage(url).then(ok=>{if(active)setReady(ok);});
   return()=>{active=false;};
  },[url]);
@@ -94,7 +97,8 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady}:{
    {profile.avatar?<span className="mythic-poster-avatar-frame">
     <CircleUserRound size={24} color={GOLD} aria-hidden="true"/>
     <img src={profile.avatar} alt="" className={'mythic-poster-avatar'+(avatarReady?' is-loaded':'')}
-     width={36} height={36} decoding="async" onLoad={onAvatarLoaded}/>
+     width={36} height={36} loading="eager" fetchPriority="high" decoding="async"
+     onLoad={onAvatarLoaded}/>
    </span>:<CircleUserRound size={33} color={GOLD} aria-hidden="true"/>}
    <strong>{profile.gamertag||'Xbox 玩家'}</strong>
   </div>
