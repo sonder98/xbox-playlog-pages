@@ -36,3 +36,15 @@ test('AU screenshot selection version survives an encrypted-record validation ro
  assert.equal(result.posterSelectionVersion,2);
  assert.equal(validateRecord(record([{...poster,posterSelectionVersion:99}])).games[0].posterSelectionVersion,undefined);
 });
+
+test('rotating Mythic screenshot URLs survive record validation without index reordering',()=>{
+ const g={...game,posterSelectionVersion:3,posterRotationStartDay:'2026-11-06',
+  posterScreenshots:['https://store-images.s-microsoft.com/a','https://store-images.s-microsoft.com/b'],
+  cachedPosterScreenshots:['https://cache.test/a.webp','']};
+ const valid=validateRecord(record([g])).games[0];
+ assert.equal(valid.posterSelectionVersion,3);
+ assert.equal(valid.posterRotationStartDay,'2026-11-06');
+ assert.deepEqual(valid.posterScreenshots,g.posterScreenshots);
+ assert.deepEqual(valid.cachedPosterScreenshots,g.cachedPosterScreenshots);
+ assert.equal(validateRecord(record([{...g,posterRotationStartDay:'yesterday'}])).games[0].posterRotationStartDay,undefined);
+});
