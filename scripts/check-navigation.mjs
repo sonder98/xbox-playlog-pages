@@ -912,6 +912,30 @@ try{
     await page.getByRole('heading',{name:'我的游戏库',exact:true}).waitFor();
     const wallEntry=page.getByRole('button',{name:'打开Mythic纪念墙'});
     await wallEntry.click();
+    const showcase=page.getByRole('region',{name:'Mythic纪念墙展示柜'});
+    await showcase.waitFor();
+    assert.equal(await page.getByRole('dialog',{name:'Mythic纪念墙'}).count(),0,
+      'Library entry opens the cabinet, not the old full-size single-card carousel');
+    const shelfGeometry=await showcase.locator('.mythic-showcase-grid').evaluate(grid=>{
+      const cards=[...grid.querySelectorAll('.mythic-showcase-seat')].slice(0,4).map(el=>el.getBoundingClientRect());
+      return {columns:getComputedStyle(grid).gridTemplateColumns.trim().split(/\\s+/).length,
+       firstRow:cards.slice(0,3).map(r=>r.top),
+       secondRow:cards[3].top,firstRowBottom:cards[0].bottom,
+       gridWidth:grid.getBoundingClientRect().width,cardWidths:cards.map(r=>r.width)};
+    });
+    assert.equal(shelfGeometry.columns,3,'Desktop and mobile cabinet always use exactly three columns');
+    assert.ok(shelfGeometry.firstRow.every(top=>Math.abs(top-shelfGeometry.firstRow[0])<1),
+      'The first three collectibles share the same grid row');
+    assert.ok(shelfGeometry.secondRow>shelfGeometry.firstRowBottom+3&&
+      shelfGeometry.cardWidths.every(width=>width>40),
+      'Additional collectibles flow vertically below the three-column row: '+JSON.stringify(shelfGeometry));
+    assert.equal(await showcase.locator('.mythic-showcase-item').count(),12,
+      'The cabinet shows all eligible Mythic games in completion-date order');
+    assert.equal(await showcase.locator('.mythic-showcase-item').first().getAttribute('data-showcase-game'),'100',
+      'The latest Mythic appears first in the showcase');
+    assert.equal(await showcase.locator('.mythic-showcase-backdrop').first().getAttribute('loading'),'lazy',
+      'The cabinet uses native lazy-loading for cinematic preview images');
+    await showcase.getByRole('button',{name:'放大 Test Game 0 纪念卡'}).click();
     const posterWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
     await posterWall.waitFor();
     const galleryPosterBox=await posterWall.locator('.mythic-poster.is-active').boundingBox();
@@ -1009,7 +1033,9 @@ try{
     assert.equal(await posterWall.locator('.mythic-poster.is-active .mythic-poster-title').innerText(),'Test Game 0',
       'The poster displays its game name without a platform tag');
     assert.equal(await posterWall.getAttribute('data-display-mode'),'wall',
-      'The library entry opens the swipeable gallery');
+      'Opening a cabinet card enters the existing swipeable full-size gallery');
+    assert.equal(await posterWall.getAttribute('data-entry'),'showcase',
+      'A selected showcase item does not trigger the game-detail single-card mode');
     assert.ok((await posterWall.locator('.mythic-poster-title').first().evaluate(el=>
       getComputedStyle(el).fontFamily)).includes('Marcellus'),
       'The Mythic collectible uses the chosen Marcellus serif for the game title');
@@ -1125,8 +1151,31 @@ try{
       assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'101',
         'A horizontal swipe advances exactly one poster');
     }
-    await posterWall.getByRole('button',{name:'关闭Mythic纪念墙'}).click();
+    await posterWall.getByRole('button',{name:'返回展示柜'}).click();
     await posterWall.waitFor({state:'hidden'});
+    await showcase.waitFor();
+    // Scroll deep into the cabinet, choose a non-first collectible and return
+    // to precisely the same scroll offset after swiping the large poster.
+    await showcase.locator('[data-showcase-game="107"]').scrollIntoViewIfNeeded();
+    const cabinetScroll=await showcase.evaluate(el=>el.scrollTop);
+    await showcase.getByRole('button',{name:'放大 Test Game 7 纪念卡'}).click();
+    await posterWall.waitFor();
+    assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'107',
+      'The selected cabinet card determines the initial full-size slide');
+    assert.equal(await posterWall.locator('canvas.mythic-wall-fireworks').count(),1,
+      'Opening a non-first poster from the cabinet also triggers the initial fireworks');
+    await posterWall.getByRole('button',{name:'下一张Mythic纪念卡'}).click();
+    assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'108',
+      'A selected card still permits swiping to the next collectible');
+    assert.equal(await posterWall.locator('canvas.mythic-wall-fireworks').count(),0,
+      'The celebration does not repeat during navigation');
+    await posterWall.getByRole('button',{name:'返回展示柜'}).click();
+    await posterWall.waitFor({state:'hidden'});
+    const restoredScroll=await showcase.evaluate(el=>el.scrollTop);
+    assert.ok(Math.abs(cabinetScroll-restoredScroll)<2,
+      'Closing a full-size poster restores the exact cabinet scroll position');
+    await showcase.getByRole('button',{name:'返回游戏库'}).click();
+    await showcase.waitFor({state:'hidden'});
     await page.getByRole('button',{name:'返回上一页',exact:true}).click();
     await page.getByRole('heading',{name:'我的游戏档案',exact:true}).waitFor();
     await page.waitForFunction(y=>Math.abs(window.scrollY-y)<5,originalScroll);
