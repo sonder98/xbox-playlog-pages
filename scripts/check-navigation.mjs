@@ -65,8 +65,12 @@ try{
       const width=original||landscape?1920:medium?480:wide?160:64,height=landscape?1080:wide?90:original?1800:width;
       return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#789"/></svg>`});
     });
-    await page.route('https://xct.live/static/mythic/**',route=>route.fulfill({contentType:'image/svg+xml',
-      body:'<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360"><path d="M180 30L220 140 330 180 220 220 180 330 140 220 30 180 140 140Z" fill="#baff78"/></svg>'}));
+    // Use the real, committed first-party PNG; a regression must not silently
+    // reintroduce a request to the unrelated third-party XCT image host.
+    const externalMythicRequests=[];
+    page.on('request',req=>{
+      if(req.url().startsWith('https://xct.live/'))externalMythicRequests.push(req.url());
+    });
     await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
     await page.route('**/vault.json*',route=>route.fulfill({json:activeEnvelope}));
     // Most visual regressions inject a fresh network fixture on each login.
@@ -940,7 +944,15 @@ try{
       'Do not show a fallback title that will shift after the web font arrives');
     const galleryFooterHeight=await posterWall.locator('.mythic-wall-controls').evaluate(el=>el.getBoundingClientRect().height);
     assert.ok(await posterWall.locator('.mythic-poster-emblem .mythic-badge-placeholder').first().isVisible(),
-      'Local Mythic badge artwork is visible even before the remote badge finishes loading');
+      'Mythic badge keeps its fallback while the local file decodes');
+    const badgeSource=await posterWall.locator('.mythic-poster-emblem .mythic-badge-art img').first().evaluate(el=>({
+      src:el.getAttribute('src'),width:el.naturalWidth,height:el.naturalHeight,complete:el.complete
+    }));
+    assert.equal(badgeSource.src,'/xbox-playlog-pages/mythic-unlocked.png',
+      'The medal loads from the same-origin project asset, never XCT');
+    assert.equal(badgeSource.width,360,'Use original 360px square badge artwork');
+    assert.equal(badgeSource.height,360,'Original badge has square intrinsic dimensions');
+    assert.equal(externalMythicRequests.length,0,'No third-party Mythic image requests occur');
     // Replace only an already mounted cover with a deliberately delayed asset.
     // The entire postcard must keep exactly the same geometry during the gap.
     await page.route('https://covers.example.test/delayed-poster.svg',async route=>{
