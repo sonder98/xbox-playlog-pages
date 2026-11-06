@@ -5,7 +5,6 @@ import {compareRecords,officialGameVisible,type Game,type RecordData} from './da
 import {GameCard,GameCover,GameDetail,Modal} from './components/game';
 import {MythicPosterWall} from './components/mythic-wall';
 import {MythicShowcase} from './components/mythic-showcase';
-import type {MythicFlightOrigin} from './components/mythic-transition';
 import {mythicPosterWall} from './mythic-posters';
 import {warmMythicFonts,warmMythicPoster} from './mythic-assets';
 import {RecentGamesRail} from './components/recent-games';
@@ -27,7 +26,7 @@ function download(name:string,content:string,type:string){const u=URL.createObje
 export default function Dashboard({onLock,locking=false,refreshFromCache=false}:{onLock:()=>void;locking?:boolean;refreshFromCache?:boolean}){
  const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState(false),[busy,setBusy]=useState(false),[progress]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState<GameLibrarySort>('recent'),[filter,setFilter]=useState<GameLibraryFilter>('all');
  const [manualPhase,setManualPhase]=useState<'idle'|'queued'|'running'|'deploying'|'ready'|'error'>('idle');
- const [mythicWallStart,setMythicWallStart]=useState<{gameId:string|null;origin?:MythicFlightOrigin}|null>(null);
+ const [mythicWallStart,setMythicWallStart]=useState<{gameId:string|null}|null>(null);
  const [showcaseOpen,setShowcaseOpen]=useState(false);
   const [hiddenIds,setHiddenIds]=useState<string[]>([]),[manageDisplay,setManageDisplay]=useState(false),[draftHidden,setDraftHidden]=useState<string[]>([]),[displayQuery,setDisplayQuery]=useState(''),[onlyHidden,setOnlyHidden]=useState(false),[savingDisplay,setSavingDisplay]=useState(false),[displayError,setDisplayError]=useState('');
  const {tab,navigate:setTab,back,gameId,dayId,showcase,gapShowcase,openGame,openAchievementDay,openAchievementShowcase,openAchievementGapShowcase,openAchievementGame,changeAchievementDay}=usePageNavigation();
@@ -191,14 +190,13 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
    <div className="display-manager-footer"><button className="secondary" disabled={savingDisplay} onClick={()=>setManageDisplay(false)}>取消</button><button className="primary" disabled={savingDisplay} onClick={saveDisplay}>{savingDisplay?'保存中…':'保存展示设置'}</button></div>
  </Modal>}
  {showcaseOpen&&tab==='library'&&current&&<MythicShowcase posters={mythicPosters} profile={current.profile}
-   onClose={()=>setShowcaseOpen(false)} onOpen={(id,origin)=>setMythicWallStart({gameId:id,origin})}/>}
+   onClose={()=>setShowcaseOpen(false)} onOpen={id=>setMythicWallStart({gameId:id})}/>}
  {selected&&!mythicWallStart&&!showcaseOpen&&<GameDetail game={selected} onClose={back}
    onOpenMythic={mythicPosters.some(p=>p.game.id===selected.id)?
     ()=>setMythicWallStart({gameId:selected.id}):undefined}/>}
   {mythicWallStart&&current&&mythicPosters.length>0&&
    <MythicPosterWall posters={mythicPosters} profile={current.profile}
     initialGameId={mythicWallStart.gameId} allowNavigation={showcaseOpen}
-    flightOrigin={mythicWallStart.origin}
     onClose={()=>setMythicWallStart(null)}/>} 
  <nav className={'mobile-nav'+(mobileNavVisible?' is-visible':'')} aria-label="主导航">{nav.map(([id,label,Icon])=><button key={id} onClick={event=>{
    event.currentTarget.blur();
