@@ -911,9 +911,61 @@ try{
     const posterWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
     await posterWall.waitFor();
     const galleryPosterBox=await posterWall.locator('.mythic-poster.is-active').boundingBox();
+    const posterFrame=await posterWall.locator('.mythic-poster.is-active').evaluate(card=>{
+      const measure=selector=>{
+        const e=card.querySelector(selector),r=e.getBoundingClientRect();
+        return {x:r.x,y:r.y,width:r.width,height:r.height};
+      };
+      const emblem=card.querySelector('.mythic-poster-emblem');
+      const img=emblem.querySelector('img'),style=getComputedStyle(img);
+      const text=card.querySelector('.mythic-poster-title');
+      return {card:measure('.mythic-poster-portrait'),emblem:measure('.mythic-poster-emblem'),
+       badge:measure('.mythic-badge-art'),player:measure('.mythic-poster-player'),
+       achievement:measure('.mythic-poster-achievement-art'),badgeFit:style.objectFit,
+       fontLoading:card.classList.contains('is-type-loading'),
+       titleVisibility:getComputedStyle(text).visibility};
+    });
+    assert.ok(Math.abs(posterFrame.emblem.width-posterFrame.emblem.height)<1,
+      'The main Mythic medal has an actual square frame, not a flattened percentage-height oval: '+
+      JSON.stringify(posterFrame.emblem));
+    assert.ok(Math.abs(posterFrame.badge.width-posterFrame.badge.height)<1&&posterFrame.badgeFit==='contain',
+      'Original Mythic badge preserves its own aspect ratio inside the square frame');
+    assert.ok(Math.abs(posterFrame.card.width-posterFrame.card.height)<1&&
+      Math.abs(posterFrame.achievement.width-posterFrame.achievement.height)<1,
+      'Cover and achievement artwork occupy stable square frames');
+    if(posterFrame.fontLoading)assert.equal(posterFrame.titleVisibility,'hidden',
+      'Do not show a fallback title that will shift after the web font arrives');
     const galleryFooterHeight=await posterWall.locator('.mythic-wall-controls').evaluate(el=>el.getBoundingClientRect().height);
     assert.ok(await posterWall.locator('.mythic-poster-emblem .mythic-badge-placeholder').first().isVisible(),
       'Local Mythic badge artwork is visible even before the remote badge finishes loading');
+    // Replace only an already mounted cover with a deliberately delayed asset.
+    // The entire postcard must keep exactly the same geometry during the gap.
+    await page.route('https://covers.example.test/delayed-poster.svg',async route=>{
+      await new Promise(resolve=>setTimeout(resolve,850));
+      await route.fulfill({contentType:'image/svg+xml',body:
+       '<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540"><rect width="960" height="540" fill="#678"/></svg>'});
+    });
+    const stableGeometry=()=>posterWall.locator('.mythic-poster.is-active').evaluate(card=>{
+      const selectors=['.mythic-poster','.mythic-poster-portrait','.mythic-poster-emblem',
+       '.mythic-poster-congratulations','.mythic-poster-title','.mythic-poster-player',
+       '.mythic-poster-achievement-pair','.mythic-poster-stats','.mythic-poster-footer'];
+      return selectors.map(selector=>{
+        const b=(selector==='.mythic-poster'?card:card.querySelector(selector)).getBoundingClientRect();
+        return {selector,x:b.x,y:b.y,width:b.width,height:b.height};
+      });
+    });
+    const beforeSlowArt=await stableGeometry();
+    await posterWall.locator('.mythic-poster.is-active .mythic-poster-portrait img').evaluate(img=>{
+      img.src='https://covers.example.test/delayed-poster.svg';
+    });
+    await page.waitForTimeout(1000);
+    const afterSlowArt=await stableGeometry();
+    for(let i=0;i<beforeSlowArt.length;i++)
+      for(const k of ['x','y','width','height'])
+        assert.ok(Math.abs(beforeSlowArt[i][k]-afterSlowArt[i][k])<1,
+          'Delayed image decode must never change '+beforeSlowArt[i].selector+' '+k+': '+
+           JSON.stringify({before:beforeSlowArt[i],after:afterSlowArt[i]}));
+    await page.unroute('https://covers.example.test/delayed-poster.svg');
     assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'100',
       'The global entry opens the newest Mythic based on its verified completion date');
     assert.equal(await posterWall.locator('.mythic-poster.is-active .mythic-poster-title').innerText(),'Test Game 0',
