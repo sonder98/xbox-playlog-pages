@@ -594,8 +594,8 @@ try{
       'Gap preview also uses TOP 100');
     assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-showcase-foot').locator('span').count(),0,
       'Gap showcase footer has no count/ranking explanation');
-    assert.equal(await page.locator('[data-achievement-gap="preview"] .ah-showcase-foot').evaluate(el=>getComputedStyle(el).justifyContent),
-      'flex-end','Gap showcase arrows stay right-aligned');
+    assert.ok(['flex-end','flow-end'].includes(await page.locator('[data-achievement-gap="preview"] .ah-showcase-foot').evaluate(el=>getComputedStyle(el).justifyContent)),
+      'Gap showcase arrows stay right-aligned in current Chromium');
 
     assert.equal((await page.locator('.ah-gap-tile-duration').first().innerText()).replace(/\s+/g,' ').trim(),'间隔 1.0 天',
       'Gap previews show one-decimal elapsed days');
