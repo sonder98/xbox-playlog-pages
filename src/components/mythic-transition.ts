@@ -52,16 +52,17 @@ function afterPaint():Promise<void>{
  * only after ALL required large-card images and fonts have decoded.
  */
 export function flyMythicIn(
- origin:MythicFlightOrigin,target:HTMLElement,ready:Promise<unknown>,onArrive:()=>void
+ origin:MythicFlightOrigin,target:HTMLElement,ready:Promise<unknown>,
+ onReveal:()=>void,onFinished:()=>void
 ){
  if(reducedMotion()){
-  void ready.then(onArrive,onArrive);
+  void ready.then(()=>{onReveal();onFinished();},()=>{onReveal();onFinished();});
   return ()=>{};
  }
  const finish=target.getBoundingClientRect();
- if(!finish.width||!finish.height){void ready.then(onArrive,onArrive);return ()=>{};}
+ if(!finish.width||!finish.height){void ready.then(()=>{onReveal();onFinished();},()=>{onReveal();onFinished();});return ()=>{};}
  const moved=movePaintedCard(origin.element,finish,'preview');
- if(!moved){void ready.then(onArrive,onArrive);return ()=>{};}
+ if(!moved){void ready.then(()=>{onReveal();onFinished();},()=>{onReveal();onFinished();});return ()=>{};}
  const {layer,restore}=moved;
  layer.style.transformOrigin='top left';
  const animation=layer.animate([
@@ -74,14 +75,14 @@ export function flyMythicIn(
  void Promise.allSettled([animation.finished,ready]).then(async()=>{
   if(cancelled)return;
   // Source and destination both remain fully dressed until this handoff.
-  onArrive();
+  onReveal();
   await afterPaint();
   if(cancelled)return;
   blend=layer.animate([{opacity:1},{opacity:0}],{
    duration:200,easing:'ease-in-out',fill:'forwards'
   });
   await blend.finished.catch(()=>{});
-  if(!cancelled)restore();
+  if(!cancelled){restore();onFinished();}
  });
  return ()=>{
   cancelled=true;animation.cancel();blend?.cancel();restore();
