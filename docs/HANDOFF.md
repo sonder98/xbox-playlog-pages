@@ -170,3 +170,12 @@ npm run build
 - 全成就日期取本体、DLC、更新等全部成就中最后一项有效解锁时间；Mythic 日期只取已验证 BaseGame 成就集合中最后一项有效解锁时间。没有已完成对应集合、成就目录不完整或缺少任一解锁时间时，不推测日期并排在末尾。若分组未知但 Full 已完成，则全部成就完成可证明 Mythic 完成，复用 Full 日期。
 - 逻辑位于 `src/game-completion-date.ts`，选项和状态位于 `src/components/achievement-sort-control.tsx`，游戏库排序接入 `src/dashboard.tsx`。下拉菜单行高调整为 36px、缩小内边距与选项间距，并限制最大高度。
 - `tests/game-completion-date.test.ts` 覆盖日期推导、DLC 与本体边界、未知分组、缺失时间及升降序；`scripts/check-navigation.mjs` 覆盖 8 个菜单项、移除旧项、菜单高度和交互。
+
+
+### 2026-11-06 Mythic 纪念卡视觉和 Screenshot 来源升级
+- 参考 PS 白金卡片改为「背景大画面 → 圆形游戏封面/勋章 → Mythic 贺词 → 游戏名 → 玩家 → 首项成就/本体完成 → 三项统计 → 纪念铭文/ABXY」的分层。收紧顶部人像比例和高度，把贺词和标题上提，让玩家、成就卡片与统计区有相互分离的专属空间。
+- 背景专用的 `posterImage` **优先选取微软澳大利亚区 DisplayCatalog 中按原始返回顺序的第一张有效 `Screenshot`**，不要按分辨率或 HeroArt 优先级改变这一顺序。没有 Screenshot 时才回退 SuperHeroArt → TitledHeroArt；游戏详情的 TitledHeroArt 和游戏库正方形封面保持原逻辑。
+- `scripts/microsoft-artwork.ts` 通过 `posterSelectionVersion:2` 标记新规则已选图；旧快照里已 Mythic 的游戏会在下次同步时重新查询一次澳区商店，之后复用，未完成游戏暂不为了海报而全量重查。字段由 `src/data.ts` 验证并随加密快照保存。
+- `scripts/image-cache.ts` 现有独立 `cachedPosterImage` WebP 缓存继续有效，会对新选中 Screenshot 重新生成缓存；没有截图时不放大方形封面充当海报背景。
+- `src/style.css` 的背景改为约 47.5% 海报高度、`background-size:cover`，下缘用 mask 和暗色叠层渐变消失于「恭喜 MYTHIC」附近；顶部缩短到约 39%，成就双卡和统计提升可用高度。桌面/手机通过 `scripts/check-navigation.mjs` 的区域不重叠与素材来源检查。
+- 发布新前端后，**已有在线快照可能暂时还是旧 Hero 背景**；新规则必须等正式 Xbox 同步成功、澳区截图重选并通过 Pages 部署后才能完整可见。不能为了换海报要求重新输入微软账号密码。
