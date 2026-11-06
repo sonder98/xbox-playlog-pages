@@ -910,6 +910,10 @@ try{
     await wallEntry.click();
     const posterWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
     await posterWall.waitFor();
+    const galleryPosterBox=await posterWall.locator('.mythic-poster.is-active').boundingBox();
+    const galleryFooterHeight=await posterWall.locator('.mythic-wall-controls').evaluate(el=>el.getBoundingClientRect().height);
+    assert.ok(await posterWall.locator('.mythic-poster-emblem .mythic-badge-placeholder').first().isVisible(),
+      'Local Mythic badge artwork is visible even before the remote badge finishes loading');
     assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'100',
       'The global entry opens the newest Mythic based on its verified completion date');
     assert.equal(await posterWall.locator('.mythic-poster.is-active .mythic-poster-title').innerText(),'Test Game 0',
@@ -1011,6 +1015,12 @@ try{
       'Games without official landscape art do not stretch their tiny square cover into a backdrop');
     assert.ok(await posterWall.locator('.mythic-poster.is-active .mythic-poster-stars span').count()>5,
       'Subsequent posters retain ambient gold sparkles');
+    const motionDurations=await posterWall.locator('.mythic-poster.is-active').evaluate(el=>({
+      star:parseFloat(getComputedStyle(el.querySelector('.mythic-poster-stars span')).animationDuration),
+      foil:parseFloat(getComputedStyle(el.querySelector('.mythic-poster-shimmer')).animationDuration)
+    }));
+    assert.ok(motionDurations.star<4&&motionDurations.foil<7,
+      'Gold shimmer and pinlights should return more frequently than the old 5s / 13s cadence');
     await posterWall.getByRole('button',{name:'上一张Mythic纪念卡'}).click();
     assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'100');
     assert.equal(await posterWall.locator('canvas.mythic-wall-fireworks').count(),0,
@@ -1122,22 +1132,26 @@ try{
     const medal=page.locator('.game-detail .detail-mythic-trigger');
     assert.equal(await medal.count(),1,'Completed Mythic details display the medal action');
     const medalPlacement=await medal.evaluate(el=>{
-      const button=el.getBoundingClientRect();
-      const stack=el.closest('.achievement-progress-actions');
-      const count=stack.querySelector('.achievement-filter-count').getBoundingClientRect();
-      const sortRow=el.closest('.achievement-sort-row').getBoundingClientRect();
-      const progress=el.closest('.achievement-group').querySelector('.progress').getBoundingClientRect();
-      return {buttonBottom:button.bottom,countTop:count.top,buttonRight:button.right,
-       countRight:count.right,sortBottom:sortRow.bottom,progressTop:progress.top};
+      const button=el.getBoundingClientRect(),summary=el.closest('.detail-summary');
+      const row=summary.getBoundingClientRect();
+      const stats=[...summary.querySelectorAll('.detail-stat')].map(item=>item.getBoundingClientRect());
+      return {buttonRight:button.right,buttonLeft:button.left,buttonCenter:(button.top+button.bottom)/2,
+       rowRight:row.right,rowLeft:row.left,rowCenter:(row.top+row.bottom)/2,statsCount:stats.length,
+       lastStatRight:stats.at(-1).right,rowScrollWidth:summary.scrollWidth,rowClientWidth:summary.clientWidth};
     });
-    assert.ok(medalPlacement.buttonBottom<=medalPlacement.countTop+1,
-      'The medal is directly above the 57/57 achievement-filter count');
-    assert.ok(Math.abs(medalPlacement.buttonRight-medalPlacement.countRight)<3,
-      'The medal and achievement count share the same right edge');
-    assert.ok(medalPlacement.sortBottom<medalPlacement.progressTop,
-      'Both controls are above the completion progress bar');
-    assert.equal(await page.locator('.game-detail .detail-summary .detail-mythic-trigger').count(),0,
-      'The Mythic medal is not in the summary row below the game title');
+    assert.equal(medalPlacement.statsCount,3,'The summary row retains all three game metrics');
+    assert.ok(medalPlacement.buttonLeft>=medalPlacement.lastStatRight-1,
+      'Mythic medal follows playtime, achievements and gamerscore');
+    assert.ok(medalPlacement.buttonRight<=medalPlacement.rowRight+1&&medalPlacement.buttonLeft>=medalPlacement.rowLeft,
+      'The far-right Mythic entry remains fully visible');
+    assert.ok(medalPlacement.rowScrollWidth<=medalPlacement.rowClientWidth+1,
+      'All three stats and the Mythic entry fit without horizontal scrolling');
+    assert.ok(Math.abs(medalPlacement.buttonCenter-medalPlacement.rowCenter)<3,
+      'Mythic medal is vertically aligned with the summary metrics');
+    assert.equal(await page.locator('.game-detail .detail-summary .detail-mythic-trigger').count(),1,
+      'The single-game Mythic entry is placed at the right end of the metric row');
+    assert.ok(await medal.locator('.mythic-badge-placeholder').isVisible(),
+      'Detail action renders a fallback emblem without waiting for a network image');
     await medal.click();
     const detailWall=page.getByRole('dialog',{name:'Mythic纪念卡'});
     await detailWall.waitFor();
@@ -1149,6 +1163,15 @@ try{
       'The detail mode never renders neighboring games');
     assert.equal(await detailWall.locator('.mythic-wall-controls').count(),0,
       'No navigation buttons or swiping UI are shown in the single-game memorial');
+    const detailPosterBox=await detailWall.locator('.mythic-poster.is-active').boundingBox();
+    const spacerHeight=await detailWall.locator('.mythic-wall-bottom-spacer').evaluate(el=>el.getBoundingClientRect().height);
+    assert.ok(Math.abs(galleryFooterHeight-spacerHeight)<1,
+      'Single poster reserves the gallery footer space to prevent vertical drift');
+    for(const dimension of ['x','y','width','height']){
+      assert.ok(Math.abs(galleryPosterBox[dimension]-detailPosterBox[dimension])<2,
+        'Gallery and single-game cards have matching '+dimension+': '+
+        JSON.stringify({gallery:galleryPosterBox,detail:detailPosterBox}));
+    }
     assert.equal(await page.getByRole('dialog').count(),1,'The poster replaces the detail modal rather than stacking dialogs');
     await detailWall.getByRole('button',{name:'关闭Mythic纪念卡'}).click();
     await page.getByRole('dialog',{name:/游戏详情/}).waitFor();

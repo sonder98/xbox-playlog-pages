@@ -3370,8 +3370,9 @@ footer .dot {
 .game-detail .achievement-progress-actions{position:relative;}
 .game-detail .achievement-progress-actions .detail-mythic-trigger img{width:21px;height:21px;}
 .mythic-wall-overlay[data-display-mode="single"] .mythic-poster{
- width:min(408px,calc(100vw - 32px),calc((100dvh - 93px)*.563));
- max-height:calc(100dvh - 93px);
+ /* Same height budget as gallery: the blank bottom rail replaces the controls. */
+ width:min(408px,calc(100vw - 48px),calc((100dvh - 142px)*.563));
+ max-height:calc(100dvh - 142px);
 }
 @media(max-width:700px){
  .mythic-poster-title{font-size:7.05cqw;}
@@ -3423,4 +3424,77 @@ footer .dot {
 @media(max-width:700px){
  .mythic-poster-achievement-art{min-width:30px;max-width:45px;}
  .mythic-poster-gamepad{top:95.45%;bottom:auto;}
+}
+
+/* 2026-11-06: The single-game poster and gallery reserve exactly the same
+   header/viewport/footer geometry, including iPhone safe-area insets. */
+.mythic-wall-bottom-spacer{
+ display:flex;align-items:center;justify-content:center;flex:0 0 auto;
+ min-height:56px;padding:3px 14px max(8px,env(safe-area-inset-bottom));
+}
+.mythic-wall-bottom-spacer::before{content:"";display:block;width:0;height:40px}
+@media(max-width:700px){
+ .mythic-wall-bottom-spacer{min-height:52px}
+ .mythic-wall-overlay[data-display-mode="single"] .mythic-poster{
+  width:min(408px,calc(100vw - 32px),calc((100dvh - 132px)*.563));
+  max-height:calc(100dvh - 132px);
+ }
+}
+
+/* Same-origin-looking immediate fallback graphic remains on screen until the
+   official external Mythic badge has fully loaded; a failing CDN never blanks it. */
+.mythic-badge-art{
+ display:grid;place-items:center;position:relative;width:100%;height:100%;
+ flex:0 0 auto;overflow:hidden;border-radius:50%;
+ color:#effff1;background:radial-gradient(circle at 38% 28%,#cceeff,#4b9fdc 42%,#19466f 72%,#112f43 100%);
+ box-shadow:inset 0 0 0 1px #f4d49c8c,inset 0 -5px 11px #0d183a70;
+}
+.mythic-badge-art .mythic-badge-placeholder{position:relative;z-index:0;filter:drop-shadow(0 1px 3px #123b5a)}
+.mythic-badge-art img{
+ position:absolute;inset:0;width:100%;height:100%;
+ object-fit:contain;opacity:0;transition:opacity .16s ease-in;
+}
+.mythic-badge-art img.is-ready{opacity:1}
+.game-detail .detail-summary .detail-mythic-trigger{
+ margin-left:auto;min-height:31px;padding:3px 9px;
+ gap:5px;font-size:11px;line-height:1;flex:0 0 auto;
+}
+.game-detail .detail-summary .mythic-badge-art.is-compact{width:23px;height:23px}
+.game-detail .achievement-progress-actions{margin-left:auto}
+@media(max-width:700px){
+ .game-detail .detail-summary{gap:clamp(5px,1.5vw,9px);overflow:visible}
+ .game-detail .detail-summary .detail-stat{gap:4px;font-size:clamp(10px,3vw,12px)}
+ .game-detail .detail-summary .detail-stat svg{width:15px;height:15px}
+ .game-detail .detail-summary .detail-mythic-trigger{
+  min-height:31px;width:31px;padding:3px;gap:0;
+ }
+ .game-detail .detail-summary .mythic-badge-art.is-compact{width:23px;height:23px}
+ .game-detail .detail-summary .detail-mythic-label{display:none}
+}
+@media(max-width:370px){
+ .game-detail .detail-summary{gap:4px}
+ .game-detail .detail-summary .detail-stat{font-size:10px;gap:3px}
+ .game-detail .detail-summary .detail-stat svg{width:13px;height:13px}
+}
+
+/* The old highlight took almost eight seconds to first appear (60% of a 13s
+   loop), and the sparse stars waited around five seconds. */
+.mythic-poster-shimmer{animation:mythic-sweep 6.4s ease-in-out infinite}
+@keyframes mythic-sweep{
+ 0%,10%{opacity:0;transform:translateX(-110%)}
+ 19%{opacity:.62;transform:translateX(-30%)}
+ 32%{opacity:.68;transform:translateX(70%)}
+ 43%,100%{opacity:0;transform:translateX(125%)}
+}
+.mythic-poster-stars span{
+ animation:mythic-subtle-sparkle calc(2.8s + var(--i)*.08s) ease-in-out infinite;
+ animation-delay:calc(var(--i)*-.32s);
+}
+@keyframes mythic-subtle-sparkle{
+ 0%,100%{opacity:.11;transform:scale(.58)}
+ 22%{opacity:.67;transform:scale(1.04)}
+ 45%{opacity:.13;transform:scale(.70)}
+}
+@media(prefers-reduced-motion:reduce){
+ .mythic-poster-stars span,.mythic-poster-shimmer{animation:none;opacity:0}
 }
