@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import type {Achievement,Game} from '../src/data.ts';
 import {mythicPosterWall,posterLocalDate} from '../src/mythic-posters.ts';
+import {mythicCover,mythicBackdrop} from '../src/mythic-assets.ts';
 
 function award(id:string,date:string|null,unlocked=true):Achievement{
  return {id,name:'Achievement '+id,image:'',unlocked,unlockedAt:date,rarity:12,description:''};
@@ -67,4 +68,14 @@ test('All-locked and unverified incomplete titles never get a poster',()=>{
  noSplit.groups=undefined;
  noSplit.earned=0;
  assert.equal(mythicPosterWall([locked,noSplit]).length,0);
+});
+
+test('Mythic circle uses a 480px cached WebP while the screenshot stays the original dedicated cache',()=>{
+ const g={...game('88','Image',['2026-01-01T00:00:00Z']),
+  image:'https://store-images.s-microsoft.com/raw-cover',
+  cachedImage:'https://sonder98.github.io/xbox-playlog-pages/media/480.webp',
+  cachedImageLarge:'https://sonder98.github.io/xbox-playlog-pages/media/1600.webp',
+  cachedPosterImage:'https://sonder98.github.io/xbox-playlog-pages/media/screenshot.webp'};
+ assert.equal(mythicCover(g),g.cachedImage,'Tiny circular art should not download a 1600px cover');
+ assert.equal(mythicBackdrop(g),g.cachedPosterImage,'Full-width screenshots still use their dedicated cached asset');
 });
