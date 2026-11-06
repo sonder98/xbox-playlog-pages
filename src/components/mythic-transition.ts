@@ -82,6 +82,7 @@ export function flyMythicIn(
   target.style.visibility='visible';
   target.style.opacity='1';
   target.style.willChange='transform';
+  target.dataset.openDelayMs=String(Math.round(performance.now()-Number(source.dataset.openClickedAt||performance.now())));
   animation=target.animate([
    {transform:scaledTransform(origin.rect,finalRect)},
    {transform:'translate3d(0,0,0) scale(1)'}
