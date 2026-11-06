@@ -914,6 +914,21 @@ try{
       'The global entry opens the newest Mythic based on its verified completion date');
     assert.equal(await posterWall.locator('.mythic-poster.is-active .mythic-poster-title').innerText(),'Test Game 0',
       'The poster displays its game name without a platform tag');
+    assert.equal(await posterWall.getAttribute('data-display-mode'),'wall',
+      'The library entry opens the swipeable gallery');
+    assert.ok((await posterWall.locator('.mythic-poster-title').first().evaluate(el=>
+      getComputedStyle(el).fontFamily)).includes('Cormorant Garamond'),
+      'The collectible game title now uses an actual editorial serif family, not UI sans-serif');
+    const posterBottomLayout=await posterWall.locator('.mythic-poster.is-active').evaluate(el=>{
+      const card=el.getBoundingClientRect();
+      const pad=el.querySelector('.mythic-poster-gamepad').getBoundingClientRect();
+      const footer=el.querySelector('.mythic-poster-footer').getBoundingClientRect();
+      return {padBottom:pad.bottom,cardBottom:card.bottom,footerBottom:footer.bottom,padTop:pad.top,cardHeight:card.height};
+    });
+    assert.ok(posterBottomLayout.padBottom<posterBottomLayout.cardBottom-posterBottomLayout.cardHeight*.018,
+      'ABXY controls sit inside the engraved bottom frame instead of overlapping it');
+    assert.ok(posterBottomLayout.padTop>=posterBottomLayout.footerBottom-2,
+      'ABXY motifs have their own space below the XBOX Playlog footer');
     assert.equal(await posterWall.locator('canvas.mythic-wall-fireworks').count(),1,
       'Only the initial opening creates the radial firework particle canvas');
     const posterBackdrop=posterWall.locator('.mythic-poster.is-active .mythic-poster-backdrop');
@@ -1054,18 +1069,35 @@ try{
     const medal=page.locator('.game-detail .detail-mythic-trigger');
     assert.equal(await medal.count(),1,'Completed Mythic details display the medal action');
     const medalPlacement=await medal.evaluate(el=>{
-      const button=el.getBoundingClientRect(),count=el.closest('.detail-mythic-stack').querySelector('.detail-achievements').getBoundingClientRect();
-      return {buttonBottom:button.bottom,countTop:count.top};
+      const button=el.getBoundingClientRect();
+      const stack=el.closest('.achievement-progress-actions');
+      const count=stack.querySelector('.achievement-filter-count').getBoundingClientRect();
+      const sortRow=el.closest('.achievement-sort-row').getBoundingClientRect();
+      const progress=el.closest('.achievement-group').querySelector('.progress').getBoundingClientRect();
+      return {buttonBottom:button.bottom,countTop:count.top,buttonRight:button.right,
+       countRight:count.right,sortBottom:sortRow.bottom,progressTop:progress.top};
     });
-    assert.ok(medalPlacement.buttonBottom<medalPlacement.countTop+1,
-      'The Mythic medal is positioned above the achievement count');
+    assert.ok(medalPlacement.buttonBottom<=medalPlacement.countTop+1,
+      'The medal is directly above the 57/57 achievement-filter count');
+    assert.ok(Math.abs(medalPlacement.buttonRight-medalPlacement.countRight)<3,
+      'The medal and achievement count share the same right edge');
+    assert.ok(medalPlacement.sortBottom<medalPlacement.progressTop,
+      'Both controls are above the completion progress bar');
+    assert.equal(await page.locator('.game-detail .detail-summary .detail-mythic-trigger').count(),0,
+      'The Mythic medal is not in the summary row below the game title');
     await medal.click();
-    const detailWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
+    const detailWall=page.getByRole('dialog',{name:'Mythic纪念卡'});
     await detailWall.waitFor();
+    assert.equal(await detailWall.getAttribute('data-display-mode'),'single',
+      'The detail launch enters single-poster mode, not the global memorial wall');
     assert.equal(await detailWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),chosenMythicId,
-      'The medal entry focuses the currently opened game instead of the global first poster');
-    assert.equal(await page.getByRole('dialog').count(),1,'The wall replaces the detail modal rather than stacking dialogs');
-    await detailWall.getByRole('button',{name:'关闭Mythic纪念墙'}).click();
+      'The detail entry opens only the current game');
+    assert.equal(await detailWall.locator('.mythic-poster').count(),1,
+      'The detail mode never renders neighboring games');
+    assert.equal(await detailWall.locator('.mythic-wall-controls').count(),0,
+      'No navigation buttons or swiping UI are shown in the single-game memorial');
+    assert.equal(await page.getByRole('dialog').count(),1,'The poster replaces the detail modal rather than stacking dialogs');
+    await detailWall.getByRole('button',{name:'关闭Mythic纪念卡'}).click();
     await page.getByRole('dialog',{name:/游戏详情/}).waitFor();
     // Gamerscore shares Lucide's transparent, 2px stroke vocabulary and aligned 24px grid.
     const scoreSummary=page.locator('.game-detail .detail-gamerscore');
