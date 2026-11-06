@@ -939,6 +939,16 @@ try{
     await showcase.getByRole('button',{name:'放大 Test Game 0 纪念卡'}).click();
     const posterWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
     await posterWall.waitFor();
+    if(!await page.evaluate(()=>matchMedia('(prefers-reduced-motion: reduce)').matches)){
+      assert.equal(await posterWall.getAttribute('data-transition'),'entering',
+        'Clicking a shelf collectible first starts a real thumbnail-to-poster transition');
+      const flyingThumb=page.locator('.mythic-flight-ghost[data-flight="preview"]');
+      assert.equal(await flyingThumb.count(),1,
+        'A visible clone of the clicked thumbnail moves from its actual shelf position');
+    }
+    await page.waitForFunction(()=>document.querySelector('.mythic-wall-overlay[data-entry="showcase"]')
+      ?.getAttribute('data-transition')==='idle');
+    await page.waitForFunction(()=>document.querySelectorAll('.mythic-flight-ghost').length===0);
     const galleryPosterBox=await posterWall.locator('.mythic-poster.is-active').boundingBox();
     const posterFrame=await posterWall.locator('.mythic-poster.is-active').evaluate(card=>{
       const measure=selector=>{
@@ -1153,6 +1163,11 @@ try{
         'A horizontal swipe advances exactly one poster');
     }
     await posterWall.getByRole('button',{name:'返回展示柜'}).click();
+    if(!await page.evaluate(()=>matchMedia('(prefers-reduced-motion: reduce)').matches)){
+      assert.equal(await posterWall.getAttribute('data-transition'),'flying-out',
+        'Closing a visible shelf collectible animates the full card back to its thumbnail');
+      assert.equal(await page.locator('.mythic-flight-ghost[data-flight="poster"]').count(),1);
+    }
     await posterWall.waitFor({state:'hidden'});
     await showcase.waitFor();
     // Scroll deep into the cabinet, choose a non-first collectible and return
@@ -1161,6 +1176,8 @@ try{
     const cabinetScroll=await showcase.evaluate(el=>el.scrollTop);
     await showcase.getByRole('button',{name:'放大 Test Game 7 纪念卡'}).click();
     await posterWall.waitFor();
+    await page.waitForFunction(()=>document.querySelector('.mythic-wall-overlay[data-entry="showcase"]')
+      ?.getAttribute('data-transition')==='idle');
     assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'107',
       'The selected cabinet card determines the initial full-size slide');
     assert.equal(await posterWall.locator('canvas.mythic-wall-fireworks').count(),1,
