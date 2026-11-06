@@ -1,0 +1,40 @@
+name: Vendor stable Mythic badge
+on:
+  push:
+    branches: [fix/vendor-mythic-badge]
+    paths:
+      - '.github/workflows/vendor-mythic-badge.yml'
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Fetch immutable original badge
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public
+          curl --fail --location --retry 2 --retry-delay 2 --connect-timeout 12 --max-time 40 \
+            -A 'Mozilla/5.0 (compatible; XboxPlaylog/1.0)' \
+            'https://xct.live/static/mythic/mythic_unlocked_hd_360.png' \
+            -o public/mythic-unlocked.png
+          python3 - <<'PY'
+          import struct
+          from pathlib import Path
+          f=Path('public/mythic-unlocked.png')
+          b=f.read_bytes()
+          assert b[:8]==b'\x89PNG\r\n\x1a\n','Response is not PNG'
+          w,h=struct.unpack('>II',b[16:24])
+          assert w==h and w>=90 and len(b)>500, f'Bad PNG {w}x{h}: {len(b)} bytes'
+          print(f'Verified real square Mythic badge {w}x{h}, {len(b)} bytes')
+          PY
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name 'github-actions[bot]'
+          git add public/mythic-unlocked.png
+          git commit -m "Vendor original Mythic badge into public assets"
+          git push origin HEAD:fix/vendor-mythic-badge
