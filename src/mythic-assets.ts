@@ -1,3 +1,4 @@
+import {useEffect,useState} from 'react';
 import type {Profile,Game} from './data.ts';
 import type {MythicPoster} from './mythic-posters.ts';
 import {MYTHIC_BADGE_URL} from './mythic-posters.ts';
@@ -26,7 +27,33 @@ export function warmMythicImage(url:string|undefined|null,priority:'auto'|'high'
  pending.set(url,promise);
  return promise;
 }
-export function mythicBackdrop(game:Game){
+/** Rotate at midnight Beijing time, regardless of the viewer's device timezone. */
+export const beijingDay=(now:number)=>Math.floor((now+8*3600_000)/86400_000);
+export function useMythicRotationDay(){
+ const [day,setDay]=useState(()=>beijingDay(Date.now()));
+ useEffect(()=>{
+  const refresh=()=>setDay(beijingDay(Date.now()));
+  const nextMidnight=(day+1)*86400_000-8*3600_000;
+  const timer=window.setTimeout(refresh,Math.max(1,nextMidnight-Date.now()+50));
+  document.addEventListener('visibilitychange',refresh);
+  window.addEventListener('focus',refresh);
+  return()=>{
+   window.clearTimeout(timer);
+   document.removeEventListener('visibilitychange',refresh);
+   window.removeEventListener('focus',refresh);
+  };
+ },[day]);
+ return day;
+}
+export function mythicBackdrop(game:Game,day=beijingDay(Date.now())){
+ const shots=game.posterScreenshots;
+ if(shots?.length&&game.posterRotationStartDay){
+  const firstDay=Date.parse(game.posterRotationStartDay+'T00:00:00Z')/86400_000;
+  if(Number.isFinite(firstDay)){
+   const index=Math.max(0,day-firstDay)%shots.length;
+   return game.cachedPosterScreenshots?.[index]||shots[index];
+  }
+ }
  return game.cachedPosterImage||game.posterImage||
   (game.detailImagePurpose==='SuperHeroArt'||game.detailImagePurpose==='TitledHeroArt'?
    game.cachedDetailImage||game.detailImage:undefined);
