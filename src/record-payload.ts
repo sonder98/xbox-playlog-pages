@@ -1,6 +1,6 @@
 /** Lossless detail deduplication inside the encrypted payload; old vaults remain readable. */
 const marker='playlog-detail-table-v1';
-const detailKeys=['achievements','groups','groupStatus','catalogAt'] as const;
+const detailKeys=['achievements','groups','groupStatus','catalogAt','posterScreenshots','cachedPosterScreenshots','posterRotationStartDay'] as const;
 export function compactPayload(payload:any):any{
  if(!payload||!Array.isArray(payload.records)||!payload.records.every((r:any)=>r&&Array.isArray(r.games)))return payload;
  // Avoid changing arbitrary payloads that already use the reserved transport keys.
