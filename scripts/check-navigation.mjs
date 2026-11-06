@@ -958,7 +958,7 @@ try{
       'The visible XBOX Playlog text fits inside its dedicated inscription: '+JSON.stringify(posterSections));
     assert.ok(posterSections.footerBottom<=posterSections.abxyTop+1,
       'ABXY begins below the complete, unobscured inscription: '+JSON.stringify(posterSections));
-    assert.ok((await posterWall.locator('.mythic-poster-footer').innerText()).includes('值得一张纪念卡'),
+    assert.ok((await posterWall.locator('.mythic-poster.is-active .mythic-poster-footer').innerText()).includes('值得一张纪念卡'),
       'The inscription has readable, meaningful copy');
     assert.equal(await posterWall.locator('canvas.mythic-wall-fireworks').count(),1,
       'Only the initial opening creates the radial firework particle canvas');
