@@ -55,7 +55,19 @@ if(!groups.length)throw Error('Official catalog had no matching ACE COMBAT 8 gam
 const entries=groups.flatMap((group,gi)=>group.images.map(image=>({
  ...image,groupIndex:gi,productId:group.productId,productTitle:group.title,kind:group.kind
 })));
-if(!entries.length)throw Error('Official AU Store response had no downloadable ACE8 Images.');
+if(!entries.length){
+ console.log('ACE8 Store public catalog image diagnostics:',JSON.stringify(products.map(p=>({
+  productId:p.ProductId,kind:p.ProductKind,
+  localized:(p.LocalizedProperties||[]).map(info=>({
+   language:info.Language,title:info.ProductTitle,imageCount:(info.Images||[]).length,
+   sample:(info.Images||[]).slice(0,5).map(im=>({
+    purpose:im.ImagePurpose,width:im.Width,height:im.Height,
+    urlHost:(()=>{try{return new URL(im.Uri).hostname}catch{return 'invalid-or-relative'}})()
+   }))
+  }))
+ }))));
+ throw Error('Official AU Store response had no downloadable ACE8 Images.');
+}
 const originalCount=entries.length;
 const limit=120;
 const selected=entries.slice(0,limit);
