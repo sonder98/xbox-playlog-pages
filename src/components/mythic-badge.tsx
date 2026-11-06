@@ -7,14 +7,22 @@ import {MYTHIC_BADGE_URL} from '../mythic-posters';
 export function MythicBadgeArt({compact=false}:{compact?:boolean}){
  const imageRef=useRef<HTMLImageElement>(null);
  const [ready,setReady]=useState(false);
- useEffect(()=>{
+ function revealWhenDecoded(){
   const img=imageRef.current;
-  if(img?.complete&&img.naturalWidth>0)setReady(true);
- },[]);
+  if(!img||img.naturalWidth===0)return;
+  // An image can have transferred its bytes but still be decoding; keep the
+  // local medal in front until the original is ready to paint.
+  void img.decode().then(()=>{
+   if(imageRef.current===img)setReady(true);
+  }).catch(()=>{
+   if(imageRef.current===img)setReady(true);
+  });
+ }
+ useEffect(()=>{revealWhenDecoded();},[]);
  return <span className={'mythic-badge-art'+(compact?' is-compact':'')} aria-hidden="true">
   <Gem size={compact?15:38} strokeWidth={1.5} className="mythic-badge-placeholder"/>
   <img ref={imageRef} src={MYTHIC_BADGE_URL} alt="" loading="eager" fetchPriority="high"
    decoding="async" className={ready?'is-ready':''}
-   onLoad={()=>setReady(true)} onError={()=>setReady(false)}/>
+   onLoad={revealWhenDecoded} onError={()=>setReady(false)}/>
  </span>;
 }
