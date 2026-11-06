@@ -62,7 +62,8 @@ if(!entries.length){
    language:info.Language,title:info.ProductTitle,imageCount:(info.Images||[]).length,
    sample:(info.Images||[]).slice(0,5).map(im=>({
     purpose:im.ImagePurpose,width:im.Width,height:im.Height,
-    urlHost:(()=>{try{return new URL(im.Uri).hostname}catch{return 'invalid-or-relative'}})()
+    fields:Object.keys(im),publicUri:String(im.Uri??im.Url??im.url).slice(0,220),
+    urlHost:(()=>{try{return new URL(im.Uri??im.Url??im.url,'https://store-images.s-microsoft.com').hostname}catch{return 'invalid-or-relative'}})()
    }))
   }))
  }))));
