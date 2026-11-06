@@ -1,4 +1,5 @@
-import {useEffect} from 'react';
+import {useEffect,type MouseEvent} from 'react';
+import type {MythicFlightOrigin} from './mythic-transition';
 import {ArrowLeft,ArrowUpRight,CircleUserRound,Diamond,Sparkles} from 'lucide-react';
 import type {Profile} from '../data';
 import type {MythicPoster} from '../mythic-posters';
@@ -6,15 +7,19 @@ import {MYTHIC_BADGE_URL,posterLocalDate} from '../mythic-posters';
 import {mythicBackdrop,mythicCover} from '../mythic-assets';
 
 function CollectionPreview({entry,profile,index,total,onOpen}:{
- entry:MythicPoster;profile:Profile;index:number;total:number;onOpen:()=>void;
+ entry:MythicPoster;profile:Profile;index:number;total:number;onOpen:(origin:MythicFlightOrigin)=>void;
 }){
  const {game,firstAt,mythicAt,firstAchievement,lastBaseAchievement,daysToMythic,baseTotal}=entry;
  const background=mythicBackdrop(game),cover=mythicCover(game);
  const first=posterLocalDate(firstAt),finish=posterLocalDate(mythicAt);
+ function expand(event:MouseEvent<HTMLButtonElement>){
+  const card=event.currentTarget.querySelector<HTMLElement>('.mythic-showcase-poster');
+  if(card)onOpen({element:card,rect:card.getBoundingClientRect()});
+ }
  const firstArt=firstAchievement?.cachedImage||firstAchievement?.image;
  const lastArt=lastBaseAchievement?.cachedImage||lastBaseAchievement?.image;
  return <button type="button" className="mythic-showcase-item" data-showcase-game={game.id}
-  aria-label={`放大 ${game.name} 纪念卡`} onClick={onOpen}>
+  aria-label={`放大 ${game.name} 纪念卡`} onClick={expand}>
   <div className="mythic-showcase-seat">
    <div className="mythic-showcase-poster">
     {background&&<img className="mythic-showcase-backdrop" src={background} alt="" loading="lazy" decoding="async"/>}
@@ -71,7 +76,7 @@ function CollectionPreview({entry,profile,index,total,onOpen}:{
 
 /** A vertically scrolling, 3-column collectible gallery before the full-size poster carousel. */
 export function MythicShowcase({posters,profile,onClose,onOpen}:{
- posters:MythicPoster[];profile:Profile;onClose:()=>void;onOpen:(gameId:string)=>void;
+ posters:MythicPoster[];profile:Profile;onClose:()=>void;onOpen:(gameId:string,origin:MythicFlightOrigin)=>void;
 }){
  useEffect(()=>{
   const before=document.body.style.overflow;
@@ -105,7 +110,7 @@ export function MythicShowcase({posters,profile,onClose,onOpen}:{
    <div className="mythic-showcase-grid">
     {posters.map((entry,index)=><CollectionPreview key={entry.game.id}
      entry={entry} profile={profile} index={index} total={posters.length}
-     onOpen={()=>onOpen(entry.game.id)}/>)}
+     onOpen={origin=>onOpen(entry.game.id,origin)}/>)}
    </div>
    <div className="mythic-showcase-bottom">✧ <span>THE JOURNEY IS THE REWARD</span> ✧</div>
   </div>
