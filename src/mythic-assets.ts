@@ -11,7 +11,10 @@ export function warmMythicImage(url:string|undefined|null):Promise<boolean>{
  const picture=new Image();
  picture.decoding='async';
  picture.src=url;
- const promise=picture.decode().then(()=>true,()=>false);
+ const promise=picture.decode().then(()=>true,()=>false).then(ok=>{
+  if(!ok)pending.delete(url); // Failed networks may recover on the next open.
+  return ok;
+ });
  pending.set(url,promise);
  return promise;
 }
@@ -37,9 +40,9 @@ let fontReady:Promise<void>|null=null;
 export function warmMythicFonts():Promise<void>{
  if(!fontReady){
   fontReady=Promise.allSettled([
-   document.fonts.load('400 26px Marcellus'),
-   document.fonts.load('600 22px "Cormorant Garamond"'),
-   document.fonts.load('500 20px "Noto Serif SC"')
+   document.fonts.load('400 26px Marcellus','WUCHANG Fallen Feathers 0123456789'),
+   document.fonts.load('600 22px "Cormorant Garamond"','MYTHIC 0123456789'),
+   document.fonts.load('500 20px "Noto Serif SC"','恭喜首项成就小时天本体玩家')
   ]).then(()=>{});
  }
  return fontReady;
