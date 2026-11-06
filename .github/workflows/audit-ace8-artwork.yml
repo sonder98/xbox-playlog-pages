@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: ace8-store-artwork-audit
@@ -51,3 +52,8 @@ jobs:
           git commit -m "Archive Microsoft AU Store ACE8 art and refresh browsable gallery"
           git pull --rebase origin main
           git push origin HEAD:main
+      - name: Publish the archived artwork gallery to GitHub Pages
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
