@@ -18,6 +18,7 @@ function CollectionPreview({entry,profile,index,total,onOpen,onPrefetch}:{
   if(card){
    const rect=card.getBoundingClientRect();
    card.classList.add('is-primed');
+   card.dataset.openClickedAt=String(performance.now());
    onOpen({element:card,rect});
   }
  }
