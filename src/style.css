@@ -3381,3 +3381,44 @@ footer .dot {
  .mythic-poster-opening-glint{animation:none;display:none;}
  .mythic-poster-stars span,.mythic-poster-shimmer{animation:none;opacity:0;}
 }
+
+/* 2026-11: Separate four bottom zones of the collectible. The prior footer was
+   allowed to overflow the time stamps, counters, and ABXY because the standard
+   site <footer> CSS and fixed percentage offsets fought the font metrics. */
+.mythic-poster-achievement-pair{
+ top:66.8%;height:16.35%;padding:5px 5px;gap:3px;
+ align-content:center;overflow:hidden;
+}
+.mythic-poster-achievement{gap:2px;line-height:1.15;}
+.mythic-poster-achievement-art{
+ width:32%;min-width:30px;max-width:43px;margin-bottom:1px;
+ border-radius:8px;
+}
+.mythic-poster-achievement b{font-size:4.0cqw;line-height:1.05;}
+.mythic-poster-achievement>span:last-child{font-size:3cqw;line-height:1.05;}
+.mythic-poster-stats{
+ top:83.8%;height:7.5%;align-items:center;overflow:hidden;
+}
+.mythic-poster-stats>div{align-content:center;align-items:baseline;row-gap:0;}
+.mythic-poster-stats strong{font-size:7.5cqw;line-height:1.03;}
+.mythic-poster-stats small{line-height:1.05;}
+.mythic-poster-stats span{line-height:1.18;margin-top:2px;}
+.mythic-poster-footer{
+ top:91.75%;height:2.4%;min-height:0;max-height:2.4%;
+ margin:0;padding:0;overflow:hidden;
+ display:flex;align-items:center;justify-content:center;
+ gap:6px;line-height:1.1;font-size:2.25cqw;
+ white-space:nowrap;
+}
+.mythic-poster-footer .mythic-poster-brand{
+ font-size:2.5cqw;padding:1px 4px;line-height:1.1;
+}
+.mythic-poster-gamepad{
+ top:95.0%;bottom:auto;gap:10px;line-height:1;
+ align-items:center;justify-content:center;
+}
+.mythic-poster-gamepad span{width:13px;height:13px;line-height:1;flex:0 0 auto;}
+@media(max-width:700px){
+ .mythic-poster-achievement-art{min-width:28px;max-width:41px;}
+ .mythic-poster-gamepad{top:95.0%;bottom:auto;}
+}
