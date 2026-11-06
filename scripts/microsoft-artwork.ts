@@ -33,8 +33,7 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
     const heroes=images.filter((i:any)=>i.Width/i.Height>=1.45&&i.Width/i.Height<=2.45&&i.Width>=640&&(i.ImagePurpose==='SuperHeroArt'||i.ImagePurpose==='TitledHeroArt'));
     // The collectible deliberately uses the FIRST Screenshot in the official
     // response, not the largest image or the unrelated Store hero/banner.
-    const firstScreenshot=images.find((i:any)=>i.ImagePurpose==='Screenshot'&&
-     i.Width/i.Height>=1.45&&i.Width/i.Height<=2.45);
+    const firstScreenshot=images.find((i:any)=>i.ImagePurpose==='Screenshot');
     const posterFallbacks=images.filter((i:any)=>i.Width>=960&&i.Width/i.Height>=1.45&&i.Width/i.Height<=2.45&&
      ['SuperHeroArt','TitledHeroArt'].includes(i.ImagePurpose));
     posterFallbacks.sort((a:any,b:any)=>
