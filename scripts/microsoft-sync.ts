@@ -15,10 +15,11 @@ function logMythicArtworkCoverage(games:Game[]){
  const mythic=games.filter(g=>completion(g).mythic);
  console.log('Mythic 海报背景覆盖：'+JSON.stringify({
   catalogGames:games.length,mythic:mythic.length,
-  firstScreenshot:mythic.filter(g=>g.posterSelectionVersion===2&&g.posterImagePurpose==='Screenshot').length,
+  firstScreenshot:mythic.filter(g=>g.posterImagePurpose==='Screenshot').length,
   fallbackOfficialArt:mythic.filter(g=>g.posterImage&&g.posterImagePurpose!=='Screenshot').length,
   missingBackground:mythic.filter(g=>!g.posterImage).length,
-  versioned:mythic.filter(g=>g.posterSelectionVersion===2).length
+  rotating:mythic.filter(g=>g.posterSelectionVersion===3&&Array.isArray(g.posterScreenshots)).length,
+  totalScreenshots:mythic.reduce((n,g)=>n+(g.posterScreenshots?.length||0),0)
  }));
 }
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
