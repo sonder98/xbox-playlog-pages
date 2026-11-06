@@ -43,7 +43,7 @@ for(const product of products){
  if(!/ACE\s*COMBAT\s*8/i.test(title))continue;
  const images=(info?.Images||[]).map((image,index)=>{
   let link;
-  try { link=new URL(image.Uri); }catch { return null; }
+  try { link=new URL(image.Uri,'https://store-images.s-microsoft.com'); }catch { return null; }
   if(link.protocol!=='https:'||!allowedHost(link.hostname)||!(Number(image.Width)>0)||!(Number(image.Height)>0))return null;
   return {index,purpose:String(image.ImagePurpose||'Unknown'),width:Number(image.Width),height:Number(image.Height),
    url:link.toString()};
