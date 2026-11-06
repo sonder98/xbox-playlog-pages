@@ -982,8 +982,8 @@ try{
       assert.ok(visualDelay>=0&&visualDelay<200,
         'The already painted thumbnail must start moving within 200ms of a tap: '+visualDelay+'ms');
       const fullReadyDelay=Number(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-open-delay-ms'));
-      assert.ok(fullReadyDelay>=visualDelay,
-        'The separate full-art handoff can wait for assets without delaying the initial visible motion');
+      assert.ok(fullReadyDelay>=visualDelay&&fullReadyDelay<700,
+        'A prewarmed full poster starts its complete-card handoff in under 700ms, not after an extra 1s wait: '+fullReadyDelay+'ms');
       assert.ok(transitionPaint.cover&&transitionPaint.emblem&&transitionPaint.backdrop&&
         transitionPaint.fontReady&&transitionPaint.outline&&
         transitionPaint.coverOpacity>.95&&transitionPaint.emblemOpacity>.95&&
@@ -1233,6 +1233,13 @@ try{
     }
     await posterWall.waitFor({state:'hidden'});
     await showcase.waitFor();
+    // Idle preparation must continue even while the user spends time inside the
+    // first full-size collectible. A distant card is ready before scrolling to it.
+    await page.waitForFunction(()=>document.querySelector(
+      '.mythic-showcase-item[data-showcase-game="107"]')?.getAttribute('data-poster-prepared')==='true',
+      null,{timeout:15000});
+    assert.equal(await showcase.locator('[data-showcase-game="107"]').getAttribute('data-poster-prepared'),'true',
+      'The wall prepares distant game art in the background, even without scrolling near that card');
     // Scroll deep into the cabinet, choose a non-first collectible and return
     // to precisely the same scroll offset after swiping the large poster.
     await showcase.locator('[data-showcase-game="107"]').scrollIntoViewIfNeeded();
@@ -1248,6 +1255,10 @@ try{
     const scrolledVisualDelay=Number(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-visual-start-delay-ms'));
     assert.ok(scrolledVisualDelay>=0&&scrolledVisualDelay<200,
       'Scrolled cards also begin visible motion immediately, independent of full-art load: '+scrolledVisualDelay+'ms');
+    const repeatOpenDelay=Number(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-open-delay-ms'));
+    assert.ok(repeatOpenDelay>=0&&repeatOpenDelay<700,
+      'A different background-warmed Mythic poster completes the enlargement without a 1s+ loading gap: '+
+      repeatOpenDelay+'ms');
     assert.equal(await posterWall.locator('canvas.mythic-wall-fireworks').count(),1,
       'Opening a non-first poster from the cabinet also triggers the initial fireworks');
     await posterWall.getByRole('button',{name:'下一张Mythic纪念卡'}).click();

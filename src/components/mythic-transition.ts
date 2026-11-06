@@ -115,9 +115,14 @@ export function flyMythicIn(
  move=source.animate([
   {transform:'translate3d(0,0,0) scale(1)'},
   {transform:`translate3d(${finalRect.left-origin.rect.left}px,${finalRect.top-origin.rect.top}px,0) scale(${finalRect.width/origin.rect.width},${finalRect.height/origin.rect.height})`}
- ],{duration:530,easing:'cubic-bezier(.22,.72,.17,1)',fill:'forwards'});
+ ],{duration:370,easing:'cubic-bezier(.22,.72,.17,1)',fill:'forwards'});
  const run=async()=>{
-  await Promise.allSettled([move!.finished,waitForPaintedPoster(target,ready)]);
+  const fullyPainted=waitForPaintedPoster(target,ready).then(()=>{
+   target.dataset.artReadyDelayMs=String(Math.round(
+    performance.now()-Number(source.dataset.openClickedAt||performance.now())
+   ));
+  });
+  await Promise.allSettled([move!.finished,fullyPainted]);
   if(cancelled)return;
   // Keep the original enlarged thumbnail visible until the *actual* full
   // poster's image classes, badge, border and fonts have painted.
@@ -130,7 +135,7 @@ export function flyMythicIn(
    Math.round(performance.now()-Number(source.dataset.openClickedAt||performance.now()))
   );
   blend=target.animate([{opacity:0},{opacity:1}],
-   {duration:190,easing:'ease-in-out',fill:'forwards'});
+   {duration:110,easing:'ease-in-out',fill:'forwards'});
   try{await blend.finished;}catch{return;}
   if(cancelled)return;
   target.style.opacity='1';
