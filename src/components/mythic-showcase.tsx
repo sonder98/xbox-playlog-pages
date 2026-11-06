@@ -3,14 +3,14 @@ import {ArrowLeft,ArrowUpRight,CircleUserRound,Diamond,Sparkles} from 'lucide-re
 import type {Profile} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {MYTHIC_BADGE_URL,posterLocalDate} from '../mythic-posters';
-import {mythicBackdrop,mythicCover,prepareMythicPoster,warmMythicFonts} from '../mythic-assets';
+import {mythicBackdrop,mythicCover,prepareMythicPoster,useMythicRotationDay,warmMythicFonts} from '../mythic-assets';
 
-function CollectionPreview({entry,profile,index,total,onOpen,onPrefetch}:{
- entry:MythicPoster;profile:Profile;index:number;total:number;
+function CollectionPreview({entry,profile,index,total,rotationDay,onOpen,onPrefetch}:{
+ entry:MythicPoster;profile:Profile;index:number;total:number;rotationDay:number;
  onOpen:()=>void;onPrefetch:()=>void;
 }){
  const {game,firstAt,mythicAt,firstAchievement,lastBaseAchievement,daysToMythic,baseTotal}=entry;
- const background=mythicBackdrop(game),cover=mythicCover(game);
+ const background=mythicBackdrop(game,rotationDay),cover=mythicCover(game);
  const first=posterLocalDate(firstAt),finish=posterLocalDate(mythicAt);
  const firstArt=firstAchievement?.cachedImage||firstAchievement?.image;
  const lastArt=lastBaseAchievement?.cachedImage||lastBaseAchievement?.image;
@@ -76,6 +76,7 @@ export function MythicShowcase({posters,profile,onClose,onOpen}:{
  posters:MythicPoster[];profile:Profile;onClose:()=>void;onOpen:(gameId:string)=>void;
 }){
  const screenRef=useRef<HTMLElement>(null);
+ const rotationDay=useMythicRotationDay();
  useEffect(()=>{
   const before=document.body.style.overflow;
   document.body.style.overflow='hidden';
@@ -136,7 +137,7 @@ export function MythicShowcase({posters,profile,onClose,onOpen}:{
    active=false;observer.disconnect();
    for(const timer of timers)window.clearTimeout(timer);
   };
- },[posters,profile]);
+ },[posters,profile,rotationDay]);
  return <section ref={screenRef} className="mythic-showcase-screen" aria-label="Mythic纪念墙展示柜" data-showcase="grid">
   <div className="mythic-showcase-inner">
    <div className="mythic-showcase-toolbar">
@@ -163,7 +164,7 @@ export function MythicShowcase({posters,profile,onClose,onOpen}:{
    </div>
    <div className="mythic-showcase-grid">
     {posters.map((entry,index)=><CollectionPreview key={entry.game.id}
-     entry={entry} profile={profile} index={index} total={posters.length}
+     entry={entry} profile={profile} index={index} total={posters.length} rotationDay={rotationDay}
      onOpen={()=>onOpen(entry.game.id)}
      onPrefetch={()=>{void prepareMythicPoster(entry,profile);}}/>)}
    </div>
