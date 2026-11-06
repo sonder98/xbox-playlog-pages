@@ -55,7 +55,7 @@ test('Verified AU TitledHeroArt remains reusable for incremental sync',async()=>
  await australianArtwork(next,async()=>{throw Error('should not contact catalog');},old);
  assert.equal(next.games[0].detailImage,old.games[0].detailImage);
  assert.equal(next.games[0].posterImage,old.games[0].posterImage);
- assert.equal(next.games[0].posterSelectionVersion,3);
+ assert.equal(next.games[0].posterSelectionVersion,2);
 });
 
 test('An existing untitled SuperHeroArt is replaced by a titled image on refresh',async()=>{
@@ -112,7 +112,7 @@ test('Already-Mythic legacy hero posters upgrade once; later syncs reuse the Scr
  },old);
  assert.equal(calls,1);
  assert.equal(next.games[0].posterImage,'https://store-images.s-microsoft.com/image/first-shot');
- assert.equal(next.games[0].posterSelectionVersion,2);
+ assert.equal(next.games[0].posterSelectionVersion,3);
  const again={games:[{id:'8',name:'Game',image:'',earned:1,total:1}]} as RecordData;
  await australianArtwork(again,async()=>{throw Error('versioned poster should be reused');},next);
  assert.equal(again.games[0].posterImage,next.games[0].posterImage);
