@@ -921,8 +921,8 @@ try{
     assert.equal(await posterWall.getAttribute('data-display-mode'),'wall',
       'The library entry opens the swipeable gallery');
     assert.ok((await posterWall.locator('.mythic-poster-title').first().evaluate(el=>
-      getComputedStyle(el).fontFamily)).includes('Cormorant Garamond'),
-      'The collectible game title now uses an actual editorial serif family, not UI sans-serif');
+      getComputedStyle(el).fontFamily)).includes('Marcellus'),
+      'The Mythic collectible uses the chosen Marcellus serif for the game title');
     const posterBottomLayout=await posterWall.locator('.mythic-poster.is-active').evaluate(el=>{
       const card=el.getBoundingClientRect();
       const pad=el.querySelector('.mythic-poster-gamepad').getBoundingClientRect();
@@ -1137,13 +1137,18 @@ try{
       const stats=[...summary.querySelectorAll('.detail-stat')].map(item=>item.getBoundingClientRect());
       return {buttonRight:button.right,buttonLeft:button.left,buttonCenter:(button.top+button.bottom)/2,
        rowRight:row.right,rowLeft:row.left,rowCenter:(row.top+row.bottom)/2,statsCount:stats.length,
-       lastStatRight:stats.at(-1).right,rowScrollWidth:summary.scrollWidth,rowClientWidth:summary.clientWidth};
+       lastStatRight:stats.at(-1).right,rowScrollWidth:summary.scrollWidth,rowClientWidth:summary.clientWidth,
+       metricsRight:summary.querySelector('.detail-metrics').getBoundingClientRect().right,
+       display:getComputedStyle(summary).display};
     });
+    assert.equal(medalPlacement.display,'grid','Game stats and medal form a fixed two-zone grid');
     assert.equal(medalPlacement.statsCount,3,'The summary row retains all three game metrics');
     assert.ok(medalPlacement.buttonLeft>=medalPlacement.lastStatRight-1,
       'Mythic medal follows playtime, achievements and gamerscore');
     assert.ok(medalPlacement.buttonRight<=medalPlacement.rowRight+1&&medalPlacement.buttonLeft>=medalPlacement.rowLeft,
       'The far-right Mythic entry remains fully visible');
+    assert.ok(Math.abs(medalPlacement.buttonRight-medalPlacement.rowRight)<2&&medalPlacement.buttonLeft>=medalPlacement.metricsRight-1,
+      'The memorial button is pinned to the extreme right of the row, not pushed beyond the metrics');
     assert.ok(medalPlacement.rowScrollWidth<=medalPlacement.rowClientWidth+1,
       'All three stats and the Mythic entry fit without horizontal scrolling');
     assert.ok(Math.abs(medalPlacement.buttonCenter-medalPlacement.rowCenter)<3,
@@ -1152,6 +1157,39 @@ try{
       'The single-game Mythic entry is placed at the right end of the metric row');
     assert.ok(await medal.locator('.mythic-badge-placeholder').isVisible(),
       'Detail action renders a fallback emblem without waiting for a network image');
+    const stressedStats=await medal.evaluate(el=>{
+      const summary=el.closest('.detail-summary'),metrics=summary.querySelector('.detail-metrics');
+      const labels=[...metrics.querySelectorAll('.detail-stat > span')];
+      const originals=labels.map(span=>span.textContent);
+      ['123,456,789.0 小时','12,345,678/99,999,999','123,456,789/987,654,321'].forEach((value,i)=>{
+        labels[i].textContent=value;
+      });
+      const box=summary.getBoundingClientRect(),button=el.getBoundingClientRect(),left=metrics.getBoundingClientRect();
+      const result={summaryOverflow:summary.scrollWidth-summary.clientWidth,
+       metricOverflow:metrics.scrollWidth-metrics.clientWidth,
+       buttonRight:button.right,rowRight:box.right,buttonLeft:button.left,metricsRight:left.right,
+       centerDifference:Math.abs((button.top+button.bottom-left.top-left.bottom)/2)};
+      labels.forEach((span,i)=>span.textContent=originals[i]);
+      return result;
+    });
+    assert.ok(stressedStats.metricOverflow>0,'Extra-large stats scroll inside the metrics area');
+    assert.ok(stressedStats.summaryOverflow<=1,'Long values do not overflow the whole summary');
+    assert.ok(Math.abs(stressedStats.rowRight-stressedStats.buttonRight)<2&&
+      stressedStats.buttonLeft>=stressedStats.metricsRight-1&&stressedStats.centerDifference<3,
+      'The Mythic action stays in the right-hand row cell even with huge numbers: '+JSON.stringify(stressedStats));
+    if(mobile){
+      const size=page.viewportSize();
+      await page.setViewportSize({width:320,height:size.height});
+      const narrow=await medal.evaluate(el=>{
+        const row=el.closest('.detail-summary').getBoundingClientRect();
+        const btn=el.getBoundingClientRect();
+        return {rowRight:row.right,buttonRight:btn.right,
+          rowLeft:row.left,buttonLeft:btn.left,viewport:innerWidth};
+      });
+      assert.ok(narrow.buttonRight<=narrow.viewport&&Math.abs(narrow.rowRight-narrow.buttonRight)<2,
+        'Even at 320px the right-hand Mythic button is visible without page overflow: '+JSON.stringify(narrow));
+      await page.setViewportSize(size);
+    }
     await medal.click();
     const detailWall=page.getByRole('dialog',{name:'Mythic纪念卡'});
     await detailWall.waitFor();
