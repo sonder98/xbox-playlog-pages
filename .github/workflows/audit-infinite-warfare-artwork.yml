@@ -1,0 +1,49 @@
+name: Archive Infinite Warfare Xbox console AU artwork
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/audit-infinite-warfare-artwork.mjs
+      - .github/workflows/audit-infinite-warfare-artwork.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: infinite-warfare-artwork-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Inspect public Microsoft Australia Xbox console product images
+        run: node scripts/audit-infinite-warfare-artwork.mjs
+      - name: Save inspection ZIP in GitHub Actions artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: infinite-warfare-xbox-console-artwork
+          path: public/artwork-audit/infinite-warfare/
+          retention-days: 14
+      - name: Save gallery and images to GitHub repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A public/artwork-audit/infinite-warfare/
+          if git diff --cached --quiet; then
+            echo "Art gallery unchanged"
+            exit 0
+          fi
+          git commit -m "Archive Xbox console Infinite Warfare AU Store artwork"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Publish gallery to GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
