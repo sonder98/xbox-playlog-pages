@@ -47,8 +47,10 @@ function MythicPosterCard({entry,profile,index,total,active,opening}:{
 }){
  const {game,firstAt,mythicAt,firstAchievement,lastBaseAchievement,daysToMythic,baseTotal}=entry;
  const first=posterLocalDate(firstAt),finish=posterLocalDate(mythicAt);
- // Collectible uses *landscape* first-party Store promotional art or screenshot.
- // Do not stretch the 1:1 library cover across a tall commemorative poster.
+ // The first AU Store Screenshot is the collectible's cinematic backdrop.
+ // Older snapshots and titles without screenshots may fall back to wide Store art.
+ // Never stretch a square library cover into this area.
+ const screenshot=game.posterImagePurpose==='Screenshot';
  const background=game.cachedPosterImage||game.posterImage||
   (game.detailImagePurpose==='SuperHeroArt'||game.detailImagePurpose==='TitledHeroArt'?
    (game.cachedDetailImage||game.detailImage):undefined);
@@ -56,7 +58,7 @@ function MythicPosterCard({entry,profile,index,total,active,opening}:{
  return <article className={'mythic-poster'+(active?' is-active':'')+(opening?' is-opening':'')} data-poster-game={game.id}
   aria-label={game.name+' Mythic 纪念卡'}>
   <div className={'mythic-poster-backdrop'+(background?' has-promotional-art':'')}
-   data-art-source={game.posterImage?'store-poster':background?'store-hero':'no-promotional-art'}
+   data-art-source={screenshot&&game.posterImage?'store-screenshot':game.posterImage?'store-poster':background?'store-hero':'no-promotional-art'}
    style={background?{backgroundImage:`url("${background.replaceAll('"','%22')}")`}:undefined}/>
   <div className="mythic-poster-backdrop-shade"/>
   <OrnateBorder/>
