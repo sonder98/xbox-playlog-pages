@@ -145,7 +145,7 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
  const single=!allowNavigation&&initialGameId!==null&&initialGameId!==undefined;
  const initial=Math.max(0,posters.findIndex(p=>p.game.id===initialGameId));
  const [index,setIndex]=useState(initial);
- const [phase,setPhase]=useState<'entering'|'idle'|'flying-out'|'fading-out'>(()=>
+ const [phase,setPhase]=useState<'entering'|'revealing'|'idle'|'flying-out'|'fading-out'>(()=>
   flightOrigin&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches?'entering':'idle');
  const wallRef=useRef<HTMLDivElement>(null);
  const exitCleanup=useRef<(()=>void)|null>(null);
@@ -159,7 +159,7 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
   const chosen=posters[initial];
   return flyMythicIn(flightOrigin,target,
    chosen?prepareMythicPoster(chosen,profile):Promise.resolve(),
-   ()=>setPhase('idle'));
+   ()=>setPhase('revealing'),()=>setPhase('idle'));
  // Initial geometry only; later swipes keep the poster in place.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[]);
