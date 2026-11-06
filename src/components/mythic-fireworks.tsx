@@ -1,95 +1,83 @@
 import {useEffect,useRef} from 'react';
 
-type Particle={x:number;y:number;vx:number;vy:number;turn:number;spin:number;size:number;life:number;maxLife:number;color:string;paper:boolean};
-const palette=['#ffe9aa','#f9c363','#ffffff','#f2cd8c','#b9fb84','#e8ad60','#d9dfdd','#9cc7dd','#e0b6a5'];
-
-/** Opening-only radial firework bursts: fast outward explosion, gravity and falling confetti.
- * No image/video download and no work after the wall is dismissed or first card is changed.
+/** Closely follows the 9.47s reference video: brief gold flash, small
+ * foil fragments bursting from both card edges, gravity and lingering glitter.
+ * No oversized shockwaves or regular radial star explosions.
  */
+type Piece={x:number;y:number;vx:number;vy:number;angle:number;spin:number;w:number;h:number;age:number;ttl:number;color:string;glint:boolean;seed:number};
+const gold=['#efd49c','#e8bd72','#fff0bf','#c7a36f','#fffaf0'];
+const color=['#b2dff0','#e9a0a2','#8ae3ad','#b0bdea'];
+const volleys=[
+ {at:.24,side:-1,y:.20,n:52},{at:.36,side:1,y:.27,n:60},
+ {at:.66,side:-1,y:.50,n:33},{at:.95,side:1,y:.51,n:33},
+ {at:1.24,side:-1,y:.69,n:24},{at:1.52,side:1,y:.65,n:22}
+];
+const rand=(v:number)=>{const n=Math.sin(v*127.137+78.41)*43832.345;return n-Math.floor(n)};
 export function MythicOpeningFireworks(){
  const ref=useRef<HTMLCanvasElement>(null);
  useEffect(()=>{
-  const canvas=ref.current,context=canvas?.getContext('2d',{alpha:true});
-  if(!canvas||!context)return;
+  const canvas=ref.current,ctx=canvas?.getContext('2d',{alpha:true});
+  if(!canvas||!ctx)return;
   const host=canvas.parentElement;
-  const started=performance.now();
-  let frame=0,width=0,height=0,dpr=1,previous=started,next=0;
-  let particles:Particle[]=[];
-  const events=[
-   {time:.04,rx:.17,ry:.30,n:60},{time:.24,rx:.83,ry:.24,n:66},
-   {time:.57,rx:.5,ry:.14,n:72},{time:.92,rx:.12,ry:.49,n:52},
-   {time:1.24,rx:.87,ry:.48,n:53}
-  ];
-  let anchors:{x:number;y:number}[]=[];
-  function layout(){
+  let raf=0,last=performance.now(),start=last,next=0;
+  let width=1,height=1,scale=1,pieces:Piece[]=[];
+  function resize(){
    width=host?.clientWidth||innerWidth;height=host?.clientHeight||innerHeight;
-   dpr=Math.min(2,devicePixelRatio||1);
-   canvas!.width=Math.round(width*dpr);canvas!.height=Math.round(height*dpr);
+   scale=Math.min(devicePixelRatio||1,2);
+   canvas!.width=Math.round(width*scale);canvas!.height=Math.round(height*scale);
    canvas!.style.width=width+'px';canvas!.style.height=height+'px';
-   context!.setTransform(dpr,0,0,dpr,0,0);
-   const r=host?.querySelector('.mythic-poster.is-active')?.getBoundingClientRect();
-   const outer=host?.getBoundingClientRect();
-   anchors=events.map(({rx,ry})=>({
-    x:r&&outer?r.left-outer.left+r.width*rx:width*rx,
-    y:r&&outer?r.top-outer.top+r.height*ry:height*ry
-   }));
+   ctx!.setTransform(scale,0,0,scale,0,0);
   }
-  layout();
-  const rand=(seed:number)=>{const value=Math.sin(seed*127.1+119.77)*43758.5453;return value-Math.floor(value);};
-  const burst=(event:number)=>{
-   const origin=anchors[event],count=events[event].n;
-   for(let i=0;i<count;i++){
-    const seed=event*113+i*1.87;
-    const angle=2*Math.PI*((i+.12*rand(seed+1))/count);
-    const speed=(105+320*rand(seed+3))*(i%7===0?.75:1);
-    const size=2+6*rand(seed+5);
-    particles.push({
-     x:origin.x,y:origin.y,vx:Math.cos(angle)*speed,
-     vy:Math.sin(angle)*speed-50,
-     turn:rand(seed+7)*Math.PI,spin:rand(seed+8)*9-4.5,
-     size,life:1.9+1.7*rand(seed+9),maxLife:1.9+1.7*rand(seed+9),
-     color:palette[(i+event*2)%palette.length],paper:i%3===0
+  resize();
+  function emit(i:number){
+   const e=volleys[i],poster=host?.querySelector('.mythic-poster.is-active')?.getBoundingClientRect();
+   const frame=host?.getBoundingClientRect();
+   const left=poster&&frame?poster.left-frame.left:width*.18;
+   const right=poster&&frame?poster.right-frame.left:width*.82;
+   const y=(poster&&frame?poster.top-frame.top:height*.1)+(poster?.height||height*.7)*e.y;
+   for(let j=0;j<e.n;j++){
+    const seed=j+i*107.4,angle=(e.side===-1?0:Math.PI)+(rand(seed+2)-.5)*2.1;
+    const speed=80+rand(seed+5)*210,glint=j%9===0;
+    pieces.push({
+     x:(e.side===-1?left+7:right-7)+(rand(seed+9)-.5)*22,
+     y:y+(rand(seed+11)-.5)*27,
+     vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-40-rand(seed+19)*120,
+     angle:rand(seed+12)*6.28,spin:(rand(seed+7)-.5)*11,
+     w:glint?1.3+rand(seed+6)*1.7:2+rand(seed+15)*3,
+     h:glint?2.3:3+rand(seed+24)*6,
+     age:0,ttl:1.45+rand(seed+29)*2,
+     color:glint?'#ffdfa3':j%5===0?color[Math.floor(rand(seed+34)*color.length)]:gold[Math.floor(rand(seed+45)*gold.length)],
+     glint,seed
     });
    }
-  };
-  function draw(now:number){
-   const elapsed=(now-started)/1000,dt=Math.min((now-previous)/1000,.035);previous=now;
-   context!.clearRect(0,0,width,height);
-   while(next<events.length&&elapsed>=events[next].time){burst(next);next++;}
-   // Bright circular shock waves clearly establish an explosive, radial launch.
-   events.forEach((event,i)=>{
-    const age=elapsed-event.time;
-    if(age<0||age>.6)return;
-    const pos=anchors[i];
-    context!.beginPath();context!.arc(pos.x,pos.y,5+age*210,0,Math.PI*2);
-    context!.strokeStyle='rgba(255,227,151,'+(.48*(1-age/.6)).toFixed(3)+')';
-    context!.lineWidth=2.3*(1-age/.6)+.5;context!.stroke();
-    context!.beginPath();context!.arc(pos.x,pos.y,Math.max(0,35-age*35),0,Math.PI*2);
-    context!.fillStyle='rgba(255,244,195,'+(.17*(1-age/.6)).toFixed(3)+')';
-    context!.fill();
-   });
-   particles=particles.filter(p=>p.life>0);
-   for(const p of particles){
-    p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;
-    p.vx*=Math.pow(.991,dt*60);p.vy+=240*dt;p.turn+=p.spin*dt;
-    const opacity=Math.min(1,p.life/.6,(p.maxLife-p.life)*8);
-    context!.globalAlpha=Math.max(0,opacity);
-    context!.save();context!.translate(p.x,p.y);context!.rotate(p.turn);
-    context!.fillStyle=p.color;
-    if(p.paper){context!.fillRect(-p.size/2,-p.size/2,p.size,p.size*1.85);}
-    else{
-     context!.fillRect(-p.size*.25,-p.size*1.8,p.size*.5,p.size*3.6);
-     context!.fillRect(-p.size*1.8,-p.size*.25,p.size*3.6,p.size*.5);
-    }
-    context!.restore();
-   }
-   context!.globalAlpha=1;
-   if(elapsed<4.25)frame=requestAnimationFrame(draw);
-   else context!.clearRect(0,0,width,height);
   }
-  frame=requestAnimationFrame(draw);
-  addEventListener('resize',layout,{passive:true});
-  return()=>{cancelAnimationFrame(frame);removeEventListener('resize',layout);context.clearRect(0,0,width,height);};
+  function draw(now:number){
+   const t=(now-start)/1000,dt=Math.min(.035,(now-last)/1000);last=now;
+   ctx!.clearRect(0,0,width,height);
+   while(next<volleys.length&&t>=volleys[next].at){emit(next);next++;}
+   pieces=pieces.filter(p=>p.age<p.ttl);
+   for(const p of pieces){
+    p.age+=dt;p.x+=(p.vx+Math.sin(p.age*5+p.seed)*12)*dt;p.y+=p.vy*dt;
+    p.vy+=175*dt;p.vx*=Math.pow(.984,dt*60);p.angle+=p.spin*dt;
+    ctx!.save();
+    ctx!.globalAlpha=Math.max(0,Math.min(1,p.age*10,(p.ttl-p.age)/.52))*.87;
+    ctx!.translate(p.x,p.y);ctx!.rotate(p.angle);ctx!.fillStyle=p.color;
+    if(p.glint){
+     ctx!.fillRect(-.6,-p.h*1.75,1.2,p.h*3.5);
+     ctx!.fillRect(-p.h*1.75,-.6,p.h*3.5,1.2);
+    }else{
+     const edge=.28+.72*Math.abs(Math.cos(p.angle*.75));
+     ctx!.fillRect(-p.w/2,-p.h/2,p.w*edge,p.h);
+    }
+    ctx!.restore();
+   }
+   ctx!.globalAlpha=1;
+   if(t<4.25)raf=requestAnimationFrame(draw);
+   else ctx!.clearRect(0,0,width,height);
+  }
+  raf=requestAnimationFrame(draw);
+  addEventListener('resize',resize,{passive:true});
+  return()=>{cancelAnimationFrame(raf);removeEventListener('resize',resize);ctx.clearRect(0,0,width,height)};
  },[]);
  return <canvas ref={ref} className="mythic-wall-fireworks" aria-hidden="true"/>;
 }
