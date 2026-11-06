@@ -3558,6 +3558,8 @@ footer .dot {
  background:linear-gradient(90deg,transparent,#bca6789c,transparent);
 }
 .mythic-poster-type-placeholder i:last-child{width:49%;opacity:.48}
+.mythic-poster.is-type-loading .mythic-poster-stars span,
+.mythic-poster.is-type-loading .mythic-poster-shimmer{animation-play-state:paused}
 @media(prefers-reduced-motion:reduce){
  .mythic-poster-backdrop,.mythic-poster-portrait img,.mythic-poster-avatar,
  .mythic-poster-achievement-art img,.mythic-badge-art img{transition:none}
