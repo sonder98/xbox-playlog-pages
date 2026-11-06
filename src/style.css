@@ -3181,11 +3181,12 @@ footer .dot {
  box-shadow:0 0 0 1px #a07a46,0 0 0 3px #171711,0 18px 80px #000b,0 0 40px #ac85452d;}
 .mythic-poster-backdrop{position:absolute;inset:0 0 auto;z-index:-4;height:47.5%;
  background-position:center 38%;background-size:cover;background-repeat:no-repeat;
- background-color:transparent;
+ background-color:transparent;opacity:0;transition:opacity .35s ease-out;
  /* First Store screenshot fills the entire cinematic zone and softly dissolves
     just above the greeting, rather than ending after its native 16:9 height. */
  -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 60%,rgba(0,0,0,.78) 78%,transparent 100%);
  mask-image:linear-gradient(to bottom,#000 0%,#000 60%,rgba(0,0,0,.78) 78%,transparent 100%);}
+.mythic-poster-backdrop.is-loaded{opacity:1}
 .mythic-poster-backdrop-shade{position:absolute;inset:0;z-index:-3;
  background:linear-gradient(180deg,rgba(4,10,9,.24) 0%,rgba(4,10,9,.06) 16%,rgba(4,9,8,.17) 28%,rgba(3,9,8,.60) 37%,#030a08 48%,#030907 59%,#030907 100%),
  linear-gradient(90deg,rgba(5,12,9,.22),transparent 50%,rgba(4,10,9,.21));}
@@ -3197,10 +3198,16 @@ footer .dot {
 .mythic-poster-portrait{position:absolute;top:8.5%;left:50%;transform:translateX(-50%);width:34.5%;aspect-ratio:1;
  border-radius:50%;overflow:hidden;display:grid;place-items:center;border:4px solid #dfc587;
  box-shadow:0 0 0 4px #2a2b21,0 0 0 6px #c39a52,0 0 24px #e7c7796b;background:#172320;z-index:2;}
-.mythic-poster-portrait img{height:100%;width:100%;object-fit:cover;}
+.mythic-poster-portrait img{
+ position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;
+ opacity:0;transition:opacity .22s ease-out;
+}
+.mythic-poster-portrait img.is-loaded{opacity:1}
+.mythic-poster-portrait .mythic-poster-image-placeholder{position:absolute;max-width:55%;max-height:55%}
 .mythic-poster-emblem{display:flex;align-items:center;justify-content:center;color:#b3ffa2;background:#12311e;
  border:2px solid #bca267;box-shadow:0 0 0 3px #243721,0 0 28px #c5dc9a6b;
- border-radius:50%;width:22%;aspect-ratio:1;position:absolute;top:24.5%;left:50%;transform:translateX(-50%);z-index:3;}
+ border-radius:50%;width:22cqw;height:22cqw;min-width:0;min-height:0;aspect-ratio:1/1;
+ position:absolute;top:24.5%;left:50%;transform:translateX(-50%);z-index:3;}
 .mythic-poster-emblem img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:50%;}
 .mythic-poster-congratulations{position:absolute;left:13%;right:13%;top:38.6%;
  display:flex;justify-content:center;align-items:center;gap:8px;text-align:center;
@@ -3217,7 +3224,16 @@ footer .dot {
  background:linear-gradient(110deg,#1c2524dc,#131916ec);border-radius:12px;
  display:flex;align-items:center;justify-content:center;gap:12px;padding:5px 14px;}
 .mythic-poster-player strong{font-size:4.4cqw;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.mythic-poster-avatar{height:70%;max-height:36px;aspect-ratio:1;border-radius:50%;object-fit:cover;border:1px solid #dfc47b;}
+.mythic-poster-avatar-frame{
+ position:relative;display:grid;place-items:center;width:36px;height:36px;
+ flex:0 0 36px;border:1px solid #dfc47b;border-radius:50%;overflow:hidden;
+ background:#1b332e;color:#e4cc90;
+}
+.mythic-poster-avatar{
+ position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
+ opacity:0;transition:opacity .2s ease-out;
+}
+.mythic-poster-avatar.is-loaded{opacity:1}
 .mythic-poster-achievement-pair{position:absolute;top:63.95%;left:7.5%;right:7.5%;height:17.3%;
  background:#080e0fbd;border:1px solid #7567487d;border-radius:13px;display:grid;grid-template-columns:1fr 18px 1fr;
  align-items:center;justify-items:center;padding:7px 5px;gap:4px;}
@@ -3225,7 +3241,12 @@ footer .dot {
  text-align:center;font-size:3.3cqw;font-variant-numeric:tabular-nums;}
 .mythic-poster-achievement-art{display:grid;place-items:center;width:36%;min-width:35px;max-width:52px;aspect-ratio:1;
  border:1.5px solid #d8ae6c;border-radius:10px;overflow:hidden;background:#0a1714;color:#e7cc87;margin-bottom:2px;}
-.mythic-poster-achievement-art img{width:100%;height:100%;object-fit:cover;}
+.mythic-poster-achievement-art{position:relative}
+.mythic-poster-achievement-art img{
+ position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;
+ opacity:0;transition:opacity .22s ease-out;
+}
+.mythic-poster-achievement-art img.is-loaded{opacity:1}
 .mythic-poster-achievement small{font-size:2.8cqw;color:#baad91;white-space:nowrap;}
 .mythic-poster-achievement:nth-child(3) small{color:#e9d29a;}
 .mythic-poster-achievement b{font-size:3.55cqw;line-height:1.25;font-weight:650;white-space:nowrap;}
@@ -3457,14 +3478,16 @@ footer .dot {
    official external Mythic badge has fully loaded; a failing CDN never blanks it. */
 .mythic-badge-art{
  display:grid;place-items:center;position:relative;width:100%;height:100%;
+ aspect-ratio:1/1;min-width:0;min-height:0;
  flex:0 0 auto;overflow:hidden;border-radius:50%;
  color:#effff1;background:radial-gradient(circle at 38% 28%,#cceeff,#4b9fdc 42%,#19466f 72%,#112f43 100%);
  box-shadow:inset 0 0 0 1px #f4d49c8c,inset 0 -5px 11px #0d183a70;
 }
 .mythic-badge-art .mythic-badge-placeholder{position:relative;z-index:0;filter:drop-shadow(0 1px 3px #123b5a)}
 .mythic-badge-art img{
- position:absolute;inset:0;width:100%;height:100%;
- object-fit:contain;opacity:0;transition:opacity .16s ease-in;
+ position:absolute;inset:0;display:block;width:100%;height:100%;
+ object-fit:contain;object-position:50% 50%;
+ opacity:0;transition:opacity .16s ease-in;
 }
 .mythic-badge-art img.is-ready{opacity:1}
 .game-detail .detail-summary .detail-mythic-trigger{
@@ -3512,4 +3535,32 @@ footer .dot {
 }
 @media(prefers-reduced-motion:reduce){
  .mythic-poster-stars span,.mythic-poster-shimmer{animation:none;opacity:0}
+}
+
+/* All collectible media lives in fixed-ratio frames. They decode offscreen and
+   crossfade in, never changing text or medal coordinates during a slow fetch. */
+.mythic-poster.is-type-loading .mythic-poster-caption,
+.mythic-poster.is-type-loading .mythic-poster-congratulations,
+.mythic-poster.is-type-loading .mythic-poster-title,
+.mythic-poster.is-type-loading .mythic-poster-player > *,
+.mythic-poster.is-type-loading .mythic-poster-achievement small,
+.mythic-poster.is-type-loading .mythic-poster-achievement b,
+.mythic-poster.is-type-loading .mythic-poster-achievement > span:last-child,
+.mythic-poster.is-type-loading .mythic-poster-stats,
+.mythic-poster.is-type-loading .mythic-poster-footer{visibility:hidden}
+.mythic-poster-type-placeholder{
+ position:absolute;top:44.3%;height:8%;left:19%;right:19%;z-index:4;
+ display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;
+ pointer-events:none;
+}
+.mythic-poster-type-placeholder i{
+ display:block;width:73%;height:5px;border-radius:20px;
+ background:linear-gradient(90deg,transparent,#bca6789c,transparent);
+}
+.mythic-poster-type-placeholder i:last-child{width:49%;opacity:.48}
+.mythic-poster.is-type-loading .mythic-poster-stars span,
+.mythic-poster.is-type-loading .mythic-poster-shimmer{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){
+ .mythic-poster-backdrop,.mythic-poster-portrait img,.mythic-poster-avatar,
+ .mythic-poster-achievement-art img,.mythic-badge-art img{transition:none}
 }

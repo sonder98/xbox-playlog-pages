@@ -4,21 +4,33 @@ import type {Profile,Game,Achievement} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {posterLocalDate} from '../mythic-posters';
 import {MythicBadgeArt} from './mythic-badge';
+import {mythicBackdrop,mythicCover,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
 import {MythicOpeningFireworks} from './mythic-fireworks';
 
 const GOLD='#e6c47b';
+function useDecodedArt(url:string|undefined){
+ const [ready,setReady]=useState(false);
+ useEffect(()=>{
+  let active=true;setReady(false);
+  if(url)void warmMythicImage(url).then(ok=>{if(active)setReady(ok);});
+  return()=>{active=false;};
+ },[url]);
+ return [ready,()=>setReady(true)] as const;
+}
 function MythicEmblem({className=''}:{className?:string}){
  return <span className={'mythic-poster-emblem '+className} aria-label="Mythic 徽章">
   <MythicBadgeArt/>
  </span>;
 }
-function MomentArt({achievement}:{achievement:Achievement|null}){
+function MomentArt({achievement,active}:{achievement:Achievement|null;active:boolean}){
  const [failed,setFailed]=useState(false);
  useEffect(()=>setFailed(false),[achievement?.id]);
  const image=achievement?.cachedImage||achievement?.image;
+ const [ready,onLoaded]=useDecodedArt(image);
  return <span className="mythic-poster-achievement-art">
-  {image&&!failed?<img src={image} alt="" loading="lazy" onError={()=>setFailed(true)}/>:
-  <Sparkles size={25} strokeWidth={1.3} aria-hidden="true"/>}
+  <Sparkles size={25} strokeWidth={1.3} aria-hidden="true"/>
+  {image&&!failed&&<img src={image} alt="" loading={active?'eager':'lazy'} decoding="async"
+   className={ready?'is-loaded':''} onLoad={onLoaded} onError={()=>setFailed(true)}/>}
  </span>;
 }
 function OrnateBorder(){
@@ -40,8 +52,8 @@ function OrnateBorder(){
   </g>
  </svg>;
 }
-function MythicPosterCard({entry,profile,index,total,active,opening}:{
- entry:MythicPoster;profile:Profile;index:number;total:number;active:boolean;opening:boolean;
+function MythicPosterCard({entry,profile,index,total,active,opening,fontReady}:{
+ entry:MythicPoster;profile:Profile;index:number;total:number;active:boolean;opening:boolean;fontReady:boolean;
 }){
  const {game,firstAt,mythicAt,firstAchievement,lastBaseAchievement,daysToMythic,baseTotal}=entry;
  const first=posterLocalDate(firstAt),finish=posterLocalDate(mythicAt);
@@ -49,13 +61,14 @@ function MythicPosterCard({entry,profile,index,total,active,opening}:{
  // Older snapshots and titles without screenshots may fall back to wide Store art.
  // Never stretch a square library cover into this area.
  const screenshot=game.posterImagePurpose==='Screenshot';
- const background=game.cachedPosterImage||game.posterImage||
-  (game.detailImagePurpose==='SuperHeroArt'||game.detailImagePurpose==='TitledHeroArt'?
-   (game.cachedDetailImage||game.detailImage):undefined);
- const cover=game.cachedImageLarge||game.cachedImage||game.image3x||game.image2x||game.image;
- return <article className={'mythic-poster'+(active?' is-active':'')+(opening?' is-opening':'')} data-poster-game={game.id}
+ const background=mythicBackdrop(game);
+ const cover=mythicCover(game);
+ const [backdropReady]=useDecodedArt(background);
+ const [coverReady,onCoverLoaded]=useDecodedArt(cover);
+ const [avatarReady,onAvatarLoaded]=useDecodedArt(profile.avatar);
+ return <article className={'mythic-poster'+(active?' is-active':'')+(opening?' is-opening':'')+(!fontReady?' is-type-loading':'')} data-poster-game={game.id}
   aria-label={game.name+' Mythic 纪念卡'}>
-  <div className={'mythic-poster-backdrop'+(background?' has-promotional-art':'')}
+  <div className={'mythic-poster-backdrop'+(background?' has-promotional-art':'')+(backdropReady?' is-loaded':'')}
    data-art-source={screenshot&&game.posterImage?'store-screenshot':game.posterImage?'store-poster':background?'store-hero':'no-promotional-art'}
    style={background?{backgroundImage:`url("${background.replaceAll('"','%22')}")`}:undefined}/>
   <div className="mythic-poster-backdrop-shade"/>
@@ -65,7 +78,10 @@ function MythicPosterCard({entry,profile,index,total,active,opening}:{
   </div>
   <header className="mythic-poster-caption"><span>MYTHIC</span><span>NO. {String(total-index).padStart(3,'0')}</span></header>
   <div className="mythic-poster-portrait">
-   {cover?<img src={cover} alt="" loading={active?'eager':'lazy'} decoding="async"/>:<Sparkles size={54} color={GOLD}/>}
+   <Sparkles className="mythic-poster-image-placeholder" size={54} color={GOLD}/>
+   {cover&&<img src={cover} alt="" width={256} height={256} loading={active?'eager':'lazy'}
+    fetchPriority={active?'high':'auto'} decoding="async" className={coverReady?'is-loaded':''}
+    onLoad={onCoverLoaded}/>}
   </div>
   <MythicEmblem/>
   <div className="mythic-poster-congratulations">
@@ -75,20 +91,23 @@ function MythicPosterCard({entry,profile,index,total,active,opening}:{
   </div>
   <h2 className="mythic-poster-title">{game.name}</h2>
   <div className="mythic-poster-player">
-   {profile.avatar?<img src={profile.avatar} alt="" className="mythic-poster-avatar"/>:
-    <CircleUserRound size={33} color={GOLD} aria-hidden="true"/>}
+   {profile.avatar?<span className="mythic-poster-avatar-frame">
+    <CircleUserRound size={24} color={GOLD} aria-hidden="true"/>
+    <img src={profile.avatar} alt="" className={'mythic-poster-avatar'+(avatarReady?' is-loaded':'')}
+     width={36} height={36} decoding="async" onLoad={onAvatarLoaded}/>
+   </span>:<CircleUserRound size={33} color={GOLD} aria-hidden="true"/>}
    <strong>{profile.gamertag||'Xbox 玩家'}</strong>
   </div>
   <div className="mythic-poster-achievement-pair">
    <div className="mythic-poster-achievement">
-    <MomentArt achievement={firstAchievement}/>
+    <MomentArt achievement={firstAchievement} active={active}/>
     <small>首项成就</small>
     <b>{first.date}</b>
     <span>{first.time}</span>
    </div>
    <span className="mythic-poster-bridge" aria-hidden="true">✦</span>
    <div className="mythic-poster-achievement">
-    <MomentArt achievement={lastBaseAchievement}/>
+    <MomentArt achievement={lastBaseAchievement} active={active}/>
     <small>Mythic 达成</small>
     <b>{finish.date}</b>
     <span>{finish.time}</span>
@@ -106,6 +125,7 @@ function MythicPosterCard({entry,profile,index,total,active,opening}:{
   <div className="mythic-poster-gamepad" aria-hidden="true">
    <span>A</span><span>B</span><span>X</span><span>Y</span>
   </div>
+  {!fontReady&&<div className="mythic-poster-type-placeholder" aria-hidden="true"><i/><i/></div>}
   <div className="mythic-poster-shimmer" aria-hidden="true"/>
   {opening&&<div className="mythic-poster-opening-glint" aria-hidden="true"/>}
  </article>;
@@ -117,6 +137,16 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
  const single=initialGameId!==null&&initialGameId!==undefined;
  const initial=Math.max(0,posters.findIndex(p=>p.game.id===initialGameId));
  const [index,setIndex]=useState(initial);
+ const [fontReady,setFontReady]=useState(false);
+ useEffect(()=>{
+  let mounted=true;
+  void warmMythicFonts().then(()=>{if(mounted)setFontReady(true);});
+  return()=>{mounted=false;};
+ },[]);
+ useEffect(()=>{
+  for(let i=Math.max(0,index-1);i<=Math.min(posters.length-1,index+1);i++)
+   warmMythicPoster(posters[i],profile);
+ },[index,posters,profile]);
  const [celebrate,setCelebrate]=useState(()=>!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
  const touchStart=useRef<{x:number;y:number}|null>(null);
  const dismiss=useRef(onClose);dismiss.current=onClose;
@@ -132,10 +162,10 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
   return()=>{document.removeEventListener('keydown',onKey);document.body.style.overflow=previous;focused?.focus({preventScroll:true});};
  },[posters.length,single]);
  useEffect(()=>{
-  if(!celebrate)return;
+  if(!celebrate||!fontReady)return;
   const timeout=window.setTimeout(()=>setCelebrate(false),4200);
   return()=>window.clearTimeout(timeout);
- },[celebrate]);
+ },[celebrate,fontReady]);
  // Once the first card is left, the celebration does not replay on any swipe.
  useEffect(()=>{if(index!==initial)setCelebrate(false);},[index,initial]);
  const visiblePosters=useMemo(()=>posters.map((entry,i)=>({entry,i,visible:single?i===initial:Math.abs(i-index)<=1}))
@@ -165,7 +195,7 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
     {visiblePosters.map(({entry,i,visible})=><div className="mythic-wall-slide" key={entry.game.id}
      aria-hidden={index!==i}>
      {visible&&<MythicPosterCard entry={entry} profile={profile} index={i} total={posters.length}
-      active={i===index} opening={i===initial&&celebrate}/>} 
+      active={i===index} opening={i===initial&&celebrate&&fontReady} fontReady={fontReady}/>} 
     </div>)}
    </div>
   </div>
@@ -176,6 +206,6 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
    <button type="button" onClick={()=>{setCelebrate(false);setIndex(i=>Math.min(posters.length-1,i+1));}}
     disabled={index===posters.length-1} aria-label="下一张Mythic纪念卡"><ChevronRight size={22}/></button>
   </nav>}
-  {celebrate&&index===initial&&<MythicOpeningFireworks/>}
+  {celebrate&&fontReady&&index===initial&&<MythicOpeningFireworks/>}
  </div>;
 }

@@ -5,6 +5,7 @@ import {compareRecords,officialGameVisible,type Game,type RecordData} from './da
 import {GameCard,GameCover,GameDetail,Modal} from './components/game';
 import {MythicPosterWall} from './components/mythic-wall';
 import {mythicPosterWall} from './mythic-posters';
+import {warmMythicFonts,warmMythicPoster} from './mythic-assets';
 import {RecentGamesRail} from './components/recent-games';
 import {DustyPreview,DustyDetails} from './components/dusty-games';
 import {rankDustyGames} from './dusty-games';
@@ -105,6 +106,16 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  const hiddenCount=officialAvailableGames.length-displayGames.length;
  const mythicPosters=useMemo(()=>mythicPosterWall((current?.games||[]).filter(g=>
   officialGameVisible(g,current?.source||'')&&!hiddenIds.includes(g.id))),[current,hiddenIds]);
+ useEffect(()=>{
+  if(!current||!mythicPosters.length)return;
+  // Start downloading collectible fonts and only the first two posters when
+  // the unlocked vault arrives, not at the moment the user taps Open.
+  void warmMythicFonts();
+  for(const poster of mythicPosters.slice(0,2))warmMythicPoster(poster,current.profile);
+  // The details page can open any Mythic, not just the latest on the wall.
+  const selectedPoster=mythicPosters.find(p=>p.game.id===selected?.id);
+  if(selectedPoster)warmMythicPoster(selectedPoster,current.profile);
+ },[mythicPosters,current?.profile,selected?.id]);
  const managementGames=officialAvailableGames.filter(g=>g.name.toLowerCase().includes(displayQuery.trim().toLowerCase())&&(!onlyHidden||draftHidden.includes(g.id)));
  function openDisplayManager(){setDisplayError('');setDraftHidden([...hiddenIds]);setDisplayQuery('');setOnlyHidden(false);setManageDisplay(true);}
  async function saveDisplay(){setSavingDisplay(true);setDisplayError('');try{const saved=await api('/api/display-preferences',{hiddenGameIds:draftHidden});setHiddenIds(saved.hiddenGameIds);setManageDisplay(false);setNotice('游戏库显示设置已保存。');}catch(e){setDisplayError('显示设置保存失败：'+(e as Error).message);}finally{setSavingDisplay(false);}}
