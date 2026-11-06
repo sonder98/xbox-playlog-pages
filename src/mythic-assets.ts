@@ -24,7 +24,9 @@ export function mythicBackdrop(game:Game){
    game.cachedDetailImage||game.detailImage:undefined);
 }
 export function mythicCover(game:Game){
- return game.cachedImageLarge||game.cachedImage||game.image3x||game.image2x||game.image;
+ // The circular art is at most 141 CSS pixels wide; the existing 480px WebP
+ // is sharp even on 3x screens and usually far smaller than the 1600px variant.
+ return game.cachedImage||game.cachedImageLarge||game.image3x||game.image2x||game.image;
 }
 export function warmMythicPoster(entry:MythicPoster,profile:Profile){
  const images=[mythicBackdrop(entry.game),mythicCover(entry.game),
