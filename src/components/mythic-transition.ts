@@ -61,6 +61,7 @@ export function flyMythicIn(
  let animation:Animation|null=null;
  const source=origin.element;
  const previousSourceVisibility=source.style.visibility;
+ const clearTap=()=>source.classList.remove('is-primed');
  const previousTargetVisibility=target.style.visibility;
  const previousTargetOpacity=target.style.opacity;
  let completed=false;
@@ -71,15 +72,17 @@ export function flyMythicIn(
  const run=async()=>{
   await waitForPaintedPoster(target,ready);
   if(cancelled)return;
-  if(reducedMotion()){revealAndFinish();return;}
+  if(reducedMotion()){clearTap();revealAndFinish();return;}
   const finalRect=target.getBoundingClientRect();
   if(!finalRect.width||!finalRect.height){revealAndFinish();return;}
   // Switch from the thumbnail to the *complete* fullscreen card at exactly
   // the source rectangle, then transform only this ONE painted DOM surface.
   source.style.visibility='hidden';
+  clearTap();
   target.style.visibility='visible';
   target.style.opacity='1';
   target.style.willChange='transform';
+  target.dataset.openDelayMs=String(Math.round(performance.now()-Number(source.dataset.openClickedAt||performance.now())));
   animation=target.animate([
    {transform:scaledTransform(origin.rect,finalRect)},
    {transform:'translate3d(0,0,0) scale(1)'}
@@ -98,6 +101,7 @@ export function flyMythicIn(
  void run();
  return ()=>{
   cancelled=true;
+  clearTap();
   animation?.cancel();
   if(!completed){
    source.style.visibility=previousSourceVisibility;

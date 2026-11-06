@@ -1,25 +1,32 @@
-import {useEffect,type MouseEvent} from 'react';
+import {useEffect,useRef,type MouseEvent} from 'react';
 import type {MythicFlightOrigin} from './mythic-transition';
 import {ArrowLeft,ArrowUpRight,CircleUserRound,Diamond,Sparkles} from 'lucide-react';
 import type {Profile} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {MYTHIC_BADGE_URL,posterLocalDate} from '../mythic-posters';
-import {mythicBackdrop,mythicCover} from '../mythic-assets';
+import {mythicBackdrop,mythicCover,prepareMythicPoster,warmMythicFonts} from '../mythic-assets';
 
-function CollectionPreview({entry,profile,index,total,onOpen}:{
- entry:MythicPoster;profile:Profile;index:number;total:number;onOpen:(origin:MythicFlightOrigin)=>void;
+function CollectionPreview({entry,profile,index,total,onOpen,onPrefetch}:{
+ entry:MythicPoster;profile:Profile;index:number;total:number;
+ onOpen:(origin:MythicFlightOrigin)=>void;onPrefetch:()=>void;
 }){
  const {game,firstAt,mythicAt,firstAchievement,lastBaseAchievement,daysToMythic,baseTotal}=entry;
  const background=mythicBackdrop(game),cover=mythicCover(game);
  const first=posterLocalDate(firstAt),finish=posterLocalDate(mythicAt);
  function expand(event:MouseEvent<HTMLButtonElement>){
   const card=event.currentTarget.querySelector<HTMLElement>('.mythic-showcase-poster');
-  if(card)onOpen({element:card,rect:card.getBoundingClientRect()});
+  if(card){
+   const rect=card.getBoundingClientRect();
+   card.classList.add('is-primed');
+   card.dataset.openClickedAt=String(performance.now());
+   onOpen({element:card,rect});
+  }
  }
  const firstArt=firstAchievement?.cachedImage||firstAchievement?.image;
  const lastArt=lastBaseAchievement?.cachedImage||lastBaseAchievement?.image;
  return <button type="button" className="mythic-showcase-item" data-showcase-game={game.id}
-  aria-label={`放大 ${game.name} 纪念卡`} onClick={expand}>
+  aria-label={`放大 ${game.name} 纪念卡`} onClick={expand}
+  onPointerEnter={onPrefetch} onFocus={onPrefetch} onPointerDown={onPrefetch}>
   <div className="mythic-showcase-seat">
    <div className="mythic-showcase-poster">
     {background&&<img className="mythic-showcase-backdrop" src={background} alt="" loading="lazy" decoding="async"/>}
@@ -78,12 +85,43 @@ function CollectionPreview({entry,profile,index,total,onOpen}:{
 export function MythicShowcase({posters,profile,onClose,onOpen}:{
  posters:MythicPoster[];profile:Profile;onClose:()=>void;onOpen:(gameId:string,origin:MythicFlightOrigin)=>void;
 }){
+ const screenRef=useRef<HTMLElement>(null);
  useEffect(()=>{
   const before=document.body.style.overflow;
   document.body.style.overflow='hidden';
   return()=>{document.body.style.overflow=before;};
  },[]);
- return <section className="mythic-showcase-screen" aria-label="Mythic纪念墙展示柜" data-showcase="grid">
+ // Warm exactly what is on screen (and the next nearby row) while the user
+ // browses, so clicking does not begin downloading the full-size card.
+ // Observing the scrolling cabinet avoids preloading the entire collection.
+ useEffect(()=>{
+  const root=screenRef.current;
+  if(!root)return;
+  let active=true;
+  const byId=new Map(posters.map(p=>[p.game.id,p]));
+  const requested=new Set<string>();
+  void warmMythicFonts();
+  const prefetch=(id:string)=>{
+   if(requested.has(id))return;
+   const poster=byId.get(id);
+   if(!poster)return;
+   requested.add(id);
+   void prepareMythicPoster(poster,profile).then(()=>{
+    if(active)root.querySelector<HTMLElement>(
+     '.mythic-showcase-item[data-showcase-game="'+CSS.escape(id)+'"]'
+    )?.setAttribute('data-poster-prepared','true');
+   });
+  };
+  // Preheat the first visible collectibles before the intersection callback.
+  for(const poster of posters.slice(0,2))prefetch(poster.game.id);
+  const observer=new IntersectionObserver(entries=>{
+   for(const entry of entries)
+    if(entry.isIntersecting)prefetch((entry.target as HTMLElement).dataset.showcaseGame||'');
+  },{root,rootMargin:'400px 0px',threshold:0});
+  root.querySelectorAll('.mythic-showcase-item').forEach(el=>observer.observe(el));
+  return()=>{active=false;observer.disconnect();};
+ },[posters,profile]);
+ return <section ref={screenRef} className="mythic-showcase-screen" aria-label="Mythic纪念墙展示柜" data-showcase="grid">
   <div className="mythic-showcase-inner">
    <div className="mythic-showcase-toolbar">
     <button type="button" className="mythic-showcase-back" onClick={onClose}>
@@ -110,7 +148,8 @@ export function MythicShowcase({posters,profile,onClose,onOpen}:{
    <div className="mythic-showcase-grid">
     {posters.map((entry,index)=><CollectionPreview key={entry.game.id}
      entry={entry} profile={profile} index={index} total={posters.length}
-     onOpen={origin=>onOpen(entry.game.id,origin)}/>)}
+     onOpen={origin=>onOpen(entry.game.id,origin)}
+     onPrefetch={()=>{void prepareMythicPoster(entry,profile);}}/>)}
    </div>
    <div className="mythic-showcase-bottom">✧ <span>THE JOURNEY IS THE REWARD</span> ✧</div>
   </div>

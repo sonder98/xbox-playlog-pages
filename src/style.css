@@ -3779,3 +3779,15 @@ footer .dot {
   animation:none;
  }
 }
+
+/* The tap reacts on the already painted thumbnail immediately, even if a
+   never-visited poster is still preparing. The full FLIP begins as soon as
+   the complete poster is ready; warmed cards do so almost at once. */
+.mythic-showcase-poster.is-primed{
+ filter:brightness(1.14);
+ box-shadow:inset 0 0 0 1px #ddbf84,0 0 0 2px #e3bb7377,0 8px 28px #e6bc552c;
+ transition:filter .12s ease-out,box-shadow .12s ease-out;
+}
+@media(prefers-reduced-motion:reduce){
+ .mythic-showcase-poster.is-primed{transition:none}
+}
