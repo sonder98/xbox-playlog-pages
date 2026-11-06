@@ -928,7 +928,7 @@ try{
     assert.ok(posterBottomLayout.padBottom<posterBottomLayout.cardBottom-posterBottomLayout.cardHeight*.018,
       'ABXY controls sit inside the engraved bottom frame instead of overlapping it');
     assert.ok(posterBottomLayout.padTop>=posterBottomLayout.footerBottom-2,
-      'ABXY motifs have their own space below the XBOX Playlog footer');
+      'ABXY motifs have their own space below the XBOX Playlog footer: '+JSON.stringify(posterBottomLayout));
     assert.equal(await posterWall.locator('canvas.mythic-wall-fireworks').count(),1,
       'Only the initial opening creates the radial firework particle canvas');
     const posterBackdrop=posterWall.locator('.mythic-poster.is-active .mythic-poster-backdrop');
