@@ -1,5 +1,5 @@
-import type {Profile,Game} from './data';
-import type {MythicPoster} from './mythic-posters';
+import type {Profile,Game} from './data.ts';
+import type {MythicPoster} from './mythic-posters.ts';
 import {MYTHIC_BADGE_URL} from './mythic-posters';
 
 // Decode each requested image once. The browser HTTP cache handles persistence;
