@@ -3517,7 +3517,7 @@ footer .dot {
 
 /* The old highlight took almost eight seconds to first appear (60% of a 13s
    loop), and the sparse stars waited around five seconds. */
-.mythic-poster-shimmer{animation:mythic-sweep 6.4s ease-in-out infinite}
+.mythic-poster-shimmer{animation:mythic-sweep 4.6s ease-in-out infinite}
 @keyframes mythic-sweep{
  0%,10%{opacity:0;transform:translateX(-110%)}
  19%{opacity:.62;transform:translateX(-30%)}

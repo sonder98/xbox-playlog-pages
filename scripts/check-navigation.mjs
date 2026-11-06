@@ -1168,7 +1168,7 @@ try{
       star:parseFloat(getComputedStyle(el.querySelector('.mythic-poster-stars span')).animationDuration),
       foil:parseFloat(getComputedStyle(el.querySelector('.mythic-poster-shimmer')).animationDuration)
     }));
-    assert.ok(motionDurations.star<4&&motionDurations.foil<7,
+    assert.ok(motionDurations.star<4&&Math.abs(motionDurations.foil-4.6)<.01,
       'Gold shimmer and pinlights should return more frequently than the old 5s / 13s cadence');
     await posterWall.getByRole('button',{name:'上一张Mythic纪念卡'}).click();
     assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'100');
