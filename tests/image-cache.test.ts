@@ -61,7 +61,7 @@ test('wide detail artwork has a separate uncropped WebP cache from the square li
 test('Mythic screenshot album caches each distinct image and keeps returned order, even when one download fails',async()=>{
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'playlog-mythic-gallery-'));
  const urls=['https://store-images.s-microsoft.com/image/one','https://store-images.s-microsoft.com/image/two','https://store-images.s-microsoft.com/image/three'];
- const game={id:'2',name:'Mythic',image:urls[0],posterImage:urls[0],posterScreenshots:urls,posterRotationStartDay:'2026-11-06',
+ const game:RecordData['games'][number]={id:'2',name:'Mythic',image:urls[0],posterImage:urls[0],posterScreenshots:urls,posterRotationStartDay:'2026-11-06',
   devices:[],lastPlayed:null,minutes:0,earned:1,total:1,score:0,maxScore:0};
  const record:RecordData={id:'x',at:new Date().toISOString(),profile:{xuid:'4285437',gamertag:'test',avatar:''},source:'Xbox',warnings:[],games:[game]};
  const bytes=await sharp({create:{width:1280,height:720,channels:3,background:'#445566'}}).png().toBuffer();
