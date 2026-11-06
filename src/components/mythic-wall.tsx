@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
+import {useEffect,useLayoutEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
 import {ChevronLeft,ChevronRight,CircleUserRound,Sparkles,X} from 'lucide-react';
 import type {Profile,Game,Achievement} from '../data';
 import type {MythicPoster} from '../mythic-posters';
@@ -6,6 +6,7 @@ import {posterLocalDate} from '../mythic-posters';
 import {MythicBadgeArt} from './mythic-badge';
 import {mythicBackdrop,mythicCover,mythicImageAlreadyDecoded,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
 import {MythicOpeningFireworks} from './mythic-fireworks';
+import {flyMythicIn,flyMythicOut,type MythicFlightOrigin} from './mythic-transition';
 
 const GOLD='#e6c47b';
 function useDecodedArt(url:string|undefined){
@@ -135,15 +136,49 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady}:{
  </article>;
 }
 
-export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=false,onClose}:{
+export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=false,flightOrigin,onClose}:{
  posters:MythicPoster[];profile:Profile;initialGameId?:string|null;
- allowNavigation?:boolean;onClose:()=>void;
+ allowNavigation?:boolean;flightOrigin?:MythicFlightOrigin;onClose:()=>void;
 }){
  // Selecting a card in the cabinet chooses the initial index, not single-card
  // mode; the game-detail shortcut still opens only its own collectible.
  const single=!allowNavigation&&initialGameId!==null&&initialGameId!==undefined;
  const initial=Math.max(0,posters.findIndex(p=>p.game.id===initialGameId));
  const [index,setIndex]=useState(initial);
+ const [phase,setPhase]=useState<'entering'|'idle'|'flying-out'|'fading-out'>(()=>
+  flightOrigin&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches?'entering':'idle');
+ const wallRef=useRef<HTMLDivElement>(null);
+ const exitCleanup=useRef<(()=>void)|null>(null);
+ const closing=useRef(false);
+ useLayoutEffect(()=>{
+  if(!flightOrigin||phase!=='entering')return;
+  const target=wallRef.current?.querySelector<HTMLElement>('.mythic-poster.is-active');
+  if(!target){setPhase('idle');return;}
+  return flyMythicIn(flightOrigin,target,()=>setPhase('idle'));
+ // Initial geometry only; later swipes keep the poster in place.
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[]);
+ useEffect(()=>()=>{exitCleanup.current?.();},[]);
+ function requestClose(){
+  if(closing.current)return;
+  if(!flightOrigin||phase==='entering'||window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+   onClose();return;
+  }
+  closing.current=true;
+  const source=wallRef.current?.querySelector<HTMLElement>('.mythic-poster.is-active');
+  const currentId=posters[index]?.game.id;
+  const matching=[...document.querySelectorAll<HTMLElement>('.mythic-showcase-item')]
+   .find(el=>el.dataset.showcaseGame===currentId);
+  const destination=matching?.querySelector<HTMLElement>('.mythic-showcase-poster')||null;
+  const r=destination?.getBoundingClientRect();
+  if(!source||!r||r.bottom<0||r.top>window.innerHeight){
+   setPhase('fading-out');
+   window.setTimeout(onClose,220);
+   return;
+  }
+  setPhase('flying-out');
+  exitCleanup.current=flyMythicOut(source,destination,onClose);
+ }
  const [fontReady,setFontReady]=useState(false);
  useEffect(()=>{
   let mounted=true;
@@ -156,7 +191,7 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
  },[index,posters,profile]);
  const [celebrate,setCelebrate]=useState(()=>!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
  const touchStart=useRef<{x:number;y:number}|null>(null);
- const dismiss=useRef(onClose);dismiss.current=onClose;
+ const dismiss=useRef(requestClose);dismiss.current=requestClose;
  useEffect(()=>{
   const previous=document.body.style.overflow,focused=document.activeElement as HTMLElement|null;
   document.body.style.overflow='hidden';
@@ -169,10 +204,10 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
   return()=>{document.removeEventListener('keydown',onKey);document.body.style.overflow=previous;focused?.focus({preventScroll:true});};
  },[posters.length,single]);
  useEffect(()=>{
-  if(!celebrate||!fontReady)return;
+  if(!celebrate||!fontReady||phase!=='idle')return;
   const timeout=window.setTimeout(()=>setCelebrate(false),4200);
   return()=>window.clearTimeout(timeout);
- },[celebrate,fontReady]);
+ },[celebrate,fontReady,phase]);
  // Once the first card is left, the celebration does not replay on any swipe.
  useEffect(()=>{if(index!==initial)setCelebrate(false);},[index,initial]);
  const visiblePosters=useMemo(()=>posters.map((entry,i)=>({entry,i,visible:single?i===initial:Math.abs(i-index)<=1}))
@@ -187,14 +222,14 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
   setCelebrate(false);
   setIndex(i=>Math.max(0,Math.min(posters.length-1,i+(dx<0?1:-1))));
  }
- return <div className="mythic-wall-overlay" role="dialog" aria-modal="true"
+ return <div ref={wallRef} className={'mythic-wall-overlay'+(phase!=='idle'?' is-'+phase:'')} role="dialog" aria-modal="true"
   aria-label={single?'Mythic纪念卡':'Mythic纪念墙'} data-display-mode={single?'single':'wall'}
-  data-entry={allowNavigation?'showcase':single?'detail':'legacy'}>
+  data-entry={allowNavigation?'showcase':single?'detail':'legacy'} data-transition={phase}>
   <header className="mythic-wall-header">
    <div><span className="mythic-wall-eyebrow">YOUR MYTHIC LEGACY</span>
     <strong>{single?'Mythic纪念卡':allowNavigation?'Mythic纪念卡':'Mythic纪念墙'}</strong></div>
    {!single&&<span className="mythic-wall-counter" aria-live="polite">{index+1} / {posters.length}</span>}
-   <button type="button" className="mythic-wall-close" onClick={onClose} aria-label={allowNavigation?'返回展示柜':single?'关闭Mythic纪念卡':'关闭Mythic纪念墙'}><X size={22}/></button>
+   <button type="button" className="mythic-wall-close" onClick={requestClose} aria-label={allowNavigation?'返回展示柜':single?'关闭Mythic纪念卡':'关闭Mythic纪念墙'}><X size={22}/></button>
   </header>
   <div className="mythic-wall-viewport" onTouchStart={e=>{
    if(!single&&e.touches.length===1)touchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};
@@ -203,7 +238,7 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
     {visiblePosters.map(({entry,i,visible})=><div className="mythic-wall-slide" key={entry.game.id}
      aria-hidden={index!==i}>
      {visible&&<MythicPosterCard entry={entry} profile={profile} index={i} total={posters.length}
-      active={i===index} opening={i===initial&&celebrate&&fontReady} fontReady={fontReady}/>} 
+      active={i===index} opening={i===initial&&celebrate&&fontReady&&phase==='idle'} fontReady={fontReady}/>} 
     </div>)}
    </div>
   </div>
@@ -214,6 +249,6 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
    <button type="button" onClick={()=>{setCelebrate(false);setIndex(i=>Math.min(posters.length-1,i+1));}}
     disabled={index===posters.length-1} aria-label="下一张Mythic纪念卡"><ChevronRight size={22}/></button>
   </nav>}
-  {celebrate&&fontReady&&index===initial&&<MythicOpeningFireworks/>}
+  {celebrate&&fontReady&&phase==='idle'&&index===initial&&<MythicOpeningFireworks/>}
  </div>;
 }
