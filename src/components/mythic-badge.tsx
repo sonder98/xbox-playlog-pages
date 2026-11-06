@@ -3,7 +3,7 @@ import {Gem} from 'lucide-react';
 import {MYTHIC_BADGE_URL} from '../mythic-posters';
 
 /** Render a local graphic immediately, then reveal the remote original only
- * after it has decoded. An unreachable image host must never leave a blank medal. */
+ * after it has decoded. Even an uncached first load must never leave a blank medal. */
 export function MythicBadgeArt({compact=false}:{compact?:boolean}){
  const imageRef=useRef<HTMLImageElement>(null);
  const [ready,setReady]=useState(false);
@@ -11,7 +11,7 @@ export function MythicBadgeArt({compact=false}:{compact?:boolean}){
   const img=imageRef.current;
   if(!img||img.naturalWidth===0)return;
   // An image can have transferred its bytes but still be decoding; keep the
-  // local medal in front until the original is ready to paint.
+  // local medal in front until the bundled asset is ready to paint.
   void img.decode().then(()=>{
    if(imageRef.current===img)setReady(true);
   }).catch(()=>{
