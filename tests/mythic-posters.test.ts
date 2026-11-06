@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import type {Achievement,Game} from '../src/data.ts';
-import {mythicPosterWall,posterLocalDate} from '../src/mythic-posters.ts';
+import {mythicPosterWall,posterLocalDate,MYTHIC_BADGE_URL} from '../src/mythic-posters.ts';
 import {mythicCover,mythicBackdrop} from '../src/mythic-assets.ts';
 
 function award(id:string,date:string|null,unlocked=true):Achievement{
@@ -78,4 +78,8 @@ test('Mythic circle uses a 480px cached WebP while the screenshot stays the orig
   cachedPosterImage:'https://sonder98.github.io/xbox-playlog-pages/media/screenshot.webp'};
  assert.equal(mythicCover(g),g.cachedImage,'Tiny circular art should not download a 1600px cover');
  assert.equal(mythicBackdrop(g),g.cachedPosterImage,'Full-width screenshots still use their dedicated cached asset');
+});
+
+test('Mythic badge is bundled with the Pages site, not fetched from XCT',()=>{
+ assert.equal(MYTHIC_BADGE_URL,'/xbox-playlog-pages/mythic-unlocked.png');
 });
