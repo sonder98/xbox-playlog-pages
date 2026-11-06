@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manjari:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manjari:wght@700&family=Cormorant+Garamond:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
 :root {
   --rarity-accent: #8CD7FA;
   color-scheme:dark;
@@ -3135,11 +3135,10 @@ footer .dot {
 .mythic-wall-entry:hover,.detail-mythic-trigger:hover{border-color:#f8d996;box-shadow:0 0 17px #edb96544;}
 .mythic-wall-entry:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
 .mythic-wall-entry svg,.detail-mythic-trigger svg{color:#e4bf74;}
-.game-detail .detail-summary:has(.detail-mythic-trigger){align-items:flex-end;}
-.game-detail .detail-summary .detail-mythic-stack{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;flex:0 0 auto;}
-.game-detail .detail-summary .detail-mythic-stack .detail-stat{display:inline-flex;}
-.game-detail .detail-mythic-stack .detail-mythic-trigger{position:static;
- font-size:11px;min-height:29px;padding:4px 9px;}
+.game-detail .achievement-progress-actions{display:flex;flex-direction:column;align-items:flex-end;gap:7px;margin-left:auto;flex:0 0 auto;}
+.game-detail .achievement-sort-row:has(.detail-mythic-trigger){align-items:flex-end;}
+.game-detail .achievement-progress-actions .detail-mythic-trigger{font-size:11px;min-height:28px;padding:3px 9px;line-height:1.1;}
+.game-detail .achievement-progress-actions .achievement-filter-count{line-height:1.25;}
 .detail-mythic-trigger img{width:23px;height:23px;object-fit:contain;flex-shrink:0;}
 .mythic-wall-overlay{position:fixed;inset:0;z-index:130;display:flex;flex-direction:column;align-items:stretch;
  background:radial-gradient(ellipse at 50% 21%,#2e3020 0%,#101814 42%,#050a09 91%);color:#f9f4e7;overflow:hidden;}
@@ -3252,8 +3251,7 @@ footer .dot {
  .mythic-wall-entry{font-size:11px;min-height:31px;padding:5px 8px;}
  .title-row:has(.library-heading-actions){gap:7px;}
  .title-row:has(.library-heading-actions) .primary{width:38px;height:38px;}
- .game-detail .detail-summary:has(.detail-mythic-trigger){gap:12px;align-items:flex-end;}
- .game-detail .detail-mythic-stack .detail-mythic-trigger{font-size:10px;min-height:27px;padding:3px 7px;}
+ .game-detail .achievement-progress-actions .detail-mythic-trigger{font-size:10px;min-height:26px;padding:3px 7px;}
  .mythic-wall-header{min-height:60px;}
  .mythic-wall-controls{min-height:52px;}
  .mythic-poster{width:min(408px,calc(100vw - 32px),calc((100dvh - 132px)*.563));
@@ -3267,5 +3265,110 @@ footer .dot {
 @media(prefers-reduced-motion:reduce){
  .mythic-wall-track{transition:none;}
  .mythic-wall-fireworks{display:none;}
+ .mythic-poster-stars span,.mythic-poster-shimmer{animation:none;opacity:0;}
+}
+
+
+/* Mythic commemorative editorial typography.
+   Engraved Chinese award copy uses Noto Serif SC; AU game titles, player names
+   and dates use Cormorant Garamond with local Songti/Georgia fallbacks. */
+.mythic-poster{
+ font-family:"Cormorant Garamond","Noto Serif SC","Songti SC","STSong",Georgia,serif;
+ font-variant-numeric:lining-nums tabular-nums;
+}
+.mythic-poster-caption{
+ font-family:"Cormorant Garamond",Georgia,serif;
+ font-size:4.0cqw;letter-spacing:.19em;font-weight:600;
+}
+.mythic-poster-congratulations{
+ font-family:"Noto Serif SC","Songti SC","STSong",serif;
+ font-size:5.25cqw;letter-spacing:.15em;font-weight:500;
+}
+.mythic-poster-congratulations strong{font-weight:500;}
+.mythic-poster-congratulations strong span{
+ font-family:"Cormorant Garamond",Georgia,serif;
+ font-size:1.15em;letter-spacing:.17em;font-weight:600;
+}
+.mythic-poster-title{
+ font-family:"Cormorant Garamond","Noto Serif SC","Songti SC",Georgia,serif;
+ font-size:7.25cqw;line-height:1.02;font-weight:600;letter-spacing:.002em;
+ top:48.9%;max-height:9.4%;text-wrap:balance;
+}
+.mythic-poster-player strong{
+ font-family:"Cormorant Garamond","Noto Serif SC","Songti SC",serif;
+ font-size:5.5cqw;font-weight:600;letter-spacing:.015em;
+}
+.mythic-poster-achievement small{
+ font-family:"Noto Serif SC","Songti SC",serif;font-size:2.85cqw;
+}
+.mythic-poster-achievement b{
+ font-family:"Cormorant Garamond",Georgia,serif;
+ font-size:4.25cqw;font-weight:650;letter-spacing:.005em;
+}
+.mythic-poster-achievement>span:last-child{
+ font-family:"Cormorant Garamond",Georgia,serif;font-size:3.25cqw;
+}
+.mythic-poster-stats strong{
+ font-family:"Cormorant Garamond",Georgia,serif;
+ font-size:8.15cqw;font-weight:550;line-height:1.0;letter-spacing:-.015em;
+}
+.mythic-poster-stats small,.mythic-poster-stats span{
+ font-family:"Noto Serif SC","Songti SC",serif;
+}
+.mythic-poster-stats small{font-size:2.65cqw;}
+.mythic-poster-stats span{font-size:2.45cqw;}
+.mythic-poster-footer{
+ top:91.8%;font-family:"Noto Serif SC","Songti SC",serif;
+ font-size:2.3cqw;
+}
+.mythic-poster-brand{font-family:"Cormorant Garamond",Georgia,serif;font-size:3cqw;letter-spacing:.10em;}
+.mythic-poster-gamepad{bottom:3.45%;font-size:2.4cqw;gap:10px;z-index:2;}
+.mythic-poster-gamepad span{width:14px;height:14px;border-width:1px;line-height:1;}
+/* The reference shows a brief full-card bright metallic wipe before confetti. */
+.mythic-poster-opening-glint{
+ position:absolute;z-index:5;pointer-events:none;inset:0;
+ background:linear-gradient(106deg,transparent 9%,rgba(255,246,214,.03) 22%,
+ rgba(255,246,214,.14) 37%,rgba(255,252,234,.40) 48%,
+ rgba(255,240,195,.12) 62%,transparent 79%);
+ mix-blend-mode:screen;opacity:0;transform:translateX(-115%);
+ animation:mythic-opening-foil 1.35s cubic-bezier(.18,.5,.34,1) both;
+}
+@keyframes mythic-opening-foil{
+ 0%{opacity:0;transform:translateX(-120%);}
+ 38%{opacity:.72;}
+ 65%{opacity:.9;}
+ 100%{opacity:0;transform:translateX(115%);}
+}
+/* Subtle pinlights and one occasional foil pass instead of bright disco stars. */
+.mythic-poster-stars span{
+ font-family:Georgia,serif;font-size:2.2cqw;opacity:.10;
+ text-shadow:0 0 4px rgba(249,217,151,.35);
+ animation:mythic-subtle-sparkle calc(5.0s + var(--i)*.21s) ease-in-out infinite;
+ animation-delay:calc(var(--i)*-.7s);
+}
+@keyframes mythic-subtle-sparkle{
+ 0%,100%{opacity:.08;transform:scale(.5)}
+ 48%{opacity:.43;transform:scale(.92)}
+}
+.mythic-poster-shimmer{
+ background:linear-gradient(110deg,transparent 43%,rgba(255,225,150,.025) 47%,
+ rgba(255,242,193,.12) 50%,rgba(255,225,150,.03) 53%,transparent 57%);
+ animation:mythic-sweep 13s ease-in-out infinite;
+}
+/* Detail launch is exactly above the 57/57 on the sorting and progress row. */
+.game-detail .achievement-progress-actions{position:relative;}
+.game-detail .achievement-progress-actions .detail-mythic-trigger img{width:21px;height:21px;}
+.mythic-wall-overlay[data-display-mode="single"] .mythic-poster{
+ width:min(408px,calc(100vw - 32px),calc((100dvh - 93px)*.563));
+ max-height:calc(100dvh - 93px);
+}
+@media(max-width:700px){
+ .mythic-poster-title{font-size:7.05cqw;}
+ .mythic-poster-gamepad{bottom:3.6%;}
+ .game-detail .achievement-progress-actions{gap:5px;}
+ .game-detail .achievement-sort-row:has(.detail-mythic-trigger){min-height:57px;}
+}
+@media(prefers-reduced-motion:reduce){
+ .mythic-poster-opening-glint{animation:none;display:none;}
  .mythic-poster-stars span,.mythic-poster-shimmer{animation:none;opacity:0;}
 }
