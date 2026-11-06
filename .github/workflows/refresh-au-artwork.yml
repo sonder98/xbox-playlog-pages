@@ -1,8 +1,8 @@
-name: Refresh Australian Store artwork
+# Legacy one-off backfill writes the bootstrap Git snapshot. Do not auto-run:
+# current encrypted history and screenshot artwork are published via sync.yml
+# to the playlog-live Release, not committed as fresh random ciphertext.
+name: Legacy AU artwork backfill (manual only)
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/refresh-au-artwork.yml', 'scripts/microsoft-artwork.ts']
   workflow_dispatch:
 permissions:
   contents: write
