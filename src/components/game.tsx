@@ -3,7 +3,7 @@ import {Gamepad2,Trophy,X,Lock,Check,Clock3,Gem} from 'lucide-react';
 import {completion} from '../completion';
 import {GamerscoreIcon} from './gamerscore-icon';
 import {GameJourney} from './game-journey';
-import {MYTHIC_BADGE_URL} from '../mythic-posters';
+import {MythicBadgeArt} from './mythic-badge';
 
 // Temporarily unpublished: retain the journey implementation for a future redesign.
 // Flip this flag only when the redesigned experience is approved for release.
@@ -145,6 +145,11 @@ export function GameDetail({game,onClose,onOpenMythic}:{game:Game;onClose:()=>vo
       <span className="detail-stat detail-playtime"><Clock3 size={16} aria-hidden="true"/><span>{hours(game.minutes)}</span></span>
       <span className="detail-stat detail-achievements" aria-label={`已解锁 ${game.earned} / ${game.total} 成就`}><Trophy size={16} aria-hidden="true"/><span>{game.earned}/{game.total}</span></span>
       <span className="detail-stat detail-gamerscore" aria-label={`已获得 ${numberFormat(game.score)} / ${numberFormat(game.maxScore)} 玩家积分`}><GamerscoreIcon size={16}/><span>{numberFormat(game.score)}/{numberFormat(game.maxScore)}</span></span>
+      {completion(game).mythic&&onOpenMythic&&
+       <button type="button" className="detail-mythic-trigger" onClick={onOpenMythic}
+        aria-label={`打开 ${game.name} 的Mythic纪念卡`}>
+        <MythicBadgeArt compact/><span className="detail-mythic-label">Mythic</span>
+       </button>}
     </div>
     {!!game.achievements?.length&&<>
       {categorized&&<div className="achievement-tabs" role="tablist" aria-label="成就分类">
@@ -168,10 +173,6 @@ export function GameDetail({game,onClose,onOpenMythic}:{game:Game;onClose:()=>vo
             <AchievementUnlockFilterControl filter={unlockFilter} onChange={changeUnlockFilter}/>
           </div>
           <div className="achievement-progress-actions">
-           {completion(game).mythic&&onOpenMythic&&<button type="button" className="detail-mythic-trigger"
-             onClick={onOpenMythic} aria-label={`打开 ${game.name} 的Mythic纪念卡`}>
-             <img src={MYTHIC_BADGE_URL} alt="" loading="lazy"/> Mythic
-            </button>}
            <span className="achievement-filter-count" aria-live="polite">{earned}/{total}</span>
           </div>
         </div>
