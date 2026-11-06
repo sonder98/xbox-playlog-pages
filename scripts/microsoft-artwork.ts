@@ -1,13 +1,17 @@
 import {safeImage,type RecordData} from '../src/data.ts';
+import {completion} from '../src/completion.ts';
 /** Select only first-party Australian Store artwork. Never send Xbox auth headers to this endpoint. */
 export async function australianArtwork(record:RecordData,request:typeof fetch=fetch,previous?:RecordData){
  let resolved=0,landscapes=0;
  const oldById=new Map(previous?.games.map(game=>[game.id,game])||[]);
  for(const game of record.games){
   const old=oldById.get(game.id);
-  // Reuse only the highest-priority official titled hero; upgrade older untitled art on refresh.
-  if(old?.detailImagePurpose==='TitledHeroArt'&&old.detailImage&&old.posterImage&&old.image.includes('store-images.s-microsoft.com/image/')){
-   game.name=old.name;game.image=old.image;game.detailImage=old.detailImage;game.detailImagePurpose=old.detailImagePurpose;game.posterImage=old.posterImage;game.posterImagePurpose=old.posterImagePurpose;
+  // Upgrade already-Mythic games once from the old hero-first poster to the first
+  // AU Store Screenshot. Keep reuse for other games and already-migrated posters.
+  if(old?.detailImagePurpose==='TitledHeroArt'&&old.detailImage&&old.posterImage&&old.image.includes('store-images.s-microsoft.com/image/')&&
+    (old.posterSelectionVersion===2||!completion(game).mythic)){
+   game.name=old.name;game.image=old.image;game.detailImage=old.detailImage;game.detailImagePurpose=old.detailImagePurpose;
+   game.posterImage=old.posterImage;game.posterImagePurpose=old.posterImagePurpose;game.posterSelectionVersion=old.posterSelectionVersion;
    resolved++;landscapes++;continue;
   }
   const url=new URL('https://displaycatalog.mp.microsoft.com/v7.0/products/lookup');
@@ -27,18 +31,20 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
     squares.sort((a:any,b:any)=>(Number(b.ImagePurpose==='BoxArt')-Number(a.ImagePurpose==='BoxArt'))||b.Width-a.Width);
     if(!squares.length)return null;
     const heroes=images.filter((i:any)=>i.Width/i.Height>=1.45&&i.Width/i.Height<=2.45&&i.Width>=640&&(i.ImagePurpose==='SuperHeroArt'||i.ImagePurpose==='TitledHeroArt'));
-    // The game detail keeps its titled hero. The collectible poster separately
-    // prefers title-free promotional art, then a 16:9 Xbox Store screenshot.
-    const posterOptions=images.filter((i:any)=>i.Width>=960&&i.Width/i.Height>=1.45&&i.Width/i.Height<=2.45&&
-     ['SuperHeroArt','Screenshot','TitledHeroArt'].includes(i.ImagePurpose));
-    const posterPriority=(image:any)=>image.ImagePurpose==='SuperHeroArt'?3:image.ImagePurpose==='Screenshot'?2:1;
-    posterOptions.sort((a:any,b:any)=>posterPriority(b)-posterPriority(a)||b.Width-a.Width);
+    // The collectible deliberately uses the FIRST Screenshot in the official
+    // response, not the largest image or the unrelated Store hero/banner.
+    const firstScreenshot=images.find((i:any)=>i.ImagePurpose==='Screenshot'&&
+     i.Width/i.Height>=1.45&&i.Width/i.Height<=2.45);
+    const posterFallbacks=images.filter((i:any)=>i.Width>=960&&i.Width/i.Height>=1.45&&i.Width/i.Height<=2.45&&
+     ['SuperHeroArt','TitledHeroArt'].includes(i.ImagePurpose));
+    posterFallbacks.sort((a:any,b:any)=>
+     Number(b.ImagePurpose==='SuperHeroArt')-Number(a.ImagePurpose==='SuperHeroArt')||b.Width-a.Width);
     // Prefer the artwork including the game's title: TitledHeroArt -> SuperHeroArt -> square BoxArt fallback.
     heroes.sort((a:any,b:any)=>Number(b.ImagePurpose==='TitledHeroArt')-Number(a.ImagePurpose==='TitledHeroArt')||b.Width-a.Width);
     const title=normalize(info.ProductTitle);
     const match=title===wanted?100:title.includes(wanted)||wanted.includes(title)?70:0;
     const kind=product.ProductKind==='Game'?20:product.ProductKind==='GameEdition'?10:0;
-    return {info,square:squares[0],hero:heroes[0],poster:posterOptions[0],score:match+kind};
+    return {info,square:squares[0],hero:heroes[0],poster:firstScreenshot||posterFallbacks[0],score:match+kind};
   }).filter(Boolean).sort((a:any,b:any)=>b.score-a.score);
   const selected=candidates[0];
   if(!selected||selected.score<10)continue;
@@ -50,6 +56,7 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
   }else{
    delete game.detailImage;delete game.detailImagePurpose;
   }
+  game.posterSelectionVersion=2;
   if(selected.poster){
    game.posterImage=safeImage(selected.poster.Uri);
    game.posterImagePurpose=selected.poster.ImagePurpose;
