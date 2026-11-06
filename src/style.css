@@ -3464,7 +3464,7 @@ footer .dot {
 @media(max-width:700px){
  .game-detail .detail-summary{gap:clamp(5px,1.5vw,9px);overflow:visible}
  .game-detail .detail-summary .detail-stat{gap:4px;font-size:clamp(10px,3vw,12px)}
- .game-detail .detail-summary .detail-stat svg{width:14px;height:14px}
+ .game-detail .detail-summary .detail-stat svg{width:15px;height:15px}
  .game-detail .detail-summary .detail-mythic-trigger{
   min-height:31px;width:31px;padding:3px;gap:0;
  }
@@ -3474,7 +3474,7 @@ footer .dot {
 @media(max-width:370px){
  .game-detail .detail-summary{gap:4px}
  .game-detail .detail-summary .detail-stat{font-size:10px;gap:3px}
- .game-detail .detail-summary .detail-stat svg{width:12px;height:12px}
+ .game-detail .detail-summary .detail-stat svg{width:13px;height:13px}
 }
 
 /* The old highlight took almost eight seconds to first appear (60% of a 13s
