@@ -18,3 +18,15 @@ test('changed unlock progress creates a separate detail entry and older vaults n
 });
 test('missing metadata references fail explicitly',()=>{const compact=compactPayload(payload);compact.records[0].games[0].detailRef=99;assert.throws(()=>expandPayload(compact),/索引缺失/);});
 test('encrypted roundtrip transparently expands compact snapshots for exports',async()=>{assert.deepEqual(await decryptVault(await encryptVault(payload,'test-password'),'test-password'),payload);});
+
+test('rotating screenshot albums are lossless and deduplicated in encrypted history',async()=>{
+ const input={records:Array.from({length:30},(_,n)=>({id:String(n),at:'2026-11-06T00:00:00Z',games:[{
+  id:'2',name:'Mythic',posterSelectionVersion:3,posterRotationStartDay:'2026-11-06',
+  posterScreenshots:['https://store-images.s-microsoft.com/a','https://store-images.s-microsoft.com/b'],
+  cachedPosterScreenshots:['https://cache.test/a.webp','']
+ }]}))};
+ const packed=compactPayload(input);
+ assert.equal(packed.detailTable.length,1);
+ assert.deepEqual(expandPayload(packed),input);
+ assert.deepEqual(await decryptVault(await encryptVault(input,'test-password'),'test-password'),input);
+});
