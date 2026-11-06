@@ -162,10 +162,10 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
   return()=>{document.removeEventListener('keydown',onKey);document.body.style.overflow=previous;focused?.focus({preventScroll:true});};
  },[posters.length,single]);
  useEffect(()=>{
-  if(!celebrate)return;
+  if(!celebrate||!fontReady)return;
   const timeout=window.setTimeout(()=>setCelebrate(false),4200);
   return()=>window.clearTimeout(timeout);
- },[celebrate]);
+ },[celebrate,fontReady]);
  // Once the first card is left, the celebration does not replay on any swipe.
  useEffect(()=>{if(index!==initial)setCelebrate(false);},[index,initial]);
  const visiblePosters=useMemo(()=>posters.map((entry,i)=>({entry,i,visible:single?i===initial:Math.abs(i-index)<=1}))
@@ -195,7 +195,7 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
     {visiblePosters.map(({entry,i,visible})=><div className="mythic-wall-slide" key={entry.game.id}
      aria-hidden={index!==i}>
      {visible&&<MythicPosterCard entry={entry} profile={profile} index={i} total={posters.length}
-      active={i===index} opening={i===initial&&celebrate} fontReady={fontReady}/>} 
+      active={i===index} opening={i===initial&&celebrate&&fontReady} fontReady={fontReady}/>} 
     </div>)}
    </div>
   </div>
@@ -206,6 +206,6 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
    <button type="button" onClick={()=>{setCelebrate(false);setIndex(i=>Math.min(posters.length-1,i+1));}}
     disabled={index===posters.length-1} aria-label="下一张Mythic纪念卡"><ChevronRight size={22}/></button>
   </nav>}
-  {celebrate&&index===initial&&<MythicOpeningFireworks/>}
+  {celebrate&&fontReady&&index===initial&&<MythicOpeningFireworks/>}
  </div>;
 }
