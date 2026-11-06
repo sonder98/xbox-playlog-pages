@@ -91,35 +91,61 @@ export function MythicShowcase({posters,profile,onClose,onOpen}:{
   document.body.style.overflow='hidden';
   return()=>{document.body.style.overflow=before;};
  },[]);
- // Warm exactly what is on screen (and the next nearby row) while the user
- // browses, so clicking does not begin downloading the full-size card.
- // Observing the scrolling cabinet avoids preloading the entire collection.
+ // Visible cards preheat immediately. Once the visitor stays on the wall,
+ // quietly complete the rest of the collection with only two background
+ // prefetches in flight. Otherwise a card on row 5 can still be cold after
+ // several minutes, because IntersectionObserver only warmed nearby rows.
  useEffect(()=>{
   const root=screenRef.current;
   if(!root)return;
   let active=true;
   const byId=new Map(posters.map(p=>[p.game.id,p]));
   const requested=new Set<string>();
+  let idleCursor=0,backgroundInFlight=0;
+  const timers=new Set<number>();
+  const later=(fn:()=>void,ms:number)=>{
+   const timer=window.setTimeout(()=>{timers.delete(timer);fn();},ms);
+   timers.add(timer);
+  };
   void warmMythicFonts();
-  const prefetch=(id:string)=>{
-   if(requested.has(id))return;
+  const prefetch=(id:string):Promise<void>|null=>{
+   if(requested.has(id))return null;
    const poster=byId.get(id);
-   if(!poster)return;
+   if(!poster)return null;
    requested.add(id);
-   void prepareMythicPoster(poster,profile).then(()=>{
+   return prepareMythicPoster(poster,profile).then(()=>{
     if(active)root.querySelector<HTMLElement>(
      '.mythic-showcase-item[data-showcase-game="'+CSS.escape(id)+'"]'
     )?.setAttribute('data-poster-prepared','true');
    });
   };
-  // Preheat the first visible collectibles before the intersection callback.
-  for(const poster of posters.slice(0,2))prefetch(poster.game.id);
+  // The first visible row must always take priority over the idle queue.
+  for(const poster of posters.slice(0,2))void prefetch(poster.game.id);
   const observer=new IntersectionObserver(entries=>{
    for(const entry of entries)
-    if(entry.isIntersecting)prefetch((entry.target as HTMLElement).dataset.showcaseGame||'');
+    if(entry.isIntersecting)void prefetch((entry.target as HTMLElement).dataset.showcaseGame||'');
   },{root,rootMargin:'400px 0px',threshold:0});
   root.querySelectorAll('.mythic-showcase-item').forEach(el=>observer.observe(el));
-  return()=>{active=false;observer.disconnect();};
+  // Gradually make *every* collectible warm if the page remains open. Visible
+  // cards can still jump the queue when scrolling (through the observer).
+  const fillBackground=()=>{
+   if(!active)return;
+   while(backgroundInFlight<2&&idleCursor<posters.length){
+    const id=posters[idleCursor++].game.id;
+    const job=prefetch(id);
+    if(!job)continue;
+    backgroundInFlight++;
+    void job.finally(()=>{
+     backgroundInFlight--;
+     if(active)later(fillBackground,100);
+    });
+   }
+  };
+  later(fillBackground,700);
+  return()=>{
+   active=false;observer.disconnect();
+   for(const timer of timers)window.clearTimeout(timer);
+  };
  },[posters,profile]);
  return <section ref={screenRef} className="mythic-showcase-screen" aria-label="Mythic纪念墙展示柜" data-showcase="grid">
   <div className="mythic-showcase-inner">
