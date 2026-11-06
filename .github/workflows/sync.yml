@@ -27,6 +27,9 @@ on:
       - 'scripts/image-cache.ts'
       - 'scripts/snapshot.ts'
       - 'scripts/password.ts'
+      # Schema changes (including posterSelectionVersion) must update the
+      # encrypted live Release as well as the static frontend.
+      - 'src/data.ts'
 permissions:
   contents: write
   actions: write
