@@ -3279,6 +3279,10 @@ footer .dot {
 .mythic-poster-caption{
  font-family:"Cormorant Garamond",Georgia,serif;
  font-size:4.0cqw;letter-spacing:.19em;font-weight:600;
+ /* Reset the unrelated global header box that added an 88px title bar
+    across the collectible image. */
+ min-height:0;height:auto;margin:0;padding:0;border:0;gap:0;
+ align-items:center;justify-content:space-between;
 }
 .mythic-poster-congratulations{
  font-family:"Noto Serif SC","Songti SC","STSong",serif;
