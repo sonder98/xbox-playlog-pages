@@ -11,7 +11,7 @@ games[0].posterImage='https://covers.example.test/landscape.svg';
 games[0].posterImagePurpose='Screenshot';
 for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),points:[10,20,0,15][i],name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:i===1?'https://covers.example.test/wide.svg':'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
 for(const game of games){game.total=4;game.earned=2;game.groupStatus='verified';game.groups=[{id:'base',name:'本体',kind:'base',earned:2,total:2,achievementIds:['1','2']},{id:'dlc',name:'追加故事',kind:'dlc',earned:0,total:2,achievementIds:['3','4']}];}
-const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:''},games,source:'Exophase',warnings:[]}]},password);
+const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:'https://covers.example.test/avatar.svg'},games,source:'Exophase',warnings:[]}]},password);
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4173'],{stdio:'ignore'});
 let browser;
 try{
@@ -921,6 +921,7 @@ try{
       const text=card.querySelector('.mythic-poster-title');
       return {card:measure('.mythic-poster-portrait'),emblem:measure('.mythic-poster-emblem'),
        badge:measure('.mythic-badge-art'),player:measure('.mythic-poster-player'),
+       avatar:measure('.mythic-poster-avatar-frame'),
        achievement:measure('.mythic-poster-achievement-art'),badgeFit:style.objectFit,
        fontLoading:card.classList.contains('is-type-loading'),
        titleVisibility:getComputedStyle(text).visibility};
@@ -930,6 +931,8 @@ try{
       JSON.stringify(posterFrame.emblem));
     assert.ok(Math.abs(posterFrame.badge.width-posterFrame.badge.height)<1&&posterFrame.badgeFit==='contain',
       'Original Mythic badge preserves its own aspect ratio inside the square frame');
+    assert.ok(Math.abs(posterFrame.avatar.width-posterFrame.avatar.height)<1,
+      'Player avatar reserves exactly the same width and height before its image loads');
     assert.ok(Math.abs(posterFrame.card.width-posterFrame.card.height)<1&&
       Math.abs(posterFrame.achievement.width-posterFrame.achievement.height)<1,
       'Cover and achievement artwork occupy stable square frames');
@@ -948,6 +951,7 @@ try{
     const stableGeometry=()=>posterWall.locator('.mythic-poster.is-active').evaluate(card=>{
       const selectors=['.mythic-poster','.mythic-poster-portrait','.mythic-poster-emblem',
        '.mythic-poster-congratulations','.mythic-poster-title','.mythic-poster-player',
+       '.mythic-poster-avatar-frame',
        '.mythic-poster-achievement-pair','.mythic-poster-stats','.mythic-poster-footer'];
       return selectors.map(selector=>{
         const b=(selector==='.mythic-poster'?card:card.querySelector(selector)).getBoundingClientRect();
