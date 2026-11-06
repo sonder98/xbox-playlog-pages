@@ -3327,9 +3327,10 @@ footer .dot {
  font-size:2.3cqw;
  /* Reset the site's global footer { margin-top:32px; padding:16px 0; }
     which was expanding the engraved card caption by nearly 100px. */
- margin:0;padding:0;align-items:center;justify-content:center;
+ margin:0;padding:0;min-height:0;height:22px;max-height:22px;
+ align-items:center;justify-content:center;overflow:hidden;white-space:nowrap;
 }
-.mythic-poster-brand{font-family:"Cormorant Garamond",Georgia,serif;font-size:2.7cqw;letter-spacing:.10em;padding:2px 5px;}
+.mythic-poster-brand{font-family:"Cormorant Garamond",Georgia,serif;font-size:2.65cqw;letter-spacing:.10em;padding:1px 4px;line-height:1.2;}
 .mythic-poster-gamepad{top:95.25%;bottom:auto;font-size:2.4cqw;gap:10px;z-index:2;}
 .mythic-poster-gamepad span{width:14px;height:14px;border-width:1px;line-height:1;}
 /* The reference shows a brief full-card bright metallic wipe before confetti. */
