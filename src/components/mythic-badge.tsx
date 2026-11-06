@@ -1,12 +1,13 @@
 import {useEffect,useRef,useState} from 'react';
 import {Gem} from 'lucide-react';
 import {MYTHIC_BADGE_URL} from '../mythic-posters';
+import {mythicImageAlreadyDecoded} from '../mythic-assets';
 
 /** Render a local graphic immediately, then reveal the remote original only
  * after it has decoded. Even an uncached first load must never leave a blank medal. */
 export function MythicBadgeArt({compact=false}:{compact?:boolean}){
  const imageRef=useRef<HTMLImageElement>(null);
- const [ready,setReady]=useState(false);
+ const [ready,setReady]=useState(()=>mythicImageAlreadyDecoded(MYTHIC_BADGE_URL));
  function revealWhenDecoded(){
   const img=imageRef.current;
   if(!img||img.naturalWidth===0)return;

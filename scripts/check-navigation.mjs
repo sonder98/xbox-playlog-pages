@@ -936,28 +936,44 @@ try{
       'The latest Mythic appears first in the showcase');
     assert.equal(await showcase.locator('.mythic-showcase-backdrop').first().getAttribute('loading'),'lazy',
       'The cabinet uses native lazy-loading for cinematic preview images');
-    const originalPaintedCard=await showcase.locator('[data-showcase-game="100"] .mythic-showcase-poster').elementHandle();
     await showcase.getByRole('button',{name:'放大 Test Game 0 纪念卡'}).click();
     const posterWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
     await posterWall.waitFor();
+    const fullPosterHandle=await posterWall.locator('.mythic-poster.is-active').elementHandle();
     if(!await page.evaluate(()=>matchMedia('(prefers-reduced-motion: reduce)').matches)){
-      assert.equal(await posterWall.getAttribute('data-transition'),'entering',
-        'Clicking a shelf collectible first starts a real thumbnail-to-poster transition');
-      const flyingThumb=page.locator('.mythic-flight-ghost[data-flight="preview"]');
-      assert.equal(await flyingThumb.count(),1,
-        'The existing already painted thumbnail flies from the actual shelf position');
-      assert.ok(await flyingThumb.locator('.mythic-showcase-poster').evaluate(
-        (el,original)=>el===original,originalPaintedCard),
-        'Flight must move the original painted image DOM, never clone its lazy images');
-      assert.equal(await flyingThumb.locator('.mythic-showcase-portrait img').count(),1,
-        'The moving card retains its existing circle art throughout the transition');
+      await page.waitForFunction(()=>document.querySelector('.mythic-wall-overlay[data-entry="showcase"]')
+        ?.getAttribute('data-transition')==='revealing');
+      const transitionPaint=await posterWall.locator('.mythic-poster.is-active').evaluate(el=>{
+        const cover=el.querySelector('.mythic-poster-portrait img');
+        const emblem=el.querySelector('.mythic-poster-emblem img');
+        const backdrop=el.querySelector('.mythic-poster-backdrop');
+        return {
+          animations:el.getAnimations().length,
+          cover:cover?.classList.contains('is-loaded'),
+          coverOpacity:parseFloat(getComputedStyle(cover).opacity),
+          emblem:emblem?.classList.contains('is-ready'),
+          emblemOpacity:parseFloat(getComputedStyle(emblem).opacity),
+          backdrop:backdrop.classList.contains('is-loaded'),
+          backdropOpacity:parseFloat(getComputedStyle(backdrop).opacity),
+          fontReady:!el.classList.contains('is-type-loading'),
+          outline:!!el.querySelector('.mythic-poster-ornament')
+        };
+      });
+      assert.ok(transitionPaint.animations>0,
+        'The full poster itself transforms as one layer, without a separate flying thumbnail');
+      assert.ok(transitionPaint.cover&&transitionPaint.emblem&&transitionPaint.backdrop&&
+        transitionPaint.fontReady&&transitionPaint.outline&&
+        transitionPaint.coverOpacity>.95&&transitionPaint.emblemOpacity>.95&&
+        transitionPaint.backdropOpacity>.95,
+        'Full-size poster must be completely painted when enlargement begins: '+JSON.stringify(transitionPaint));
+      assert.equal(await page.locator('.mythic-flight-ghost').count(),0,
+        'Never clone or reparent image DOM during transitions on iOS Safari');
     }
     await page.waitForFunction(()=>document.querySelector('.mythic-wall-overlay[data-entry="showcase"]')
       ?.getAttribute('data-transition')==='idle');
-    await page.waitForFunction(()=>document.querySelectorAll('.mythic-flight-ghost').length===0);
-    assert.ok(await showcase.locator('[data-showcase-game="100"] .mythic-showcase-poster').evaluate(
-      (el,original)=>el===original,originalPaintedCard),
-      'The exact thumbnail DOM is restored after the complete-card handoff');
+    assert.ok(await posterWall.locator('.mythic-poster.is-active').evaluate(
+      (el,original)=>el===original,fullPosterHandle),
+      'The exact same fullscreen poster element remains mounted throughout the transition');
     const fullyDressed=await posterWall.locator('.mythic-poster.is-active').evaluate(card=>{
       const img=selector=>card.querySelector(selector);
       return {
@@ -1186,8 +1202,11 @@ try{
     await posterWall.getByRole('button',{name:'返回展示柜'}).click();
     if(!await page.evaluate(()=>matchMedia('(prefers-reduced-motion: reduce)').matches)){
       assert.equal(await posterWall.getAttribute('data-transition'),'flying-out',
-        'Closing a visible shelf collectible animates the full card back to its thumbnail');
-      assert.equal(await page.locator('.mythic-flight-ghost[data-flight="poster"]').count(),1);
+        'Closing a visible shelf collectible animates the same full poster back to its thumbnail');
+      assert.ok(await posterWall.locator('.mythic-poster.is-active').evaluate(el=>
+        el.getAnimations().length>0&&el.parentElement.classList.contains('mythic-wall-slide')),
+        'Close motion also keeps the fully painted poster in its React-owned slide');
+      assert.equal(await page.locator('.mythic-flight-ghost').count(),0);
     }
     await posterWall.waitFor({state:'hidden'});
     await showcase.waitFor();

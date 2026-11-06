@@ -3727,22 +3727,12 @@ footer .dot {
 }
 
 
-/* FLIP shared-element passage between a grid collectible and its full-size
-   memorial card. The flying clone stays on its own compositor layer. */
-.mythic-flight-ghost{
- position:fixed;z-index:190;pointer-events:none;contain:layout paint style;
- overflow:visible;transform-origin:top left;
- filter:drop-shadow(0 12px 35px #080b08a1);
- will-change:transform,opacity;
-}
-.mythic-flight-ghost>.mythic-showcase-poster,
-.mythic-flight-ghost>.mythic-poster{
- display:block;width:100%!important;height:100%!important;max-height:none!important;
- margin:0!important;aspect-ratio:auto!important;transform:none!important;
-}
-.mythic-flight-ghost>.mythic-poster{box-shadow:0 0 0 1px #a07a46,0 0 0 3px #171711,0 16px 60px #0008}
-.mythic-wall-overlay.is-entering{background:transparent}
-.mythic-wall-overlay.is-entering::before{
+/* The fullscreen poster is the only animated surface; never relocate
+   or clone its DOM. Its image layers and gold frame remain painted together. */
+.mythic-wall-overlay.is-entering,
+.mythic-wall-overlay.is-revealing{background:transparent}
+.mythic-wall-overlay.is-entering::before,
+.mythic-wall-overlay.is-revealing::before{
  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
  background:radial-gradient(ellipse at 50% 21%,#2e3020 0%,#101814 42%,#050a09 91%);
  animation:mythic-shared-backdrop-in 520ms ease-out both;
