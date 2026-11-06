@@ -126,7 +126,9 @@ export function flyMythicIn(
   onReveal();
   await nextPaint();
   if(cancelled)return;
-  target.dataset.openDelayMs=target.dataset.visualStartDelayMs||'0';
+  target.dataset.openDelayMs=String(
+   Math.round(performance.now()-Number(source.dataset.openClickedAt||performance.now()))
+  );
   blend=target.animate([{opacity:0},{opacity:1}],
    {duration:190,easing:'ease-in-out',fill:'forwards'});
   try{await blend.finished;}catch{return;}
