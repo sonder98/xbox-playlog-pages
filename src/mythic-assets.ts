@@ -47,6 +47,24 @@ export function warmMythicPoster(entry:MythicPoster,profile:Profile){
   void warmMythicImage(url);
 }
 
+/** Prepare the *complete* enlarged card while its painted thumbnail is moving.
+ * Fullscreen reveal waits for image decode and the final typography, so the
+ * screenshot, gold ornaments, cover and badge cannot arrive in separate stages.
+ * Failed resources resolve to their fixed-size placeholders instead of hanging.
+ */
+export function prepareMythicPoster(entry:MythicPoster,profile:Profile):Promise<void>{
+ const urls=[
+  profile.avatar,MYTHIC_BADGE_URL,mythicCover(entry.game),
+  mythicBackdrop(entry.game),
+  entry.firstAchievement?.cachedImage||entry.firstAchievement?.image,
+  entry.lastBaseAchievement?.cachedImage||entry.lastBaseAchievement?.image
+ ];
+ return Promise.all([
+  warmMythicFonts(),
+  ...urls.map((url,i)=>warmMythicImage(url,i<3?'high':'auto'))
+ ]).then(()=>{});
+}
+
 // Always show the finished font layout, never the fallback layout followed by
 // an unrelated reflow when Google Fonts resolves 1-2 seconds later.
 let fontReady:Promise<void>|null=null;
