@@ -135,10 +135,13 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady}:{
  </article>;
 }
 
-export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
- posters:MythicPoster[];profile:Profile;initialGameId?:string|null;onClose:()=>void;
+export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=false,onClose}:{
+ posters:MythicPoster[];profile:Profile;initialGameId?:string|null;
+ allowNavigation?:boolean;onClose:()=>void;
 }){
- const single=initialGameId!==null&&initialGameId!==undefined;
+ // Selecting a card in the cabinet chooses the initial index, not single-card
+ // mode; the game-detail shortcut still opens only its own collectible.
+ const single=!allowNavigation&&initialGameId!==null&&initialGameId!==undefined;
  const initial=Math.max(0,posters.findIndex(p=>p.game.id===initialGameId));
  const [index,setIndex]=useState(initial);
  const [fontReady,setFontReady]=useState(false);
@@ -185,12 +188,13 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
   setIndex(i=>Math.max(0,Math.min(posters.length-1,i+(dx<0?1:-1))));
  }
  return <div className="mythic-wall-overlay" role="dialog" aria-modal="true"
-  aria-label={single?'Mythic纪念卡':'Mythic纪念墙'} data-display-mode={single?'single':'wall'}>
+  aria-label={single?'Mythic纪念卡':'Mythic纪念墙'} data-display-mode={single?'single':'wall'}
+  data-entry={allowNavigation?'showcase':single?'detail':'legacy'}>
   <header className="mythic-wall-header">
    <div><span className="mythic-wall-eyebrow">YOUR MYTHIC LEGACY</span>
-    <strong>{single?'Mythic纪念卡':'Mythic纪念墙'}</strong></div>
+    <strong>{single?'Mythic纪念卡':allowNavigation?'Mythic纪念卡':'Mythic纪念墙'}</strong></div>
    {!single&&<span className="mythic-wall-counter" aria-live="polite">{index+1} / {posters.length}</span>}
-   <button type="button" className="mythic-wall-close" onClick={onClose} aria-label={single?'关闭Mythic纪念卡':'关闭Mythic纪念墙'}><X size={22}/></button>
+   <button type="button" className="mythic-wall-close" onClick={onClose} aria-label={allowNavigation?'返回展示柜':single?'关闭Mythic纪念卡':'关闭Mythic纪念墙'}><X size={22}/></button>
   </header>
   <div className="mythic-wall-viewport" onTouchStart={e=>{
    if(!single&&e.touches.length===1)touchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};
