@@ -3317,12 +3317,13 @@ footer .dot {
 }
 .mythic-poster-stats small{font-size:2.65cqw;}
 .mythic-poster-stats span{font-size:2.45cqw;}
+.mythic-poster-stats{top:83.9%;height:7.0%;}
 .mythic-poster-footer{
- top:91.8%;font-family:"Noto Serif SC","Songti SC",serif;
+ top:91.15%;font-family:"Noto Serif SC","Songti SC",serif;
  font-size:2.3cqw;
 }
 .mythic-poster-brand{font-family:"Cormorant Garamond",Georgia,serif;font-size:3cqw;letter-spacing:.10em;}
-.mythic-poster-gamepad{bottom:3.45%;font-size:2.4cqw;gap:10px;z-index:2;}
+.mythic-poster-gamepad{top:95.1%;bottom:auto;font-size:2.4cqw;gap:10px;z-index:2;}
 .mythic-poster-gamepad span{width:14px;height:14px;border-width:1px;line-height:1;}
 /* The reference shows a brief full-card bright metallic wipe before confetti. */
 .mythic-poster-opening-glint{
@@ -3364,7 +3365,7 @@ footer .dot {
 }
 @media(max-width:700px){
  .mythic-poster-title{font-size:7.05cqw;}
- .mythic-poster-gamepad{bottom:3.6%;}
+ .mythic-poster-gamepad{top:95.1%;bottom:auto;}
  .game-detail .achievement-progress-actions{gap:5px;}
  .game-detail .achievement-sort-row:has(.detail-mythic-trigger){min-height:57px;}
 }
