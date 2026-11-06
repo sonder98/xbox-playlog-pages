@@ -918,7 +918,7 @@ try{
       'Library entry opens the cabinet, not the old full-size single-card carousel');
     const shelfGeometry=await showcase.locator('.mythic-showcase-grid').evaluate(grid=>{
       const cards=[...grid.querySelectorAll('.mythic-showcase-seat')].slice(0,4).map(el=>el.getBoundingClientRect());
-      return {columns:getComputedStyle(grid).gridTemplateColumns.trim().split(/\\s+/).length,
+      return {columns:getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length,
        firstRow:cards.slice(0,3).map(r=>r.top),
        secondRow:cards[3].top,firstRowBottom:cards[0].bottom,
        gridWidth:grid.getBoundingClientRect().width,cardWidths:cards.map(r=>r.width)};
