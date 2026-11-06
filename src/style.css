@@ -3791,3 +3791,46 @@ footer .dot {
 @media(prefers-reduced-motion:reduce){
  .mythic-showcase-poster.is-primed{transition:none}
 }
+
+
+/* Truly immediate card flight. Keep the already rasterized preview inside its
+   original React tree; position:fixed escapes the gallery, no image reparenting.
+   The opaque fullscreen card takes over only once every visual has painted. */
+.mythic-showcase-screen.is-flight-active{
+ z-index:145;
+ overflow:visible;
+ background:transparent;
+}
+.mythic-showcase-screen.is-flight-active::before{
+ content:"";
+ position:fixed;
+ inset:0;
+ z-index:1;
+ pointer-events:none;
+ background:radial-gradient(ellipse at 50% 21%,#2e3020 0%,#101814 42%,#050a09 91%);
+}
+.mythic-showcase-screen.is-flight-active .mythic-showcase-seat{
+ transform:none!important;
+}
+.mythic-flight-spacer{
+ aspect-ratio:420/748;
+ flex:none;
+ visibility:hidden;
+}
+.mythic-showcase-poster.is-flight-source{
+ position:fixed;
+ isolation:isolate;
+ pointer-events:none;
+ box-shadow:0 0 0 1px #c7a463,0 16px 60px #000b,0 0 32px #a789502d;
+ will-change:transform;
+}
+.mythic-wall-overlay.is-revealing{
+ z-index:160;
+ background:transparent;
+}
+.mythic-wall-overlay.is-revealing::before{
+ display:none;
+}
+@media(prefers-reduced-motion:reduce){
+ .mythic-showcase-poster.is-flight-source{will-change:auto}
+}
