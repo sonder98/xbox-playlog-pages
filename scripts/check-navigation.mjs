@@ -943,6 +943,19 @@ try{
     await showcase.getByRole('button',{name:'放大 Test Game 0 纪念卡'}).click();
     const posterWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
     await posterWall.waitFor();
+    if(!await page.evaluate(()=>matchMedia('(prefers-reduced-motion: reduce)').matches)){
+      const moving=await showcase.locator('[data-showcase-game="100"] .mythic-showcase-poster').evaluate(el=>({
+        moving:el.classList.contains('is-flight-source'),
+        animation:el.getAnimations().length>0,
+        parent:el.parentElement?.className,
+        top:getComputedStyle(el).top,
+        position:getComputedStyle(el).position
+      }));
+      assert.ok(moving.moving&&moving.animation&&moving.position==='fixed',
+        'The existing thumbnail visibly starts flying before any full-size images or fonts complete: '+JSON.stringify(moving));
+      assert.ok(await showcase.evaluate(el=>el.classList.contains('is-flight-active')),
+        'The showcase supplies an immediate fullscreen backdrop during the flight');
+    }
     const fullPosterHandle=await posterWall.locator('.mythic-poster.is-active').elementHandle();
     if(!await page.evaluate(()=>matchMedia('(prefers-reduced-motion: reduce)').matches)){
       await page.waitForFunction(()=>document.querySelector('.mythic-wall-overlay[data-entry="showcase"]')
@@ -965,9 +978,12 @@ try{
       });
       assert.ok(transitionPaint.animations>0,
         'The full poster itself transforms as one layer, without a separate flying thumbnail');
-      const openDelay=Number(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-open-delay-ms'));
-      assert.ok(openDelay>=0&&openDelay<350,
-        'A preheated poster begins expanding immediately after the tap (<350ms), not after a 1s resource wait: '+openDelay+'ms');
+      const visualDelay=Number(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-visual-start-delay-ms'));
+      assert.ok(visualDelay>=0&&visualDelay<200,
+        'The already painted thumbnail must start moving within 200ms of a tap: '+visualDelay+'ms');
+      const fullReadyDelay=Number(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-open-delay-ms'));
+      assert.ok(fullReadyDelay>=visualDelay,
+        'The separate full-art handoff can wait for assets without delaying the initial visible motion');
       assert.ok(transitionPaint.cover&&transitionPaint.emblem&&transitionPaint.backdrop&&
         transitionPaint.fontReady&&transitionPaint.outline&&
         transitionPaint.coverOpacity>.95&&transitionPaint.emblemOpacity>.95&&
@@ -1229,9 +1245,9 @@ try{
       ?.getAttribute('data-transition')==='idle');
     assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'107',
       'The selected cabinet card determines the initial full-size slide');
-    const scrolledTapDelay=Number(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-open-delay-ms'));
-    assert.ok(scrolledTapDelay>=0&&scrolledTapDelay<350,
-      'After scrolling, nearby full-size cards are already warmed and animate without a loading gap: '+scrolledTapDelay+'ms');
+    const scrolledVisualDelay=Number(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-visual-start-delay-ms'));
+    assert.ok(scrolledVisualDelay>=0&&scrolledVisualDelay<200,
+      'Scrolled cards also begin visible motion immediately, independent of full-art load: '+scrolledVisualDelay+'ms');
     assert.equal(await posterWall.locator('canvas.mythic-wall-fireworks').count(),1,
       'Opening a non-first poster from the cabinet also triggers the initial fireworks');
     await posterWall.getByRole('button',{name:'下一张Mythic纪念卡'}).click();

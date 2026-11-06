@@ -53,62 +53,100 @@ async function waitForPaintedPoster(poster:HTMLElement,prepared:Promise<unknown>
  await nextPaint();
 }
 
+/** A genuine immediate-response FLIP:
+ * The original *painted thumbnail*, still owned by React in its showcase,
+ * starts moving in the very first post-click frame. Fullscreen assets prepare
+ * in parallel, hidden below it. Once BOTH the motion and fully dressed modal
+ * are ready, the two cards crossfade in one pass. We never clone/reparent an
+ * image DOM node (which previously caused iOS Safari image flashes).
+ */
 export function flyMythicIn(
  origin:MythicFlightOrigin,target:HTMLElement,ready:Promise<unknown>,
  onReveal:()=>void,onFinished:()=>void
 ){
  let cancelled=false;
- let animation:Animation|null=null;
  const source=origin.element;
- const previousSourceVisibility=source.style.visibility;
- const clearTap=()=>source.classList.remove('is-primed');
- const previousTargetVisibility=target.style.visibility;
- const previousTargetOpacity=target.style.opacity;
- let completed=false;
- const revealAndFinish=()=>{
-  if(cancelled)return;
-  onReveal();onFinished();
+ const gallery=source.closest<HTMLElement>('.mythic-showcase-screen');
+ let move:Animation|null=null;
+ let blend:Animation|null=null;
+ const prevSourceStyle=source.getAttribute('style');
+ const prevTargetVisibility=target.style.visibility;
+ const prevTargetOpacity=target.style.opacity;
+ const galleryScroll=gallery?.scrollTop??0;
+ let placeholder:HTMLElement|null=null;
+ const complete=()=>{if(!cancelled){onReveal();onFinished();}};
+ // For reduced-motion, skip transform but retain the complete-art requirement.
+ if(reducedMotion()||!gallery||!source.isConnected){
+  void waitForPaintedPoster(target,ready).then(complete);
+  return ()=>{cancelled=true;};
+ }
+ const finalRect=target.getBoundingClientRect();
+ if(!finalRect.width||!finalRect.height||!origin.rect.width||!origin.rect.height){
+  void waitForPaintedPoster(target,ready).then(complete);
+  return ()=>{cancelled=true;};
+ }
+ const restore=()=>{
+  move?.cancel();
+  blend?.cancel();
+  source.classList.remove('is-flight-source','is-primed');
+  if(prevSourceStyle===null)source.removeAttribute('style');
+  else source.setAttribute('style',prevSourceStyle);
+  placeholder?.remove();
+  gallery.classList.remove('is-flight-active');
+  gallery.scrollTop=galleryScroll;
  };
+ // Preserve grid geometry while switching this SAME thumbnail to fixed mode.
+ placeholder=document.createElement('div');
+ placeholder.className='mythic-flight-spacer';
+ placeholder.style.width=origin.rect.width+'px';
+ placeholder.style.height=origin.rect.height+'px';
+ source.parentElement?.insertBefore(placeholder,source);
+ gallery.classList.add('is-flight-active');
+ source.classList.add('is-flight-source');
+ Object.assign(source.style,{
+  position:'fixed',left:origin.rect.left+'px',top:origin.rect.top+'px',
+  width:origin.rect.width+'px',height:origin.rect.height+'px',
+  maxHeight:'none',margin:'0',zIndex:'3',transformOrigin:'top left'
+ });
+ target.dataset.visualStartDelayMs=String(
+  Math.round(performance.now()-Number(source.dataset.openClickedAt||performance.now()))
+ );
+ // No network/decode await is allowed before this animation starts.
+ move=source.animate([
+  {transform:'translate3d(0,0,0) scale(1)'},
+  {transform:`translate3d(${finalRect.left-origin.rect.left}px,${finalRect.top-origin.rect.top}px,0) scale(${finalRect.width/origin.rect.width},${finalRect.height/origin.rect.height})`}
+ ],{duration:530,easing:'cubic-bezier(.22,.72,.17,1)',fill:'forwards'});
  const run=async()=>{
-  await waitForPaintedPoster(target,ready);
+  await Promise.allSettled([move!.finished,waitForPaintedPoster(target,ready)]);
   if(cancelled)return;
-  if(reducedMotion()){clearTap();revealAndFinish();return;}
-  const finalRect=target.getBoundingClientRect();
-  if(!finalRect.width||!finalRect.height){revealAndFinish();return;}
-  // Switch from the thumbnail to the *complete* fullscreen card at exactly
-  // the source rectangle, then transform only this ONE painted DOM surface.
-  source.style.visibility='hidden';
-  clearTap();
+  // Keep the original enlarged thumbnail visible until the *actual* full
+  // poster's image classes, badge, border and fonts have painted.
   target.style.visibility='visible';
-  target.style.opacity='1';
-  target.style.willChange='transform';
-  target.dataset.openDelayMs=String(Math.round(performance.now()-Number(source.dataset.openClickedAt||performance.now())));
-  animation=target.animate([
-   {transform:scaledTransform(origin.rect,finalRect)},
-   {transform:'translate3d(0,0,0) scale(1)'}
-  ],{duration:570,easing:'cubic-bezier(.22,.72,.17,1)',fill:'both'});
+  target.style.opacity='0';
   onReveal();
-  try{await animation.finished;}catch{return;}
+  await nextPaint();
   if(cancelled)return;
-  completed=true;
-  animation.cancel();
-  target.style.removeProperty('will-change');
-  target.style.visibility=previousTargetVisibility;
-  target.style.opacity=previousTargetOpacity;
-  source.style.visibility=previousSourceVisibility;
+  target.dataset.openDelayMs=String(
+   Math.round(performance.now()-Number(source.dataset.openClickedAt||performance.now()))
+  );
+  blend=target.animate([{opacity:0},{opacity:1}],
+   {duration:190,easing:'ease-in-out',fill:'forwards'});
+  try{await blend.finished;}catch{return;}
+  if(cancelled)return;
+  target.style.opacity='1';
+  // The fullscreen poster is now opaque, so removing the temporary fixed
+  // thumbnail cannot expose an empty frame or the gallery behind it.
+  restore();
   onFinished();
+  target.style.visibility=prevTargetVisibility;
+  target.style.opacity=prevTargetOpacity;
  };
  void run();
  return ()=>{
   cancelled=true;
-  clearTap();
-  animation?.cancel();
-  if(!completed){
-   source.style.visibility=previousSourceVisibility;
-   target.style.visibility=previousTargetVisibility;
-   target.style.opacity=previousTargetOpacity;
-   target.style.removeProperty('will-change');
-  }
+  restore();
+  target.style.visibility=prevTargetVisibility;
+  target.style.opacity=prevTargetOpacity;
  };
 }
 
