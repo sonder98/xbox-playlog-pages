@@ -8,6 +8,19 @@ import {publishSnapshot} from './snapshot.ts';
 import {cacheRecordImages} from './image-cache.ts';
 import {appendPlaytimeSamples,boundaryPlaytimeSweep} from '../src/playtime-ledger.ts';
 import {fixedPcMetascores} from './fixed-pc-metascores.ts';
+import {completion} from '../src/completion.ts';
+import type {Game} from '../src/data.ts';
+/** Aggregate only. Never log the private game's name, ID or snapshot. */
+function logMythicArtworkCoverage(games:Game[]){
+ const mythic=games.filter(g=>completion(g).mythic);
+ console.log('Mythic 海报背景覆盖：'+JSON.stringify({
+  catalogGames:games.length,mythic:mythic.length,
+  firstScreenshot:mythic.filter(g=>g.posterSelectionVersion===2&&g.posterImagePurpose==='Screenshot').length,
+  fallbackOfficialArt:mythic.filter(g=>g.posterImage&&g.posterImagePurpose!=='Screenshot').length,
+  missingBackground:mythic.filter(g=>!g.posterImage).length,
+  versioned:mythic.filter(g=>g.posterSelectionVersion===2).length
+ }));
+}
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
 const root=process.env.MICROSOFT_STATE_DIR||'.private/microsoft',key=process.env.MICROSOFT_STATE_KEY!;
 const saved=readState(root+'/candidate.json',key);
@@ -21,6 +34,7 @@ const fresh=freshSource?{...freshSource,games:freshSource.games.filter((g:any)=>
 if(ledger&&fresh?.source==='Xbox'&&!boundaryPlaytimeSweep(new Date().toISOString())&&process.env.PLAYTIME_FORCE_SWEEP!=='true'&&Date.now()-Date.parse(fresh.at)<20*60_000){
  const artwork=await australianArtwork(fresh,fetch,previous[0]);
  console.log('快速快照澳区横幅覆盖：'+JSON.stringify(artwork));
+ logMythicArtworkCoverage(fresh.games);
  await cacheRecordImages(fresh);
  await publishSnapshot(fresh,previous.filter((r:any)=>r.id!==fresh.id).slice(0,29),target,ledger,fixedPcMetascores(fresh.games.map((g:any)=>String(g.id)),key));console.log('复用刚完成的微软快照。');process.exit(0);
 }
@@ -37,6 +51,7 @@ if(result.audit.failed||result.audit.interrupted||result.audit.historySourcesFai
 const artworkStarted=Date.now();
 const artwork=await australianArtwork(result.record,fetch,previous[0]);
 console.log('澳区英文封面覆盖：'+JSON.stringify({...artwork,seconds:Math.round((Date.now()-artworkStarted)/1000)}));
+logMythicArtworkCoverage(result.record.games);
 // Retain zero-result metadata ONLY in the existing encrypted private candidate
 // so the next run can avoid re-reading 30+ unpublishable titles.
 const allScannedGames=result.record.games;
