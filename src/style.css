@@ -3751,8 +3751,18 @@ footer .dot {
 .mythic-wall-overlay.is-entering .mythic-poster,
 .mythic-wall-overlay.is-flying-out .mythic-poster{visibility:hidden}
 .mythic-wall-overlay.is-entering .mythic-wall-header,
-.mythic-wall-overlay.is-entering .mythic-wall-controls{
+.mythic-wall-overlay.is-entering .mythic-wall-controls,
+.mythic-wall-overlay.is-revealing .mythic-wall-header,
+.mythic-wall-overlay.is-revealing .mythic-wall-controls{
  opacity:0;
+}
+/* Complete imagery is already decoded while it is concealed by the flying
+   card. Reveal it in a single frame rather than cascading image crossfades. */
+.mythic-wall-overlay.is-entering .mythic-poster-backdrop,
+.mythic-wall-overlay.is-entering .mythic-poster img,
+.mythic-wall-overlay.is-revealing .mythic-poster-backdrop,
+.mythic-wall-overlay.is-revealing .mythic-poster img{
+ transition:none!important;
 }
 .mythic-wall-overlay.is-flying-out{
  animation:mythic-shared-backdrop-out 440ms ease-in-out both;

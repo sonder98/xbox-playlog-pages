@@ -4,7 +4,7 @@ import type {Profile,Game,Achievement} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {posterLocalDate} from '../mythic-posters';
 import {MythicBadgeArt} from './mythic-badge';
-import {mythicBackdrop,mythicCover,mythicImageAlreadyDecoded,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
+import {mythicBackdrop,mythicCover,mythicImageAlreadyDecoded,prepareMythicPoster,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
 import {MythicOpeningFireworks} from './mythic-fireworks';
 import {flyMythicIn,flyMythicOut,type MythicFlightOrigin} from './mythic-transition';
 
@@ -145,7 +145,7 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
  const single=!allowNavigation&&initialGameId!==null&&initialGameId!==undefined;
  const initial=Math.max(0,posters.findIndex(p=>p.game.id===initialGameId));
  const [index,setIndex]=useState(initial);
- const [phase,setPhase]=useState<'entering'|'idle'|'flying-out'|'fading-out'>(()=>
+ const [phase,setPhase]=useState<'entering'|'revealing'|'idle'|'flying-out'|'fading-out'>(()=>
   flightOrigin&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches?'entering':'idle');
  const wallRef=useRef<HTMLDivElement>(null);
  const exitCleanup=useRef<(()=>void)|null>(null);
@@ -154,7 +154,12 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
   if(!flightOrigin||phase!=='entering')return;
   const target=wallRef.current?.querySelector<HTMLElement>('.mythic-poster.is-active');
   if(!target){setPhase('idle');return;}
-  return flyMythicIn(flightOrigin,target,()=>setPhase('idle'));
+  // The painted original moves immediately. Keep it in front until every
+  // enlarged illustration and the final fonts are decoded behind it.
+  const chosen=posters[initial];
+  return flyMythicIn(flightOrigin,target,
+   chosen?prepareMythicPoster(chosen,profile):Promise.resolve(),
+   ()=>setPhase('revealing'),()=>setPhase('idle'));
  // Initial geometry only; later swipes keep the poster in place.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[]);

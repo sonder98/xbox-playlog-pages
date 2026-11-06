@@ -936,6 +936,7 @@ try{
       'The latest Mythic appears first in the showcase');
     assert.equal(await showcase.locator('.mythic-showcase-backdrop').first().getAttribute('loading'),'lazy',
       'The cabinet uses native lazy-loading for cinematic preview images');
+    const originalPaintedCard=await showcase.locator('[data-showcase-game="100"] .mythic-showcase-poster').elementHandle();
     await showcase.getByRole('button',{name:'放大 Test Game 0 纪念卡'}).click();
     const posterWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
     await posterWall.waitFor();
@@ -944,11 +945,31 @@ try{
         'Clicking a shelf collectible first starts a real thumbnail-to-poster transition');
       const flyingThumb=page.locator('.mythic-flight-ghost[data-flight="preview"]');
       assert.equal(await flyingThumb.count(),1,
-        'A visible clone of the clicked thumbnail moves from its actual shelf position');
+        'The existing already painted thumbnail flies from the actual shelf position');
+      assert.ok(await flyingThumb.locator('.mythic-showcase-poster').evaluate(
+        (el,original)=>el===original,originalPaintedCard),
+        'Flight must move the original painted image DOM, never clone its lazy images');
+      assert.equal(await flyingThumb.locator('.mythic-showcase-portrait img').count(),1,
+        'The moving card retains its existing circle art throughout the transition');
     }
     await page.waitForFunction(()=>document.querySelector('.mythic-wall-overlay[data-entry="showcase"]')
       ?.getAttribute('data-transition')==='idle');
     await page.waitForFunction(()=>document.querySelectorAll('.mythic-flight-ghost').length===0);
+    assert.ok(await showcase.locator('[data-showcase-game="100"] .mythic-showcase-poster').evaluate(
+      (el,original)=>el===original,originalPaintedCard),
+      'The exact thumbnail DOM is restored after the complete-card handoff');
+    const fullyDressed=await posterWall.locator('.mythic-poster.is-active').evaluate(card=>{
+      const img=selector=>card.querySelector(selector);
+      return {
+       backdrop:card.querySelector('.mythic-poster-backdrop').classList.contains('is-loaded'),
+       cover:img('.mythic-poster-portrait img')?.classList.contains('is-loaded'),
+       emblem:img('.mythic-poster-emblem img')?.naturalWidth>0,
+       fontReady:!card.classList.contains('is-type-loading')
+      };
+    });
+    assert.ok(fullyDressed.backdrop&&fullyDressed.cover&&fullyDressed.emblem&&fullyDressed.fontReady,
+      'Poster reveal happens once: full background, cover, emblem and final fonts are present together: '+
+      JSON.stringify(fullyDressed));
     const galleryPosterBox=await posterWall.locator('.mythic-poster.is-active').boundingBox();
     const posterFrame=await posterWall.locator('.mythic-poster.is-active').evaluate(card=>{
       const measure=selector=>{
