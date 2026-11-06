@@ -3725,3 +3725,57 @@ footer .dot {
 @media(prefers-reduced-motion:reduce){
  .mythic-showcase-seat{transition:none}
 }
+
+
+/* FLIP shared-element passage between a grid collectible and its full-size
+   memorial card. The flying clone stays on its own compositor layer. */
+.mythic-flight-ghost{
+ position:fixed;z-index:190;pointer-events:none;contain:layout paint style;
+ overflow:visible;transform-origin:top left;
+ filter:drop-shadow(0 12px 35px #080b08a1);
+ will-change:transform,opacity;
+}
+.mythic-flight-ghost>.mythic-showcase-poster,
+.mythic-flight-ghost>.mythic-poster{
+ display:block;width:100%!important;height:100%!important;max-height:none!important;
+ margin:0!important;aspect-ratio:auto!important;transform:none!important;
+}
+.mythic-flight-ghost>.mythic-poster{box-shadow:0 0 0 1px #a07a46,0 0 0 3px #171711,0 16px 60px #0008}
+.mythic-wall-overlay.is-entering{background:transparent}
+.mythic-wall-overlay.is-entering::before{
+ content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+ background:radial-gradient(ellipse at 50% 21%,#2e3020 0%,#101814 42%,#050a09 91%);
+ animation:mythic-shared-backdrop-in 520ms ease-out both;
+}
+.mythic-wall-overlay.is-entering .mythic-wall-viewport{position:relative;z-index:1}
+.mythic-wall-overlay.is-entering .mythic-poster,
+.mythic-wall-overlay.is-flying-out .mythic-poster{visibility:hidden}
+.mythic-wall-overlay.is-entering .mythic-wall-header,
+.mythic-wall-overlay.is-entering .mythic-wall-controls{
+ opacity:0;
+}
+.mythic-wall-overlay.is-flying-out{
+ animation:mythic-shared-backdrop-out 440ms ease-in-out both;
+}
+.mythic-wall-overlay.is-fading-out{
+ animation:mythic-shared-backdrop-out 220ms ease-in both;
+}
+.mythic-wall-overlay.is-fading-out .mythic-poster{animation:mythic-shared-poster-out 220ms ease-in both}
+.mythic-wall-overlay[data-transition="idle"][data-entry="showcase"] .mythic-wall-header,
+.mythic-wall-overlay[data-transition="idle"][data-entry="showcase"] .mythic-wall-controls{
+ animation:mythic-shared-controls-in .19s ease-out both;
+}
+@keyframes mythic-shared-backdrop-in{from{opacity:0}to{opacity:1}}
+@keyframes mythic-shared-backdrop-out{from{opacity:1}to{opacity:0}}
+@keyframes mythic-shared-poster-out{to{opacity:0;transform:scale(.93)}}
+@keyframes mythic-shared-controls-in{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+ .mythic-wall-overlay.is-entering::before,
+ .mythic-wall-overlay.is-flying-out,
+ .mythic-wall-overlay.is-fading-out,
+ .mythic-wall-overlay.is-fading-out .mythic-poster,
+ .mythic-wall-overlay[data-transition="idle"][data-entry="showcase"] .mythic-wall-header,
+ .mythic-wall-overlay[data-transition="idle"][data-entry="showcase"] .mythic-wall-controls{
+  animation:none;
+ }
+}
