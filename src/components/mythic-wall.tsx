@@ -2,16 +2,14 @@ import {useEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
 import {ChevronLeft,ChevronRight,CircleUserRound,Sparkles,X} from 'lucide-react';
 import type {Profile,Game,Achievement} from '../data';
 import type {MythicPoster} from '../mythic-posters';
-import {MYTHIC_BADGE_URL,posterLocalDate} from '../mythic-posters';
+import {posterLocalDate} from '../mythic-posters';
+import {MythicBadgeArt} from './mythic-badge';
 import {MythicOpeningFireworks} from './mythic-fireworks';
 
 const GOLD='#e6c47b';
 function MythicEmblem({className=''}:{className?:string}){
- const [failed,setFailed]=useState(false);
- return <span className={'mythic-poster-emblem '+className}>
-  <Sparkles size={42} strokeWidth={1.4} aria-hidden="true"/>
-  {!failed&&<img src={MYTHIC_BADGE_URL} alt="Xbox Mythic 勋章" loading="eager"
-   onError={()=>setFailed(true)}/>}
+ return <span className={'mythic-poster-emblem '+className} aria-label="Mythic 徽章">
+  <MythicBadgeArt/>
  </span>;
 }
 function MomentArt({achievement}:{achievement:Achievement|null}){
@@ -171,6 +169,7 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
     </div>)}
    </div>
   </div>
+  {single&&<div className="mythic-wall-bottom-spacer" aria-hidden="true"/>}
   {!single&&<nav className="mythic-wall-controls" aria-label="切换Mythic纪念卡">
    <button type="button" onClick={()=>{setCelebrate(false);setIndex(i=>Math.max(0,i-1));}} disabled={index===0} aria-label="上一张Mythic纪念卡"><ChevronLeft size={22}/></button>
    <span>左右滑动，回顾每一次 Mythic</span>
