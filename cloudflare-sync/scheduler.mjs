@@ -3,7 +3,7 @@
 // remain on GitHub Actions. Never put GitHub tokens in this source file.
 const endpoint='https://api.github.com/repos/sonder98/xbox-playlog-pages/actions/workflows/sync.yml/dispatches';
 export const CRON_RULES=Object.freeze([
- '17,47 0-14,16-23 * * *', // ordinary 30-minute cadence, except the UTC 15h checkpoint
+ '17 */2 * * *', // every two hours at :17 UTC; same cadence as existing GitHub schedule
  '42 15 * * *',           // Beijing 23:42: force end-of-day playtime sample
  '2 16 * * *'             // Beijing 00:02: force next-day baseline
 ]);

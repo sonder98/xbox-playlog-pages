@@ -1,6 +1,6 @@
 # 免费 Cloudflare Cron 接管 Xbox 同步（不迁移网站）
 
-> **历史备选方案（2026-11-03）：** 用户已选择 EdgeOne 作为网站免 VPN 访问方案，并将 Xbox 自动同步改为每两小时一次。本文件中的半小时 Cron 配置不再是当前目标；除非用户明确要求回退到 Cloudflare，否则不要按本文启用或修改调度。
+> **2026-11-06 准备接入：** 仅使用 Cloudflare Worker 替代 GitHub Actions 不稳定的定时触发，每两小时一次；EdgeOne 网站访问方案与当前 GitHub Pages 站点不变。用户在 Cloudflare 控制台完成 Token Secret、Worker 部署与 Cron 设置之前，Cloudflare 不会自动执行任何任务。
 
 目的：替换目前容易漏触发的 GitHub Actions `schedule`，**仍然由现有 GitHub Actions 抓取 Xbox、保管微软授权、加密快照并发布 GitHub Pages**。Cloudflare 只定时发送一次授权的 GitHub workflow_dispatch。**不要把 Token 发到聊天、Issue、仓库文件或截图里。**
 
@@ -49,15 +49,15 @@ Worker → **Settings → Triggers → Cron Triggers**，分别添加下面三�
 
 | Cron (UTC) | 北京时间 | 作用 |
 |---|---|---|
-| `17,47 0-14,16-23 * * *` | 通常每小时 17、47 分，23 点除外 | 普通约半小时同步 |
+| `17 */2 * * *` | 每天 00:17、02:17、04:17……22:17（允许平台延迟） | 每两小时普通同步 |
 | `42 15 * * *` | 每天 23:42 | 当天临近结束时强制更新时长 |
 | `2 16 * * *` | 每天 00:02 | 次日时长基线采样 |
 
-这三条是**旧版已有规则的等价替换**，没有额外增加同步次数；Cloudflare Free 每个账户最多 5 个 Cron Triggers，容量够用。Cron 设置全球生效可能需要最多约 15 分钟。
+这三条与 `.github/workflows/sync.yml` 当前的定时规则一致；每两小时一次普通同步，另有两次跨天采样，不是旧版半小时同步。Cloudflare Free 每个账户最多 5 个 Cron Triggers，容量够用。Cron 设置全球生效可能需要最多约 15 分钟。
 
 ### 5. 验证至少一次实际触发
 
-在下一次预期时段查看：
+在下一次预期时段查看（仅 Worker 调用成功不代表 Xbox 同步已完成）：
 - Cloudflare Worker 的 Observability / Logs：应出现 `Xbox sync dispatched`，且 HTTP 状态 200 或 204。
 - GitHub [Actions 的 Sync Xbox records](https://github.com/sonder98/xbox-playlog-pages/actions/workflows/sync.yml)：应出现 `workflow_dispatch` 触发、最终 Success。
 - [Deploy Playlog](https://github.com/sonder98/xbox-playlog-pages/actions/workflows/pages.yml) 应随后成功。
