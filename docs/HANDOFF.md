@@ -179,3 +179,7 @@ npm run build
 - `scripts/image-cache.ts` 现有独立 `cachedPosterImage` WebP 缓存继续有效，会对新选中 Screenshot 重新生成缓存；没有截图时不放大方形封面充当海报背景。
 - `src/style.css` 的背景改为约 47.5% 海报高度、`background-size:cover`，下缘用 mask 和暗色叠层渐变消失于「恭喜 MYTHIC」附近；顶部缩短到约 39%，成就双卡和统计提升可用高度。桌面/手机通过 `scripts/check-navigation.mjs` 的区域不重叠与素材来源检查。
 - 发布新前端后，**已有在线快照可能暂时还是旧 Hero 背景**；新规则必须等正式 Xbox 同步成功、澳区截图重选并通过 Pages 部署后才能完整可见。不能为了换海报要求重新输入微软账号密码。
+
+### 2026-11-06 旧素材回填任务解除自动触发
+- `.github/workflows/refresh-au-artwork.yml` 曾在 `scripts/microsoft-artwork.ts` 发生变化时自动运行，并把旧的 `public/vault.json` 重新加密写入 Git。该历史流程与正式的 Release 发布架构不一致，还会额外触发 Pages 部署、在同一并发队列内挤掉等待执行的 Xbox 同步。
+- 因此旧任务改为**仅手动保留**，不再监听 push。日常海报截图升级、素材 WebP 缓存和最新 Xbox 数据应走 `.github/workflows/sync.yml` → Release → Pages。新增 `src/data.ts` 到正式 sync push 路径，使加密快照字段变更也能触发同步。
