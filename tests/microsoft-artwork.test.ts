@@ -26,7 +26,7 @@ test('AU catalog selects TitledHeroArt before higher-resolution SuperHeroArt, ne
  assert.equal(record.games[0].posterImage,'https://store-images.s-microsoft.com/shot');
  assert.equal(record.games[0].posterImagePurpose,'Screenshot',
   'Mythic poster uses the first AU Store screenshot instead of a hero');
- assert.equal(record.games[0].posterSelectionVersion,2);
+ assert.equal(record.games[0].posterSelectionVersion,3);
  assert.equal(record.games[0].achievements![0].name,'中文成就');
 });
 test('Missing TitledHeroArt uses SuperHeroArt, then BoxArt if no hero exists',async()=>{
@@ -55,7 +55,7 @@ test('Verified AU TitledHeroArt remains reusable for incremental sync',async()=>
  await australianArtwork(next,async()=>{throw Error('should not contact catalog');},old);
  assert.equal(next.games[0].detailImage,old.games[0].detailImage);
  assert.equal(next.games[0].posterImage,old.games[0].posterImage);
- assert.equal(next.games[0].posterSelectionVersion,2);
+ assert.equal(next.games[0].posterSelectionVersion,3);
 });
 
 test('An existing untitled SuperHeroArt is replaced by a titled image on refresh',async()=>{
@@ -88,6 +88,11 @@ test('Mythic background takes the first Screenshot in API order, not the largest
  ]}]}]}));
  assert.equal(record.games[0].posterImage,'https://store-images.s-microsoft.com/image/first-shot');
  assert.equal(record.games[0].posterImagePurpose,'Screenshot');
+ assert.deepEqual(record.games[0].posterScreenshots,[
+  'https://store-images.s-microsoft.com/image/first-shot',
+  'https://store-images.s-microsoft.com/image/later-4k-shot'
+ ]);
+ assert.match(record.games[0].posterRotationStartDay||'',/^\d{4}-\d{2}-\d{2}$/);
 });
 
 test('Already-Mythic legacy hero posters upgrade once; later syncs reuse the Screenshot',async()=>{
@@ -111,5 +116,51 @@ test('Already-Mythic legacy hero posters upgrade once; later syncs reuse the Scr
  const again={games:[{id:'8',name:'Game',image:'',earned:1,total:1}]} as RecordData;
  await australianArtwork(again,async()=>{throw Error('versioned poster should be reused');},next);
  assert.equal(again.games[0].posterImage,next.games[0].posterImage);
- assert.equal(again.games[0].posterSelectionVersion,2);
+ assert.equal(again.games[0].posterSelectionVersion,3);
+});
+
+test('independent Mythic albums preserve AU API order and reuse a complete gallery on later syncs',async()=>{
+ const make=(id:string)=>({games:[{id,name:'Game',image:'',earned:1,total:1}]}) as RecordData;
+ const first=make('10'),second=make('11');
+ const request:typeof fetch=async input=>{
+  const id=new URL(String(input)).searchParams.get('Value');
+  return Response.json({Products:[{ProductKind:'Game',LocalizedProperties:[{Language:'en-AU',ProductTitle:'Game',Images:[
+   image('BoxArt',1080,1080,'image/cover-'+id),
+   image('TitledHeroArt',1920,1080,'image/titled-'+id),
+   image('Screenshot',1920,1080,'image/first-'+id),
+   ...(id==='10'?[image('Screenshot',1920,1080,'image/second-10'),image('Screenshot',1920,1080,'image/third-10')]:[])
+  ]}]}]});
+ };
+ await australianArtwork(first,request);
+ await australianArtwork(second,request);
+ assert.deepEqual(first.games[0].posterScreenshots,[
+  'https://store-images.s-microsoft.com/image/first-10',
+  'https://store-images.s-microsoft.com/image/second-10',
+  'https://store-images.s-microsoft.com/image/third-10'
+ ]);
+ assert.deepEqual(second.games[0].posterScreenshots,['https://store-images.s-microsoft.com/image/first-11']);
+ const refreshed=make('10');
+ await australianArtwork(refreshed,async()=>{throw Error('must reuse already versioned screenshot album');},first);
+ assert.deepEqual(refreshed.games[0].posterScreenshots,first.games[0].posterScreenshots);
+ assert.equal(refreshed.games[0].posterRotationStartDay,first.games[0].posterRotationStartDay);
+});
+
+test('a legacy Mythic with a version-two poster reloads the screenshot album once',async()=>{
+ const old={games:[{id:'99',name:'Game',image:'https://store-images.s-microsoft.com/image/cover',
+  detailImage:'https://store-images.s-microsoft.com/image/title',
+  detailImagePurpose:'TitledHeroArt',posterImage:'https://store-images.s-microsoft.com/image/shot-one',
+  posterSelectionVersion:2,posterImagePurpose:'Screenshot',earned:1,total:1}]} as RecordData;
+ const next=structuredClone(old);
+ let calls=0;
+ await australianArtwork(next,async()=>{calls++;return Response.json({Products:[{ProductKind:'Game',LocalizedProperties:[{Language:'en-AU',ProductTitle:'Game',Images:[
+  image('BoxArt',1080,1080,'image/cover'),
+  image('TitledHeroArt',1920,1080,'image/title'),
+  image('Screenshot',1920,1080,'image/shot-one'),
+  image('Screenshot',1920,1080,'image/shot-two')
+ ]}]}]});},old);
+ assert.equal(calls,1);
+ assert.equal(next.games[0].posterSelectionVersion,3);
+ assert.deepEqual(next.games[0].posterScreenshots,[
+  'https://store-images.s-microsoft.com/image/shot-one','https://store-images.s-microsoft.com/image/shot-two'
+ ]);
 });
