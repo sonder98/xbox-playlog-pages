@@ -917,18 +917,19 @@ try{
     assert.equal(await page.getByRole('dialog',{name:'Mythic纪念墙'}).count(),0,
       'Library entry opens the cabinet, not the old full-size single-card carousel');
     const shelfGeometry=await showcase.locator('.mythic-showcase-grid').evaluate(grid=>{
-      const cards=[...grid.querySelectorAll('.mythic-showcase-seat')].slice(0,4).map(el=>el.getBoundingClientRect());
-      return {columns:getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length,
-       firstRow:cards.slice(0,3).map(r=>r.top),
-       secondRow:cards[3].top,firstRowBottom:cards[0].bottom,
+      const columns=getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length;
+      const cards=[...grid.querySelectorAll('.mythic-showcase-seat')].slice(0,columns+1).map(el=>el.getBoundingClientRect());
+      return {columns,firstRow:cards.slice(0,columns).map(r=>r.top),
+       secondRow:cards[columns].top,firstRowBottom:cards[0].bottom,
        gridWidth:grid.getBoundingClientRect().width,cardWidths:cards.map(r=>r.width)};
     });
-    assert.equal(shelfGeometry.columns,3,'Desktop and mobile cabinet always use exactly three columns');
+    assert.equal(shelfGeometry.columns,mobile?2:3,
+      'Phones display two larger collectibles per row; desktop retains three');
     assert.ok(shelfGeometry.firstRow.every(top=>Math.abs(top-shelfGeometry.firstRow[0])<1),
-      'The first three collectibles share the same grid row');
+      'All collectibles in the first row are horizontally aligned');
     assert.ok(shelfGeometry.secondRow>shelfGeometry.firstRowBottom+3&&
-      shelfGeometry.cardWidths.every(width=>width>40),
-      'Additional collectibles flow vertically below the three-column row: '+JSON.stringify(shelfGeometry));
+      shelfGeometry.cardWidths.every(width=>width>(mobile?130:40)),
+      'Additional collectibles flow into the next row without shrinking the mobile cards: '+JSON.stringify(shelfGeometry));
     assert.equal(await showcase.locator('.mythic-showcase-item').count(),12,
       'The cabinet shows all eligible Mythic games in completion-date order');
     assert.equal(await showcase.locator('.mythic-showcase-item').first().getAttribute('data-showcase-game'),'100',

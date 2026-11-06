@@ -3708,18 +3708,18 @@ footer .dot {
  .mythic-showcase-section-heading{margin-bottom:12px}
  .mythic-showcase-section-heading strong{font-size:12px;gap:7px}
  .mythic-showcase-section-heading>span{font-size:10px;max-width:135px}
- .mythic-showcase-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 8px}
+ .mythic-showcase-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 12px}
  .mythic-showcase-seat{padding:3px 3px 6px;border-radius:7px}
  .mythic-showcase-seat-light{margin-top:5px;height:2px}
  .mythic-showcase-meta{padding:7px 0 0;min-height:37px}
- .mythic-showcase-meta-title{font-size:10.5px}
- .mythic-showcase-meta-date{font-size:9px;margin-top:4px}
+ .mythic-showcase-meta-title{font-size:12px}
+ .mythic-showcase-meta-date{font-size:10px;margin-top:4px}
  .mythic-showcase-open-icon{display:none}
  .mythic-showcase-bottom{padding:32px 0 0;font-size:10px}
 }
 @media(max-width:360px){
  .mythic-showcase-inner{padding-left:11px;padding-right:11px}
- .mythic-showcase-grid{gap:18px 6px}
+ .mythic-showcase-grid{gap:20px 10px}
  .mythic-showcase-hero p{max-width:210px}
 }
 @media(prefers-reduced-motion:reduce){
