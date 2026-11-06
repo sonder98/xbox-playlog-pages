@@ -42,8 +42,8 @@ function OrnateBorder(){
   </g>
  </svg>;
 }
-function MythicPosterCard({entry,profile,index,total,active}:{
- entry:MythicPoster;profile:Profile;index:number;total:number;active:boolean;
+function MythicPosterCard({entry,profile,index,total,active,opening}:{
+ entry:MythicPoster;profile:Profile;index:number;total:number;active:boolean;opening:boolean;
 }){
  const {game,firstAt,mythicAt,firstAchievement,lastBaseAchievement,daysToMythic,baseTotal}=entry;
  const first=posterLocalDate(firstAt),finish=posterLocalDate(mythicAt);
@@ -53,7 +53,7 @@ function MythicPosterCard({entry,profile,index,total,active}:{
   (game.detailImagePurpose==='SuperHeroArt'||game.detailImagePurpose==='TitledHeroArt'?
    (game.cachedDetailImage||game.detailImage):undefined);
  const cover=game.cachedImageLarge||game.cachedImage||game.image3x||game.image2x||game.image;
- return <article className={'mythic-poster'+(active?' is-active':'')} data-poster-game={game.id}
+ return <article className={'mythic-poster'+(active?' is-active':'')+(opening?' is-opening':'')} data-poster-game={game.id}
   aria-label={game.name+' Mythic 纪念卡'}>
   <div className={'mythic-poster-backdrop'+(background?' has-promotional-art':'')}
    data-art-source={game.posterImage?'store-poster':background?'store-hero':'no-promotional-art'}
@@ -107,12 +107,14 @@ function MythicPosterCard({entry,profile,index,total,active}:{
    <span>A</span><span>B</span><span>X</span><span>Y</span>
   </div>
   <div className="mythic-poster-shimmer" aria-hidden="true"/>
+  {opening&&<div className="mythic-poster-opening-glint" aria-hidden="true"/>}
  </article>;
 }
 
 export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
  posters:MythicPoster[];profile:Profile;initialGameId?:string|null;onClose:()=>void;
 }){
+ const single=initialGameId!==null&&initialGameId!==undefined;
  const initial=Math.max(0,posters.findIndex(p=>p.game.id===initialGameId));
  const [index,setIndex]=useState(initial);
  const [celebrate,setCelebrate]=useState(()=>!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -123,12 +125,12 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
   document.body.style.overflow='hidden';
   const onKey=(event:KeyboardEvent)=>{
    if(event.key==='Escape'){event.preventDefault();dismiss.current();}
-   if(event.key==='ArrowLeft'){event.preventDefault();setCelebrate(false);setIndex(i=>Math.max(0,i-1));}
-   if(event.key==='ArrowRight'){event.preventDefault();setCelebrate(false);setIndex(i=>Math.min(posters.length-1,i+1));}
+   if(!single&&event.key==='ArrowLeft'){event.preventDefault();setCelebrate(false);setIndex(i=>Math.max(0,i-1));}
+   if(!single&&event.key==='ArrowRight'){event.preventDefault();setCelebrate(false);setIndex(i=>Math.min(posters.length-1,i+1));}
   };
   document.addEventListener('keydown',onKey);
   return()=>{document.removeEventListener('keydown',onKey);document.body.style.overflow=previous;focused?.focus({preventScroll:true});};
- },[posters.length]);
+ },[posters.length,single]);
  useEffect(()=>{
   if(!celebrate)return;
   const timeout=window.setTimeout(()=>setCelebrate(false),4200);
@@ -136,8 +138,10 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
  },[celebrate]);
  // Once the first card is left, the celebration does not replay on any swipe.
  useEffect(()=>{if(index!==initial)setCelebrate(false);},[index,initial]);
- const visiblePosters=useMemo(()=>posters.map((entry,i)=>({entry,i,visible:Math.abs(i-index)<=1})),[posters,index]);
+ const visiblePosters=useMemo(()=>posters.map((entry,i)=>({entry,i,visible:single?i===initial:Math.abs(i-index)<=1}))
+  .filter(item=>!single||item.visible),[posters,index,initial,single]);
  function onTouchEnd(event:React.TouchEvent){
+  if(single)return;
   const start=touchStart.current;touchStart.current=null;
   if(!start||event.changedTouches.length!==1)return;
   const dx=event.changedTouches[0].clientX-start.x;
@@ -146,28 +150,31 @@ export function MythicPosterWall({posters,profile,initialGameId,onClose}:{
   setCelebrate(false);
   setIndex(i=>Math.max(0,Math.min(posters.length-1,i+(dx<0?1:-1))));
  }
- return <div className="mythic-wall-overlay" role="dialog" aria-modal="true" aria-label="Mythic纪念墙">
+ return <div className="mythic-wall-overlay" role="dialog" aria-modal="true"
+  aria-label={single?'Mythic纪念卡':'Mythic纪念墙'} data-display-mode={single?'single':'wall'}>
   <header className="mythic-wall-header">
-   <div><span className="mythic-wall-eyebrow">YOUR MYTHIC LEGACY</span><strong>Mythic纪念墙</strong></div>
-   <span className="mythic-wall-counter" aria-live="polite">{index+1} / {posters.length}</span>
-   <button type="button" className="mythic-wall-close" onClick={onClose} aria-label="关闭Mythic纪念墙"><X size={22}/></button>
+   <div><span className="mythic-wall-eyebrow">YOUR MYTHIC LEGACY</span>
+    <strong>{single?'Mythic纪念卡':'Mythic纪念墙'}</strong></div>
+   {!single&&<span className="mythic-wall-counter" aria-live="polite">{index+1} / {posters.length}</span>}
+   <button type="button" className="mythic-wall-close" onClick={onClose} aria-label={single?'关闭Mythic纪念卡':'关闭Mythic纪念墙'}><X size={22}/></button>
   </header>
   <div className="mythic-wall-viewport" onTouchStart={e=>{
-   if(e.touches.length===1)touchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};
+   if(!single&&e.touches.length===1)touchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};
   }} onTouchEnd={onTouchEnd} onTouchCancel={()=>touchStart.current=null}>
-   <div className="mythic-wall-track" style={{transform:`translate3d(-${index*100}%,0,0)`}}>
+   <div className="mythic-wall-track" style={{transform:single?'none':`translate3d(-${index*100}%,0,0)`}}>
     {visiblePosters.map(({entry,i,visible})=><div className="mythic-wall-slide" key={entry.game.id}
      aria-hidden={index!==i}>
-     {visible&&<MythicPosterCard entry={entry} profile={profile} index={i} total={posters.length} active={i===index}/>}
+     {visible&&<MythicPosterCard entry={entry} profile={profile} index={i} total={posters.length}
+      active={i===index} opening={i===initial&&celebrate}/>} 
     </div>)}
    </div>
   </div>
-  <nav className="mythic-wall-controls" aria-label="切换Mythic纪念卡">
+  {!single&&<nav className="mythic-wall-controls" aria-label="切换Mythic纪念卡">
    <button type="button" onClick={()=>{setCelebrate(false);setIndex(i=>Math.max(0,i-1));}} disabled={index===0} aria-label="上一张Mythic纪念卡"><ChevronLeft size={22}/></button>
    <span>左右滑动，回顾每一次 Mythic</span>
    <button type="button" onClick={()=>{setCelebrate(false);setIndex(i=>Math.min(posters.length-1,i+1));}}
     disabled={index===posters.length-1} aria-label="下一张Mythic纪念卡"><ChevronRight size={22}/></button>
-  </nav>
+  </nav>}
   {celebrate&&index===initial&&<MythicOpeningFireworks/>}
  </div>;
 }
