@@ -142,9 +142,11 @@ export function GameDetail({game,onClose,onOpenMythic}:{game:Game;onClose:()=>vo
     <GameCover game={game} wide/>
     <div className="detail-heading"><h2>{game.name}</h2></div>
     <div className="detail-summary">
-      <span className="detail-stat detail-playtime"><Clock3 size={16} aria-hidden="true"/><span>{hours(game.minutes)}</span></span>
-      <span className="detail-stat detail-achievements" aria-label={`已解锁 ${game.earned} / ${game.total} 成就`}><Trophy size={16} aria-hidden="true"/><span>{game.earned}/{game.total}</span></span>
-      <span className="detail-stat detail-gamerscore" aria-label={`已获得 ${numberFormat(game.score)} / ${numberFormat(game.maxScore)} 玩家积分`}><GamerscoreIcon size={16}/><span>{numberFormat(game.score)}/{numberFormat(game.maxScore)}</span></span>
+      <div className="detail-metrics" aria-label="游戏统计">
+        <span className="detail-stat detail-playtime"><Clock3 size={16} aria-hidden="true"/><span>{hours(game.minutes)}</span></span>
+        <span className="detail-stat detail-achievements" aria-label={`已解锁 ${game.earned} / ${game.total} 成就`}><Trophy size={16} aria-hidden="true"/><span>{game.earned}/{game.total}</span></span>
+        <span className="detail-stat detail-gamerscore" aria-label={`已获得 ${numberFormat(game.score)} / ${numberFormat(game.maxScore)} 玩家积分`}><GamerscoreIcon size={16}/><span>{numberFormat(game.score)}/{numberFormat(game.maxScore)}</span></span>
+      </div>
       {completion(game).mythic&&onOpenMythic&&
        <button type="button" className="detail-mythic-trigger" onClick={onOpenMythic}
         aria-label={`打开 ${game.name} 的Mythic纪念卡`}>
