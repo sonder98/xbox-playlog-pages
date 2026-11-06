@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 
 const mod=await import(new URL('../cloudflare-sync/scheduler.mjs',import.meta.url).href);
 
-test('Cloudflare schedules preserve the existing 30-minute and day-boundary cadence',()=>{
+test('Cloudflare schedules match the two-hour sync and daily Beijing day-boundary checks',()=>{
  assert.deepEqual(mod.CRON_RULES,[
-  '17,47 0-14,16-23 * * *',
+  '17 */2 * * *',
   '42 15 * * *',
   '2 16 * * *'
  ]);
