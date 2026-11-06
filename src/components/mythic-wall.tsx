@@ -4,7 +4,7 @@ import type {Profile,Achievement} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {posterLocalDate} from '../mythic-posters';
 import {MythicBadgeArt} from './mythic-badge';
-import {mythicBackdrop,mythicCover,mythicImageAlreadyDecoded,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
+import {mythicBackdrop,mythicCover,mythicImageAlreadyDecoded,useMythicRotationDay,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
 import {MythicOpeningFireworks} from './mythic-fireworks';
 
 const GOLD='#e6c47b';
@@ -55,16 +55,16 @@ function OrnateBorder(){
   </g>
  </svg>;
 }
-function MythicPosterCard({entry,profile,index,total,active,opening,fontReady}:{
- entry:MythicPoster;profile:Profile;index:number;total:number;active:boolean;opening:boolean;fontReady:boolean;
+function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,rotationDay}:{
+ entry:MythicPoster;profile:Profile;index:number;total:number;active:boolean;opening:boolean;fontReady:boolean;rotationDay:number;
 }){
  const {game,firstAt,mythicAt,firstAchievement,lastBaseAchievement,daysToMythic,baseTotal}=entry;
  const first=posterLocalDate(firstAt),finish=posterLocalDate(mythicAt);
- // The first AU Store Screenshot is the collectible's cinematic backdrop.
+ // Rotate AU Store Screenshots daily, preserving their original catalog order.
  // Older snapshots and titles without screenshots may fall back to wide Store art.
  // Never stretch a square library cover into this area.
  const screenshot=game.posterImagePurpose==='Screenshot';
- const background=mythicBackdrop(game);
+ const background=mythicBackdrop(game,rotationDay);
  const cover=mythicCover(game);
  const [backdropReady]=useDecodedArt(background);
  const [coverReady,onCoverLoaded]=useDecodedArt(cover);
@@ -144,6 +144,7 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
  const single=!allowNavigation&&initialGameId!==null&&initialGameId!==undefined;
  const initial=Math.max(0,posters.findIndex(p=>p.game.id===initialGameId));
  const [index,setIndex]=useState(initial);
+ const rotationDay=useMythicRotationDay();
  const [fontReady,setFontReady]=useState(false);
  useEffect(()=>{
   let mounted=true;
@@ -153,7 +154,7 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
  useEffect(()=>{
   for(let i=Math.max(0,index-1);i<=Math.min(posters.length-1,index+1);i++)
    warmMythicPoster(posters[i],profile);
- },[index,posters,profile]);
+ },[index,posters,profile,rotationDay]);
  const [celebrate,setCelebrate]=useState(()=>!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
  const touchStart=useRef<{x:number;y:number}|null>(null);
  const dismiss=useRef(onClose);dismiss.current=onClose;
@@ -203,7 +204,7 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
     {visiblePosters.map(({entry,i,visible})=><div className="mythic-wall-slide" key={entry.game.id}
      aria-hidden={index!==i}>
      {visible&&<MythicPosterCard entry={entry} profile={profile} index={i} total={posters.length}
-      active={i===index} opening={i===initial&&celebrate&&fontReady} fontReady={fontReady}/>} 
+      active={i===index} opening={i===initial&&celebrate&&fontReady} fontReady={fontReady} rotationDay={rotationDay}/>} 
     </div>)}
    </div>
   </div>
