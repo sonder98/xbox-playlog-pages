@@ -8,7 +8,7 @@ import {encryptVault,decryptVault} from '../src/crypto.ts';
 const password='navigation-test-only';
 const games=Array.from({length:12},(_,i)=>({id:String(100+i),name:'Test Game '+i,image:'https://covers.example.test/square.svg',image2x:'https://covers.example.test/medium.svg',image3x:'https://covers.example.test/original.svg',devices:['Xbox'],lastPlayed:'2026-10-30T00:00:00Z',minutes:60,earned:1,total:10,score:10,maxScore:100}));
 games[0].posterImage='https://covers.example.test/landscape.svg';
-games[0].posterImagePurpose='SuperHeroArt';
+games[0].posterImagePurpose='Screenshot';
 for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),points:[10,20,0,15][i],name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:i===1?'https://covers.example.test/wide.svg':'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
 for(const game of games){game.total=4;game.earned=2;game.groupStatus='verified';game.groups=[{id:'base',name:'本体',kind:'base',earned:2,total:2,achievementIds:['1','2']},{id:'dlc',name:'追加故事',kind:'dlc',earned:0,total:2,achievementIds:['3','4']}];}
 const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:''},games,source:'Exophase',warnings:[]}]},password);
@@ -963,8 +963,8 @@ try{
     assert.equal(await posterWall.locator('canvas.mythic-wall-fireworks').count(),1,
       'Only the initial opening creates the radial firework particle canvas');
     const posterBackdrop=posterWall.locator('.mythic-poster.is-active .mythic-poster-backdrop');
-    assert.equal(await posterBackdrop.getAttribute('data-art-source'),'store-poster',
-      'A first-party wide promotional poster is displayed instead of a stretched cover');
+    assert.equal(await posterBackdrop.getAttribute('data-art-source'),'store-screenshot',
+      'The first Australian Store Screenshot is displayed instead of a stretched square cover');
     const artStyle=await posterBackdrop.evaluate(el=>({
       background:getComputedStyle(el).backgroundImage,
       size:getComputedStyle(el).backgroundSize,
@@ -972,8 +972,30 @@ try{
       cardHeight:el.closest('.mythic-poster').getBoundingClientRect().height
     }));
     assert.ok(artStyle.background.includes('landscape.svg'),'Uses the wide Xbox Store source');
-    assert.equal(artStyle.size,'100% auto','Wide art is not scaled and cropped to fill a tall poster');
-    assert.ok(artStyle.height<artStyle.cardHeight*.55,'Poster art stays in the cinematic top portion');
+    assert.equal(artStyle.size,'cover','The first Store Screenshot fills the extended cinematic artwork region');
+    assert.ok(artStyle.height>artStyle.cardHeight*.45&&artStyle.height<artStyle.cardHeight*.50,
+      'Screenshot spans roughly the upper half before its fade-out');
+    const composition=await posterWall.locator('.mythic-poster.is-active').evaluate(el=>{
+      const box=selector=>el.querySelector(selector).getBoundingClientRect();
+      const card=el.getBoundingClientRect(),backdrop=box('.mythic-poster-backdrop');
+      const greeting=box('.mythic-poster-congratulations'),title=box('.mythic-poster-title');
+      const player=box('.mythic-poster-player'),pair=box('.mythic-poster-achievement-pair');
+      return {backdropEnd:backdrop.bottom,greetingTop:greeting.top,greetingBottom:greeting.bottom,
+        titleTop:title.top,titleBottom:title.bottom,playerTop:player.top,playerBottom:player.bottom,
+        pairTop:pair.top,pairHeight:pair.height,cardHeight:card.height,
+        faded:getComputedStyle(el.querySelector('.mythic-poster-backdrop')).maskImage.includes('linear-gradient')};
+    });
+    assert.ok(composition.faded&&composition.backdropEnd>composition.greetingTop,
+      'The screenshot fades behind the area immediately above the Mythic congratulations');
+    assert.ok(composition.greetingTop<artStyle.cardHeight*.42+
+      await posterWall.locator('.mythic-poster.is-active').evaluate(el=>el.getBoundingClientRect().top),
+      'The headline is brought up from the old top-heavy image zone');
+    assert.ok(composition.greetingBottom<=composition.titleTop+1&&
+      composition.titleBottom<=composition.playerTop+1&&composition.playerBottom<=composition.pairTop+1,
+      'Editorial headline, game title, player identity and achievements have clear non-overlapping zones: '+
+       JSON.stringify(composition));
+    assert.ok(composition.pairHeight/composition.cardHeight>.168,
+      'Achievement comparison gains vertical breathing room compared with the old poster');
     assert.equal(await posterWall.locator('.mythic-poster-ornament path[d*="Q17"]').count(),0,
       'Old curled spider-like corner ornaments are removed');
     const posterGeometry=await posterWall.locator('.mythic-poster.is-active').evaluate(el=>{

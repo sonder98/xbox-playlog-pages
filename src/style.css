@@ -3167,28 +3167,30 @@ footer .dot {
  overflow:hidden;background:radial-gradient(ellipse at 55% 19%,#34443a 0%,#18271f 23%,#0a1410 48%,#060b09 78%);color:#f7efe0;
  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif;
  box-shadow:0 0 0 1px #a07a46,0 0 0 3px #171711,0 18px 80px #000b,0 0 40px #ac85452d;}
-.mythic-poster-backdrop{position:absolute;inset:0 0 auto;z-index:-4;height:49%;
- background-position:center top;background-size:100% auto;background-repeat:no-repeat;
+.mythic-poster-backdrop{position:absolute;inset:0 0 auto;z-index:-4;height:47.5%;
+ background-position:center 38%;background-size:cover;background-repeat:no-repeat;
  background-color:transparent;
- -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 52%,transparent 100%);
- mask-image:linear-gradient(to bottom,#000 0%,#000 52%,transparent 100%);}
+ /* First Store screenshot fills the entire cinematic zone and softly dissolves
+    just above the greeting, rather than ending after its native 16:9 height. */
+ -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 60%,rgba(0,0,0,.78) 78%,transparent 100%);
+ mask-image:linear-gradient(to bottom,#000 0%,#000 60%,rgba(0,0,0,.78) 78%,transparent 100%);}
 .mythic-poster-backdrop-shade{position:absolute;inset:0;z-index:-3;
- background:linear-gradient(180deg,rgba(4,10,9,.05) 0%,rgba(4,10,9,.07) 24%,rgba(4,9,8,.28) 34%,rgba(3,9,8,.72) 46%,#030a08 61%,#030907 100%),
- linear-gradient(90deg,rgba(5,12,9,.20),transparent 51%,rgba(4,10,9,.18));}
+ background:linear-gradient(180deg,rgba(4,10,9,.24) 0%,rgba(4,10,9,.06) 16%,rgba(4,9,8,.17) 28%,rgba(3,9,8,.60) 37%,#030a08 48%,#030907 59%,#030907 100%),
+ linear-gradient(90deg,rgba(5,12,9,.22),transparent 50%,rgba(4,10,9,.21));}
 .mythic-poster-ornament{position:absolute;inset:0;width:100%;height:100%;z-index:6;pointer-events:none;
  filter:drop-shadow(0 0 .5px #c5a66c);}
 .mythic-poster-caption{position:absolute;z-index:2;left:10.5%;right:10.5%;top:3.2%;display:flex;justify-content:space-between;
  color:#ead3a1;font-size:3.2cqw;font-family:Georgia,serif;font-weight:600;letter-spacing:.19em;text-shadow:0 1px 5px #000;}
 .mythic-poster-caption span:last-child{font-variant-numeric:tabular-nums;letter-spacing:.03em;}
-.mythic-poster-portrait{position:absolute;top:10%;left:50%;transform:translateX(-50%);width:37%;aspect-ratio:1;
+.mythic-poster-portrait{position:absolute;top:8.5%;left:50%;transform:translateX(-50%);width:34.5%;aspect-ratio:1;
  border-radius:50%;overflow:hidden;display:grid;place-items:center;border:4px solid #dfc587;
  box-shadow:0 0 0 4px #2a2b21,0 0 0 6px #c39a52,0 0 24px #e7c7796b;background:#172320;z-index:2;}
 .mythic-poster-portrait img{height:100%;width:100%;object-fit:cover;}
 .mythic-poster-emblem{display:flex;align-items:center;justify-content:center;color:#b3ffa2;background:#12311e;
  border:2px solid #bca267;box-shadow:0 0 0 3px #243721,0 0 28px #c5dc9a6b;
- border-radius:50%;width:23%;aspect-ratio:1;position:absolute;top:27.5%;left:50%;transform:translateX(-50%);z-index:3;}
+ border-radius:50%;width:22%;aspect-ratio:1;position:absolute;top:24.5%;left:50%;transform:translateX(-50%);z-index:3;}
 .mythic-poster-emblem img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:50%;}
-.mythic-poster-congratulations{position:absolute;left:13%;right:13%;top:43%;
+.mythic-poster-congratulations{position:absolute;left:13%;right:13%;top:38.6%;
  display:flex;justify-content:center;align-items:center;gap:8px;text-align:center;
  font-family:"Songti SC","STSong","Noto Serif CJK SC",serif;color:#f3dcaa;text-shadow:0 2px 13px #000;font-size:5.45cqw;
  font-weight:600;letter-spacing:.09em;white-space:nowrap;}
@@ -3196,15 +3198,15 @@ footer .dot {
 .mythic-poster-gold-line:before{content:"";position:absolute;top:50%;right:0;left:0;height:1px;background:#b8985c77;}
 .mythic-poster-congratulations strong{font-weight:600;}
 .mythic-poster-congratulations strong span{font-family:Georgia,serif;font-weight:650;letter-spacing:.10em;}
-.mythic-poster-title{position:absolute;top:49.5%;left:8%;right:8%;max-height:8.3%;overflow:hidden;
+.mythic-poster-title{position:absolute;top:44.3%;left:8%;right:8%;max-height:9.4%;overflow:hidden;
  text-align:center;margin:0;font-size:5.45cqw;line-height:1.20;font-weight:620;letter-spacing:-.025em;
  text-shadow:0 2px 10px #000;color:#fff9f0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-.mythic-poster-player{position:absolute;top:57.5%;left:7.5%;right:7.5%;height:8.7%;border:1px solid #7e785e96;
+.mythic-poster-player{position:absolute;top:54.3%;left:7.5%;right:7.5%;height:8.1%;border:1px solid #7e785e96;
  background:linear-gradient(110deg,#1c2524dc,#131916ec);border-radius:12px;
  display:flex;align-items:center;justify-content:center;gap:12px;padding:5px 14px;}
 .mythic-poster-player strong{font-size:4.4cqw;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .mythic-poster-avatar{height:70%;max-height:36px;aspect-ratio:1;border-radius:50%;object-fit:cover;border:1px solid #dfc47b;}
-.mythic-poster-achievement-pair{position:absolute;top:67.4%;left:7.5%;right:7.5%;height:16.2%;
+.mythic-poster-achievement-pair{position:absolute;top:63.95%;left:7.5%;right:7.5%;height:17.3%;
  background:#080e0fbd;border:1px solid #7567487d;border-radius:13px;display:grid;grid-template-columns:1fr 18px 1fr;
  align-items:center;justify-items:center;padding:7px 5px;gap:4px;}
 .mythic-poster-achievement{display:flex;flex-direction:column;align-items:center;min-width:0;gap:2px;width:100%;
@@ -3296,7 +3298,7 @@ footer .dot {
 .mythic-poster-title{
  font-family:"Cormorant Garamond","Noto Serif SC","Songti SC",Georgia,serif;
  font-size:7.25cqw;line-height:1.02;font-weight:600;letter-spacing:.002em;
- top:48.9%;max-height:9.4%;text-wrap:balance;
+ top:44.3%;max-height:9.4%;text-wrap:balance;
 }
 .mythic-poster-player strong{
  font-family:"Cormorant Garamond","Noto Serif SC","Songti SC",serif;
@@ -3386,25 +3388,25 @@ footer .dot {
    allowed to overflow the time stamps, counters, and ABXY because the standard
    site <footer> CSS and fixed percentage offsets fought the font metrics. */
 .mythic-poster-achievement-pair{
- top:66.8%;height:16.35%;padding:5px 5px;gap:3px;
+ top:63.95%;height:17.3%;padding:9px 7px;gap:5px;
  align-content:center;overflow:hidden;
 }
 .mythic-poster-achievement{gap:2px;line-height:1.15;}
 .mythic-poster-achievement-art{
- width:32%;min-width:30px;max-width:43px;margin-bottom:1px;
+ width:36%;min-width:32px;max-width:48px;margin-bottom:3px;
  border-radius:8px;
 }
 .mythic-poster-achievement b{font-size:4.0cqw;line-height:1.05;}
 .mythic-poster-achievement>span:last-child{font-size:3cqw;line-height:1.05;}
 .mythic-poster-stats{
- top:83.8%;height:7.5%;align-items:center;overflow:hidden;
+ top:82.7%;height:8.1%;align-items:center;overflow:hidden;
 }
 .mythic-poster-stats>div{align-content:center;align-items:baseline;row-gap:0;}
 .mythic-poster-stats strong{font-size:7.5cqw;line-height:1.03;}
 .mythic-poster-stats small{line-height:1.05;}
 .mythic-poster-stats span{line-height:1.18;margin-top:2px;}
 .mythic-poster-footer{
- top:91.75%;height:2.4%;min-height:0;max-height:2.4%;
+ top:92.1%;height:2.4%;min-height:0;max-height:2.4%;
  margin:0;padding:0;overflow:hidden;
  display:flex;align-items:center;justify-content:center;
  gap:6px;line-height:1.1;font-size:2.25cqw;
@@ -3414,11 +3416,11 @@ footer .dot {
  font-size:2.5cqw;padding:1px 4px;line-height:1.1;
 }
 .mythic-poster-gamepad{
- top:95.0%;bottom:auto;gap:10px;line-height:1;
+ top:95.45%;bottom:auto;gap:10px;line-height:1;
  align-items:center;justify-content:center;
 }
 .mythic-poster-gamepad span{width:13px;height:13px;line-height:1;flex:0 0 auto;}
 @media(max-width:700px){
- .mythic-poster-achievement-art{min-width:28px;max-width:41px;}
- .mythic-poster-gamepad{top:95.0%;bottom:auto;}
+ .mythic-poster-achievement-art{min-width:30px;max-width:45px;}
+ .mythic-poster-gamepad{top:95.45%;bottom:auto;}
 }

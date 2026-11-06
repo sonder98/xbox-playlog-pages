@@ -27,3 +27,12 @@ test('independent promotional backdrop URLs are retained only when safe, not con
  assert.equal(result.posterImagePurpose,'SuperHeroArt');
  assert.equal(validateRecord(record([{...poster,posterImage:'javascript:alert(1)'}])).games[0].posterImage,undefined);
 });
+
+test('AU screenshot selection version survives an encrypted-record validation round trip',()=>{
+ const poster={...game,posterImage:'https://store-images.s-microsoft.com/shot',
+  posterImagePurpose:'Screenshot',posterSelectionVersion:2};
+ const result=validateRecord(record([poster])).games[0];
+ assert.equal(result.posterImagePurpose,'Screenshot');
+ assert.equal(result.posterSelectionVersion,2);
+ assert.equal(validateRecord(record([{...poster,posterSelectionVersion:99}])).games[0].posterSelectionVersion,undefined);
+});
