@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manjari:wght@700&family=Cormorant+Garamond:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manjari:wght@700&family=Cormorant+Garamond:wght@400;500;600;700&family=Marcellus&family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
 :root {
   --rarity-accent: #8CD7FA;
   color-scheme:dark;
@@ -1719,10 +1719,11 @@ footer .dot {
   line-height:1.32;
 }
 .game-detail .detail-summary{
-  display:flex;
-  flex-wrap:nowrap;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
   align-items:center;
-  gap:28px;
+  column-gap:18px;
+  width:100%;
   margin:20px 0 28px;
   font-size:17px;
   font-weight:600;
@@ -1730,6 +1731,19 @@ footer .dot {
   font-variant-numeric:tabular-nums;
   min-width:0;
 }
+.game-detail .detail-summary .detail-metrics{
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  height:36px;
+  min-width:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  scrollbar-width:none;
+  gap:28px;
+}
+.game-detail .detail-summary .detail-metrics::-webkit-scrollbar{display:none}
 .game-detail .detail-summary .detail-stat{
   display:inline-flex;
   align-items:center;
@@ -1825,20 +1839,18 @@ footer .dot {
 @media(max-width:700px){
   .game-detail .detail-heading h2{font-size:22px}
   .game-detail .detail-summary{
-    flex-wrap:nowrap;
-    gap:13px;
+    column-gap:8px;
     font-size:13px;
     margin:16px 0 23px;
-    overflow-x:auto;
-    scrollbar-width:none;
   }
-  .game-detail .detail-summary::-webkit-scrollbar{display:none}
+  .game-detail .detail-summary .detail-metrics{gap:13px}
   .game-detail .detail-summary .detail-stat{gap:5px;flex-shrink:0}
   .game-detail .detail-summary .detail-stat svg{width:15px;height:15px}
   .game-detail .achievement-tab{font-size:13px}
 }
 @media(max-width:370px){
-  .game-detail .detail-summary{gap:8px;font-size:11px}
+  .game-detail .detail-summary{column-gap:6px;font-size:11px}
+  .game-detail .detail-summary .detail-metrics{gap:8px}
   .game-detail .detail-summary .detail-stat{gap:4px}
   .game-detail .detail-summary .detail-stat svg{width:13px;height:13px}
   .game-detail .achievement-tab{padding:7px 10px;font-size:12px}
@@ -3296,8 +3308,8 @@ footer .dot {
  font-size:1.15em;letter-spacing:.17em;font-weight:600;
 }
 .mythic-poster-title{
- font-family:"Cormorant Garamond","Noto Serif SC","Songti SC",Georgia,serif;
- font-size:7.25cqw;line-height:1.02;font-weight:600;letter-spacing:.002em;
+ font-family:"Marcellus","Noto Serif SC","Songti SC",Georgia,serif;
+ font-size:6.55cqw;line-height:1.14;font-weight:400;letter-spacing:.008em;
  top:44.3%;max-height:9.4%;text-wrap:balance;
 }
 .mythic-poster-player strong{
@@ -3375,7 +3387,7 @@ footer .dot {
  max-height:calc(100dvh - 142px);
 }
 @media(max-width:700px){
- .mythic-poster-title{font-size:7.05cqw;}
+ .mythic-poster-title{font-size:6.45cqw;}
  .mythic-poster-gamepad{top:95.25%;bottom:auto;}
  .game-detail .achievement-progress-actions{gap:5px;}
  .game-detail .achievement-sort-row:has(.detail-mythic-trigger){min-height:57px;}
@@ -3456,13 +3468,15 @@ footer .dot {
 }
 .mythic-badge-art img.is-ready{opacity:1}
 .game-detail .detail-summary .detail-mythic-trigger{
- margin-left:auto;min-height:31px;padding:3px 9px;
+ justify-self:end;align-self:center;margin:0;
+ min-height:31px;padding:3px 9px;
  gap:5px;font-size:11px;line-height:1;flex:0 0 auto;
 }
 .game-detail .detail-summary .mythic-badge-art.is-compact{width:23px;height:23px}
 .game-detail .achievement-progress-actions{margin-left:auto}
 @media(max-width:700px){
- .game-detail .detail-summary{gap:clamp(5px,1.5vw,9px);overflow:visible}
+ .game-detail .detail-summary{column-gap:clamp(5px,1.5vw,9px);overflow:visible}
+ .game-detail .detail-summary .detail-metrics{gap:clamp(5px,1.5vw,9px)}
  .game-detail .detail-summary .detail-stat{gap:4px;font-size:clamp(10px,3vw,12px)}
  .game-detail .detail-summary .detail-stat svg{width:15px;height:15px}
  .game-detail .detail-summary .detail-mythic-trigger{
@@ -3472,7 +3486,8 @@ footer .dot {
  .game-detail .detail-summary .detail-mythic-label{display:none}
 }
 @media(max-width:370px){
- .game-detail .detail-summary{gap:4px}
+ .game-detail .detail-summary{column-gap:4px}
+ .game-detail .detail-summary .detail-metrics{gap:4px}
  .game-detail .detail-summary .detail-stat{font-size:10px;gap:3px}
  .game-detail .detail-summary .detail-stat svg{width:13px;height:13px}
 }
