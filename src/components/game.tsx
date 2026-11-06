@@ -143,14 +143,7 @@ export function GameDetail({game,onClose,onOpenMythic}:{game:Game;onClose:()=>vo
     <div className="detail-heading"><h2>{game.name}</h2></div>
     <div className="detail-summary">
       <span className="detail-stat detail-playtime"><Clock3 size={16} aria-hidden="true"/><span>{hours(game.minutes)}</span></span>
-      {completion(game).mythic&&onOpenMythic?
-       <div className="detail-mythic-stack">
-        <button type="button" className="detail-mythic-trigger" onClick={onOpenMythic}
-          aria-label={`打开 ${game.name} 的Mythic纪念卡`}>
-         <img src={MYTHIC_BADGE_URL} alt="" loading="lazy"/>Mythic
-        </button>
-        <span className="detail-stat detail-achievements" aria-label={`已解锁 ${game.earned} / ${game.total} 成就`}><Trophy size={16} aria-hidden="true"/><span>{game.earned}/{game.total}</span></span>
-       </div>:<span className="detail-stat detail-achievements" aria-label={`已解锁 ${game.earned} / ${game.total} 成就`}><Trophy size={16} aria-hidden="true"/><span>{game.earned}/{game.total}</span></span>}
+      <span className="detail-stat detail-achievements" aria-label={`已解锁 ${game.earned} / ${game.total} 成就`}><Trophy size={16} aria-hidden="true"/><span>{game.earned}/{game.total}</span></span>
       <span className="detail-stat detail-gamerscore" aria-label={`已获得 ${numberFormat(game.score)} / ${numberFormat(game.maxScore)} 玩家积分`}><GamerscoreIcon size={16}/><span>{numberFormat(game.score)}/{numberFormat(game.maxScore)}</span></span>
     </div>
     {!!game.achievements?.length&&<>
@@ -174,7 +167,13 @@ export function GameDetail({game,onClose,onOpenMythic}:{game:Game;onClose:()=>vo
             <AchievementSortControl order={order} onChange={setOrder} lockedOnly={unlockFilter==='locked'}/>
             <AchievementUnlockFilterControl filter={unlockFilter} onChange={changeUnlockFilter}/>
           </div>
-          <span className="achievement-filter-count" aria-live="polite">{earned}/{total}</span>
+          <div className="achievement-progress-actions">
+           {completion(game).mythic&&onOpenMythic&&<button type="button" className="detail-mythic-trigger"
+             onClick={onOpenMythic} aria-label={`打开 ${game.name} 的Mythic纪念卡`}>
+             <img src={MYTHIC_BADGE_URL} alt="" loading="lazy"/> Mythic
+            </button>}
+           <span className="achievement-filter-count" aria-live="polite">{earned}/{total}</span>
+          </div>
         </div>
         <Progress earned={earned} total={total} complete={earned===total&&total>0} label="当前成就分类完成度"/>
         <div className="achievement-list" id="achievement-panel" data-unlock-filter={unlockFilter} role={categorized?'tabpanel':undefined} aria-labelledby={categorized?'achievement-tab-'+selectedCategory:undefined}>
