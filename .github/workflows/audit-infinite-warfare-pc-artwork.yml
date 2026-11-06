@@ -1,0 +1,51 @@
+name: Archive Infinite Warfare user-selected PC artwork
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/audit-infinite-warfare-pc-artwork.mjs
+      - .github/workflows/audit-infinite-warfare-pc-artwork.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: infinite-warfare-pc-artwork-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Validate audit script
+        run: node --check scripts/audit-infinite-warfare-pc-artwork.mjs
+      - name: Download exact Microsoft Australia PC product images
+        run: node scripts/audit-infinite-warfare-pc-artwork.mjs
+      - name: Attach downloadable inspection ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: infinite-warfare-pc-9NBLGGH52PH9-artwork
+          path: public/artwork-audit/infinite-warfare-pc/
+          retention-days: 14
+      - name: Commit PC image archive without touching prior console results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A public/artwork-audit/infinite-warfare-pc/
+          if git diff --cached --quiet; then
+            echo "PC image archive unchanged"
+            exit 0
+          fi
+          git commit -m "Archive Infinite Warfare PC edition images"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Publish gallery to GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
