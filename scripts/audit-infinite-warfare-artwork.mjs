@@ -103,7 +103,7 @@ const manifest={
  excludedWindowsPcProductId:'9NBLGGH52PH9',
  capturedAt:new Date().toISOString(),market:'AU',languages:'en-AU,en,neutral',
  source:'Microsoft Store DisplayCatalog v7.0 (public, unauthenticated)',
- title:'Call of Duty: Infinite Warfare: WINGS OF THEVE',xboxTitleId:TITLE_ID,storeProductId:PRODUCT_ID,
+ title:'Call of Duty: Infinite Warfare',xboxTitleId:TITLE_ID,storeProductId:PRODUCT_ID,
  endpoint,productCount:groups.length,products:groups.map(({images,...x})=>({...x,imageCount:images.length})),
  totalImageEntries:originalCount,attempted:selected.length,downloaded,
  truncated:originalCount>limit,types:purposes,
