@@ -157,7 +157,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  async function saveDisplay(){setSavingDisplay(true);setDisplayError('');try{const saved=await api('/api/display-preferences',{hiddenGameIds:draftHidden});setHiddenIds(saved.hiddenGameIds);setManageDisplay(false);setNotice('游戏库显示设置已保存。');}catch(e){setDisplayError('显示设置保存失败：'+(e as Error).message);}finally{setSavingDisplay(false);}}
 
  const known=games.filter(g=>g.minutes!==null);const totalMinutes=known.reduce((a,g)=>a+(g.minutes||0),0),totalEarned=games.reduce((a,g)=>a+g.earned,0),completed=games.filter(g=>completion(g).mythic).length,full=games.filter(g=>completion(g).full).length;
- const achievementSpans=useMemo(()=>new Map((current?.games||[]).map(g=>[g.id,achievementTimeSpan(g)])),[current]);
+ const achievementSpans=useMemo(()=>new Map((current?.games||[]).map(g=>[g.id,achievementTimeSpan(g,playtimeLedger)])),[current,playtimeLedger]);
  const visible=displayGames.filter(g=>g.name.toLowerCase().includes(query.toLowerCase())&&(filter==='all'||filter==='mythic'&&completion(g).mythic||filter==='full'&&completion(g).full||filter==='playing'&&!completion(g).full)).sort((a,b)=>{
   if(sort==='span-desc'||sort==='span-asc'){
    const difference=compareAchievementTimeSpans(achievementSpans.get(a.id)??null,achievementSpans.get(b.id)??null,sort==='span-desc'?'longest':'shortest');
@@ -249,7 +249,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   }} aria-current={tab===id?'page':undefined}><Icon size={21}/><span>{label}</span></button>)}</nav>
 
  </div>;
- function renderGames(list:Game[]){return list.length?<div className="game-cards">{list.map((g,index)=><GameCard key={g.id} game={g} priority={index<2} onOpen={()=>loadAchievements(g)}/>)}</div>:<Empty title={loading?'正在读取记录…':hiddenCount===games.length&&games.length?'所有游戏已隐藏':query||filter!=='all'?'没有匹配的游戏':'游戏故事，从连接开始'} text={hiddenCount===games.length&&games.length?'前往「管理」页面，恢复想展示的游戏。':query||filter!=='all'?'试试其他名称或筛选条件。':'微软 首次同步成功后，你的游戏会出现在这里。'}/>;}
+ function renderGames(list:Game[]){return list.length?<div className="game-cards">{list.map((g,index)=><GameCard key={g.id} game={g} priority={index<2} playtimeLedger={playtimeLedger} onOpen={()=>loadAchievements(g)}/>)}</div>:<Empty title={loading?'正在读取记录…':hiddenCount===games.length&&games.length?'所有游戏已隐藏':query||filter!=='all'?'没有匹配的游戏':'游戏故事，从连接开始'} text={hiddenCount===games.length&&games.length?'前往「管理」页面，恢复想展示的游戏。':query||filter!=='all'?'试试其他名称或筛选条件。':'微软 首次同步成功后，你的游戏会出现在这里。'}/>;}
 
 }
 function Stat({label,value,unit,icon,note}:{label:string;value:string;unit:string;icon:React.ReactNode;note:string}){return <div className="stat"><div className="stat-label">{label}<span>{icon}</span></div><div className="stat-value">{value}<small>{unit}</small></div><div className="stat-note">{note}</div></div>}
