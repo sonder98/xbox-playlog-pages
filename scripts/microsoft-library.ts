@@ -6,10 +6,24 @@ import type {CatalogBundle} from './catalog-cache.ts';
 import {boundaryPlaytimeSweep,type PlaytimeSample} from '../src/playtime-ledger.ts';
 const percent=(value:unknown)=>(typeof value==='number'||typeof value==='string')&&value!==''&&Number.isFinite(Number(value))&&Number(value)>=0&&Number(value)<=100?Number(value):null;
 const timestamp=(value:unknown)=>typeof value==='string'&&Number.isFinite(Date.parse(value))&&Date.parse(value)>=Date.UTC(2005,0,1)?new Date(value).toISOString():null;
+/** Only the player's current achievement response describes real progress.
+ * A single numeric requirement is unambiguous; compound rules are not. */
+export function officialAchievementProgress(raw:any):number|null{
+ if(raw?.progressState!=='InProgress')return null;
+ const requirements=raw.progression?.requirements;
+ if(!Array.isArray(requirements)||requirements.length!==1)return null;
+ const requirement=requirements[0];
+ const numeric=(value:unknown):number|null=>
+  (typeof value==='number'||typeof value==='string'&&value.trim()!=='')&&
+  Number.isFinite(Number(value))&&Number(value)>=0?Number(value):null;
+ const current=numeric(requirement?.current),target=numeric(requirement?.target);
+ if(current===null||target===null||target<=0||current>target)return null;
+ return Math.round(current/target*100);
+}
 export function achievement(raw:any):Achievement{
  const unlocked=raw.progressState==='Achieved'||raw.unlocked===true;
  const points=raw.rewards?.find((r:any)=>r.type==='Gamerscore')?.value??raw.gamerscore??0;
- return {id:String(raw.id),name:String(raw.name||'Achievement'),description:String(unlocked?(raw.description||raw.lockedDescription||''):(raw.lockedDescription||raw.description||'')),image:safeImage(raw.mediaAssets?.find((m:any)=>m.type==='Icon')?.url||raw.mediaAssets?.[0]?.url||raw.imageUrl||raw.tileUrl),unlocked,unlockedAt:unlocked?timestamp(raw.progression?.timeUnlocked||raw.timeUnlocked):null,rarity:percent(raw.rarity?.currentPercentage),points:Number.isFinite(Number(points))?Math.max(0,Number(points)):0};
+ return {id:String(raw.id),name:String(raw.name||'Achievement'),description:String(unlocked?(raw.description||raw.lockedDescription||''):(raw.lockedDescription||raw.description||'')),image:safeImage(raw.mediaAssets?.find((m:any)=>m.type==='Icon')?.url||raw.mediaAssets?.[0]?.url||raw.imageUrl||raw.tileUrl),unlocked,unlockedAt:unlocked?timestamp(raw.progression?.timeUnlocked||raw.timeUnlocked):null,rarity:percent(raw.rarity?.currentPercentage),points:Number.isFinite(Number(points))?Math.max(0,Number(points)):0,...(!unlocked&&officialAchievementProgress(raw)!==null?{progressPercent:officialAchievementProgress(raw)!}:{})};
 }
 export function playtime(data:any,titleId:string):number|null{
  // Respect title and stat identity; a missing statistic never becomes zero.
@@ -153,12 +167,13 @@ export function shouldReadPlaytime(lastPlayed:string|null,oldMinutes:number|null
  * Xbox omits currentGamerscore on some title summaries, and can change the textual
  * timestamp precision without changing the actual last-played instant.
  * The total and earned counts are mandatory: absent ones must trigger a fresh read. */
-export type DetailDecision='newGame'|'incompleteCache'|'dailyRefresh'|'playedAgain'|'missingSummary'|'totalChanged'|'earnedChanged'|'scoreChanged'|'reused'|'verifiedEarned'|'inactiveReuse'|'emptyCache'|'recentVerification';
+export type DetailDecision='newGame'|'incompleteCache'|'dailyRefresh'|'playedAgain'|'missingSummary'|'totalChanged'|'earnedChanged'|'scoreChanged'|'reused'|'verifiedEarned'|'inactiveReuse'|'emptyCache'|'recentVerification'|'progressBackfill';
 export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:string|null,fullRefresh:boolean):DetailDecision {
  if(!old)return 'newGame';
  const awards=old.achievements||[],groups=old.groups||[];
  if(!awards.length||awards.length!==old.total||(old.groupStatus==='verified'&&!groups.some(g=>g.kind==='base')))return 'incompleteCache';
  if(fullRefresh)return 'dailyRefresh';
+ if(old.progressScanVersion!==1)return 'progressBackfill';
  const oldTime=old.lastPlayed?Date.parse(old.lastPlayed):NaN;
  const newTime=lastPlayed?Date.parse(lastPlayed):NaN;
  const sameTime=old.lastPlayed===lastPlayed||
@@ -279,7 +294,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
      minutes=observed??cached.minutes;
      audit.statsReads++;
     }else audit.statsSkipped++;
-    Object.assign(game,{achievements:oldAchievements,groups:oldGroups,groupStatus:cached.groupStatus,earned:cached.earned,total:cached.total,score:cached.score,maxScore:cached.maxScore,minutes,lastPlayed:cached.lastPlayed});
+    Object.assign(game,{achievements:oldAchievements,groups:oldGroups,groupStatus:cached.groupStatus,earned:cached.earned,total:cached.total,score:cached.score,maxScore:cached.maxScore,minutes,lastPlayed:cached.lastPlayed,progressScanVersion:cached.progressScanVersion});
     audit.complete++;audit.processed++;audit.preserved++;audit.reusedDetails++;audit.rarityTitles+=oldAchievements.some(a=>a.rarity!==null)?1:0;audit.rarityAchievements+=oldAchievements.filter(a=>a.rarity!==null).length;audit.images+=oldAchievements.filter(a=>!!a.image).length;audit.unlockDates+=oldAchievements.filter(a=>!!a.unlockedAt).length;
     if(cached.groupStatus==='verified'){audit.officialBaseGroups++;if(oldGroups.some(g=>g.kind==='dlc'))audit.officialAddonGroups++;}else audit.unknownGroups++;
     if(game.minutes!==null)audit.playtimeTitles++;options.progress?.(audit.processed,games.length,audit);continue;
@@ -329,7 +344,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    if(version==='1')game.score=awards.filter(a=>a.unlocked).reduce((sum,a)=>sum+(a.points||0),0);
    if(expectedScore===null)game.maxScore=returnedScore;
    if(awards.length!==game.total||unlocked!==game.earned||(expectedScore!==null&&expectedScore!==returnedScore)){audit.summaryMismatches++;throw Error('Xbox 成就明细与摘要不一致。');}
-   game.achievements=awards;complete=true;audit.complete++;audit.detailedReads++;audit.contracts[version]=(audit.contracts[version]||0)+1;
+   game.achievements=awards;game.progressScanVersion=1;complete=true;audit.complete++;audit.detailedReads++;audit.contracts[version]=(audit.contracts[version]||0)+1;
    let groups=officialGroups(data.pages,game.id,awards);
    if(!groups&&version!=='6'){
     try{const metadata=await pagesFor(game.id,'6',true);groups=officialGroups(metadata.pages,game.id,awards);
