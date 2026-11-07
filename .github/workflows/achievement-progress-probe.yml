@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/achievement-progress-probe.yml'
+      - 'scripts/achievement-progress-probe.ts'
 permissions:
   contents: read
   actions: write
