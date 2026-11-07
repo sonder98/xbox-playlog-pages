@@ -686,6 +686,14 @@ select {
 .manage-section-heading p{font-size:12px;line-height:1.5;text-align:right;}
 .manage-page .settings-grid{align-items:stretch;}
 .manage-page #sync-history>.panel{min-width:0;}
+.visibility-panel{display:flex;flex-direction:column;align-items:flex-start;gap:14px;}
+.visibility-panel .section-title{width:100%;margin:0;}
+.visibility-panel .section-title h2{margin:0;}
+.visibility-panel .muted{margin:0;}
+.visibility-panel>.primary{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;}
+.visibility-panel .hidden-count{color:var(--surface);background:var(--text-primary);}
+@media(max-width:700px){.visibility-panel>.primary{width:100%;}}
+
 @media(max-width:700px){
  .manage-page{gap:30px;}
  .manage-section{gap:13px;}
@@ -2884,6 +2892,11 @@ footer .dot {
   border-radius:16px;
   background:var(--surface-raised);
   box-shadow:0 12px 34px rgba(0,0,0,.48);
+}
+/* With Manage Display moved out of the library toolbar, sorting is the rightmost
+   control on desktop. Anchor its popup to that control's right edge. */
+@media(min-width:701px){
+  .game-library-sort .achievement-sort-menu {left:auto;right:0;}
 }
 .game-library-sort .achievement-sort-option {
   width:100%;
