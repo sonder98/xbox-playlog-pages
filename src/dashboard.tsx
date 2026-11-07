@@ -92,20 +92,23 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  // The Manage tab and resumed PWA should show the latest *published* snapshot,
  // not only the records that were decrypted when this page opened.
  // A shared promise prevents duplicate downloads from tab, focus and initial unlock.
+ const [cloudChecking,setCloudChecking]=useState(false);
+ const lastForcedCloudCheckAt=useRef(0);
  const autoRefreshPromise=useRef<Promise<void>|null>(null);
  const lastAutoRefreshAt=useRef(refreshFromCache?0:Date.now());
  const activeRef=useRef(true);
  useEffect(()=>()=>{activeRef.current=false;},[]);
- const refreshLatest=useCallback((warnForCachedStartup=false,minIntervalMs=15_000):Promise<void>=>{
+ const refreshLatest=useCallback((warnForCachedStartup=false,minIntervalMs=15_000,force=false):Promise<void>=>{
   if(autoRefreshPromise.current)return autoRefreshPromise.current;
-  if(Date.now()-lastAutoRefreshAt.current<minIntervalMs)return Promise.resolve();
+  if(!force&&Date.now()-lastAutoRefreshAt.current<minIntervalMs)return Promise.resolve();
   lastAutoRefreshAt.current=Date.now();
-  const task=refreshCloudRecords().then(latest=>{
+  if(force){lastForcedCloudCheckAt.current=Date.now();setCloudChecking(true);}
+  const task=refreshCloudRecords({force}).then(latest=>{
    if(activeRef.current&&latest){setRecords(latest);setNotice('已自动加载最新同步记录。');}
   }).catch(()=>{
-   if(activeRef.current&&warnForCachedStartup)
-    setNotice('当前显示本机保存的历史档案；云端暂时无法连接，历史数据仍可正常查看。');
-  }).finally(()=>{autoRefreshPromise.current=null;});
+   if(activeRef.current&&(warnForCachedStartup||force))
+    setNotice('最新云端档案暂时无法读取，当前仍显示此前同步的数据，请稍后重试。');
+  }).finally(()=>{autoRefreshPromise.current=null;if(activeRef.current)setCloudChecking(false);});
   autoRefreshPromise.current=task;
   return task;
  },[]);
@@ -114,7 +117,9 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  },[refreshFromCache,refreshLatest]);
  useEffect(()=>{
   if(tab!=='manage')return;
-  void refreshLatest();
+  // The published status marker can lag behind an already-uploaded encrypted
+  // Release. Verify the full vault on Manage entry, at most once per 5 min.
+  void refreshLatest(false,0,Date.now()-lastForcedCloudCheckAt.current>=5*60_000);
   // While a user stays on the history page, check a tiny status marker every
   // five minutes. The full encrypted vault downloads only if it actually changed.
   const interval=window.setInterval(()=>{
@@ -124,7 +129,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  },[tab,refreshLatest]);
  useEffect(()=>{
   const onResume=()=>{
-   if(document.visibilityState==='visible')void refreshLatest();
+   if(document.visibilityState==='visible')void refreshLatest(false,0,Date.now()-lastForcedCloudCheckAt.current>=5*60_000);
   };
   document.addEventListener('visibilitychange',onResume);
   window.addEventListener('focus',onResume);
@@ -210,7 +215,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   </section>
   <section className="manage-section" id="sync-history" aria-labelledby="manage-history-title">
    <div className="manage-section-heading"><div><span className="eyebrow">SYNC HISTORY</span><h2 id="manage-history-title">同步历史</h2></div><p>回顾每次同步的变化和数据快照</p></div>
-   <section className="panel"><div className="section-title"><h2>同步快照</h2><span>共 {records.length} 次</span></div><p className="muted">新增时长属于两次同步之间的区间，不代表单日实际游玩时长。首次记录作为基线。</p>{records.length?records.map((r,i)=>{const d=compareRecords(r,records[i+1]);return <div className="history-row" key={r.id}><span className="history-icon"><History size={18}/></span><div><b>{new Date(r.at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}</b><span className="history-sync-mechanism">{syncMechanismLabel(r.syncMechanism)}{r.syncReusedFromAt?' · 复用先前手动同步数据（未重新扫描）':''}</span><small>{r.source} · {r.games.length} 个游戏{r.warnings.length?` · ${r.warnings.join('；')}`:''}</small></div><div className="history-delta"><b>{d.minutes===null?'基线记录':'+'+fmt(d.minutes)}</b><small>{d.achievements===null?'从此刻开始':'+'+d.achievements+' 个成就'}{d.corrections>0?' · 存在时长修正':''}</small></div></div>}):<Empty title="第一份记录，等你开始" text="微软 首次同步会建立统计基线。"/>}</section>
+   <section className="panel"><div className="section-title"><h2>同步快照</h2><span>共 {records.length} 次</span><button type="button" className="text-button" disabled={cloudChecking} onClick={()=>void refreshLatest(true,0,true)}>{cloudChecking?'检查中…':'检查云端更新'}</button></div><p className="muted">新增时长属于两次同步之间的区间，不代表单日实际游玩时长。首次记录作为基线。</p>{records.length?records.map((r,i)=>{const d=compareRecords(r,records[i+1]);return <div className="history-row" key={r.id}><span className="history-icon"><History size={18}/></span><div><b>{new Date(r.at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}</b><span className="history-sync-mechanism">{syncMechanismLabel(r.syncMechanism)}{r.syncReusedFromAt?' · 复用先前手动同步数据（未重新扫描）':''}</span><small>{r.source} · {r.games.length} 个游戏{r.warnings.length?` · ${r.warnings.join('；')}`:''}</small></div><div className="history-delta"><b>{d.minutes===null?'基线记录':'+'+fmt(d.minutes)}</b><small>{d.achievements===null?'从此刻开始':'+'+d.achievements+' 个成就'}{d.corrections>0?' · 存在时长修正':''}</small></div></div>}):<Empty title="第一份记录，等你开始" text="微软 首次同步会建立统计基线。"/>}</section>
   </section>
  </div>}
  <footer><span><span className="dot green"/>XBOX Playlog · 只属于你的游戏旅程</span><span>{current?'最后记录 '+dt(current.at):'连接账号后开始记录'} · 时间显示为北京时间</span></footer></div></main>
