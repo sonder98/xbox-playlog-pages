@@ -94,10 +94,17 @@ function AchievementItem({achievement:a}:{achievement:Achievement}){
         {a.description&&<p className="achievement-description">{a.description}</p>}
         {a.rarity!==null?<span className={'achievement-rarity'+(rare?' rare':'')} data-rarity-tier={rare?'rare':'common'} aria-label={`${rare?'稀有成就，':''}稀有度 ${a.rarity}%`}>{rare?<Gem size={16} aria-hidden="true"/>:<Trophy size={15} aria-hidden="true"/>}{a.rarity}%</span>:<span className="achievement-rarity unknown">稀有度暂缺</span>}
       </div>
-      <small className={'achievement-unlock'+(a.unlocked?' unlocked':'')}>
-        {a.unlocked?<Check size={14} aria-hidden="true"/>:<Lock size={14} aria-hidden="true"/>}
-        {a.unlocked?<span>{a.unlockedAt?<><span>已解锁 · </span><time dateTime={a.unlockedAt}>{new Date(a.unlockedAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})}</time></>:'已解锁 · 时间暂缺'}</span>:<span>未解锁</span>}
-      </small>
+      <div className="achievement-status-row">
+        <small className={'achievement-unlock'+(a.unlocked?' unlocked':'')}>
+          {a.unlocked?<Check size={14} aria-hidden="true"/>:<Lock size={14} aria-hidden="true"/>}
+          {a.unlocked?<span>{a.unlockedAt?<><span>已解锁 · </span><time dateTime={a.unlockedAt}>{new Date(a.unlockedAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})}</time></>:'已解锁 · 时间暂缺'}</span>:<span>未解锁</span>}
+        </small>
+        {!a.unlocked&&a.progressPercent!==undefined&&<span className="achievement-progress-value">{a.progressPercent}%</span>}
+      </div>
+      {!a.unlocked&&a.progressPercent!==undefined&&
+        <div className="achievement-progress-track" role="progressbar" aria-label="成就完成进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={a.progressPercent}>
+          <span style={{width:a.progressPercent+'%'}}/>
+        </div>}
     </div>
   </article>;
 }
