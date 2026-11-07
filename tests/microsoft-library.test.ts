@@ -4,7 +4,7 @@ import {officialGameVisible} from '../src/data.ts';
 import type {Achievement,Game,RecordData} from '../src/data.ts';
 const config={clientId:'11111111-1111-1111-1111-111111111111',refreshToken:'PRIVATE-REFRESH'};
 const award=(id:string,unlocked=false):Achievement=>({id,name:'Award '+id,image:'',unlocked,unlockedAt:null,rarity:null,points:10});
-const game=(id='1'):Game=>({id,name:'PRIVATE-GAME',image:'',devices:[],minutes:42,lastPlayed:null,earned:1,total:2,score:10,maxScore:20,achievements:[award('1',true),award('2')]});
+const game=(id='1'):Game=>({id,name:'PRIVATE-GAME',image:'',devices:[],minutes:42,lastPlayed:null,earned:1,total:2,score:10,maxScore:20,progressScanVersion:1,achievements:[award('1',true),award('2')]});
 const record=(games:Game[]):RecordData=>({id:'snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'2530000000000000',gamertag:'PRIVATE-GAMERTAG',avatar:''},source:'Xbox',games,warnings:[]});
 test('official BaseGame IDs partition add-ons without assuming scores, and inconsistent membership stays unknown',()=>{
  const a=[award('8',true),award('99')],page={completion:[{titleId:'1',groups:{g:{groupType:'BaseGame',achievementIds:['8'],unlockedAchievementIds:['8']}}}]};
@@ -332,6 +332,7 @@ test('cached catalogs reuse missing-score summaries and real identical last-play
  assert.equal(detailCacheDecision(old,{...good,totalAchievements:3},old.lastPlayed,false),'totalChanged');
  assert.equal(detailCacheDecision(old,good,'2026-11-01T11:24:30Z',false),'playedAgain');
  assert.equal(detailCacheDecision(old,good,old.lastPlayed,true),'dailyRefresh');
+ assert.equal(detailCacheDecision({...old,progressScanVersion:undefined},good,old.lastPlayed,false),'progressBackfill','Old encrypted catalogs must be scanned once for the new progress fields');
  assert.equal(detailCacheDecision(undefined,good,old.lastPlayed,false),'newGame');
  assert.equal(detailCacheDecision({...old,achievements:[award('1',true)]},good,old.lastPlayed,false),'incompleteCache');
  assert.equal(detailCacheDecision(old,{...good,currentAchievements:undefined},old.lastPlayed,false),'missingSummary');
