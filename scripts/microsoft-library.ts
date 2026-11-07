@@ -1,6 +1,6 @@
 import {microsoftProvider,XboxReadError,type DirectConfig} from './microsoft.ts';
 import {collectPages} from './microsoft-probe.ts';
-import {normalizeTitles,safeImage,type Achievement,type AchievementGroup,type Game,type RecordData} from '../src/data.ts';
+import {normalizeTitles,officialGameVisible,safeImage,type Achievement,type AchievementGroup,type Game,type RecordData} from '../src/data.ts';
 import {validateGroups} from '../src/completion.ts';
 import type {CatalogBundle} from './catalog-cache.ts';
 import {boundaryPlaytimeSweep,type PlaytimeSample} from '../src/playtime-ledger.ts';
@@ -58,6 +58,18 @@ export function catalogGroups(bundle:CatalogBundle|undefined,game:Game):Achievem
  for(const a of catalog.data.achievements){const matches=xbox.get(key(a));if(matches?.length!==1||[...map.values()].includes(matches[0].id))return;map.set(a.id,matches[0].id);}
  if(map.size!==game.achievements.length)return;
  return validateGroups(catalog.data.groups.map(g=>({...g,achievementIds:g.achievementIds.map(id=>map.get(id)!)})),game.achievements,game.total,game.earned);
+}
+// Only visible titles with a complete achievement catalog need a base/DLC split.
+export function countVisibleUnknownGroups(games:Game[],source='Xbox'):number{
+ return games.filter(g=>officialGameVisible(g,source)&&g.total>0&&
+  g.achievements?.length===g.total&&g.groupStatus!=='verified').length;
+}
+// Recompute on every publish, including quick reuse, to discard stale counts.
+export function refreshGroupingWarnings(record:RecordData):RecordData{
+ const count=countVisibleUnknownGroups(record.games,record.source);
+ const warnings=record.warnings.filter(w=>!/^\d+ 个游戏分组未知。$/.test(w));
+ if(count)warnings.push(`${count} 个游戏分组未知。`);
+ return {...record,warnings};
 }
 export type ScanAudit={version:1;at:string;titlePages:number;achievementHistoryPages:number;historySourcesFailed:number;historyTitlesAdded:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;fullRefresh:boolean;reusedDetails:number;detailedReads:number;statsReads:number;statsSkipped:number;emptySkipped:number;reuseReasons:Partial<Record<DetailDecision,number>>;failed:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number;matchedAchievementDates:number};};
 export function compareLibrary(games:Game[],prior?:RecordData,aliases=new Map<string,string[]>(),awardNames=new Map<string,Map<string,string>>()){
@@ -343,7 +355,8 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  const ids=new Set(games.map(g=>g.id));for(const [id,g]of prior)if(!ids.has(id)){games.push({...g,officialHidden:undefined});audit.preserved++;}
  let aliases=new Map<string,string[]>();if(options.baseline)aliases=await titleAliases(p=>provider.call(p));
  audit.comparison=compareLibrary(games,options.baseline,aliases);
- const record:RecordData={id:crypto.randomUUID(),at:audit.at,source:'Xbox',profile:{xuid:provider.xuid,gamertag:setting('Gamertag')||'Xbox 玩家',avatar:safeImage(setting('GameDisplayPicRaw'))},games,warnings:[...(audit.failed?[`${audit.failed} 个游戏的官方数据尚未完整核对。`]:[]),...(audit.unknownGroups?[`${audit.unknownGroups} 个游戏分组未知。`]:[])]};
+ audit.unknownGroups=countVisibleUnknownGroups(games);
+ const record:RecordData=refreshGroupingWarnings({id:crypto.randomUUID(),at:audit.at,source:'Xbox',profile:{xuid:provider.xuid,gamertag:setting('Gamertag')||'Xbox 玩家',avatar:safeImage(setting('GameDisplayPicRaw'))},games,warnings:[...(audit.failed?[`${audit.failed} 个游戏的官方数据尚未完整核对。`]:[])]});
  // Only the MICROSOFT_STATE_KEY-encrypted candidate cache stores zero-result titles.
  const emptyTitles:EmptyTitleCache[]=games.filter(g=>g.officialHidden===false&&g.total===0&&g.earned===0&&
   g.score===0&&g.maxScore===0&&g.minutes===null&&!(g.achievements?.length))
