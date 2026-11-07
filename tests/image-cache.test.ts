@@ -6,6 +6,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import {cacheRecordImages,convertImage,imageCacheName,imageSource} from '../scripts/image-cache.ts';
 import {validateRecord,type RecordData} from '../src/data.ts';
+import {beijingDay,mythicBackdrop,mythicBackdropPreview} from '../src/mythic-assets.ts';
 test('only known public artwork hosts and paths can be fetched; variants have stable distinct cache keys',()=>{
  assert.equal(imageSource('https://m.exophase.com/xbox/awards/s/abc.png'),'https://m.exophase.com/xbox/awards/s/abc.png');
  for(const url of ['http://m.exophase.com/xbox/awards/s/a','https://m.exophase.com.evil.test/xbox/awards/a','https://user@m.exophase.com/xbox/awards/a','https://m.exophase.com:8443/xbox/games/a','https://127.0.0.1/','https://m.exophase.com/account'])assert.equal(imageSource(url),null);
@@ -65,10 +66,11 @@ test('Mythic screenshot album caches each distinct image and keeps returned orde
   devices:[],lastPlayed:null,minutes:0,earned:1,total:1,score:0,maxScore:0};
  const record:RecordData={id:'x',at:new Date().toISOString(),profile:{xuid:'4285437',gamertag:'test',avatar:''},source:'Xbox',warnings:[],games:[game]};
  const bytes=await sharp({create:{width:1280,height:720,channels:3,background:'#445566'}}).png().toBuffer();
+ const third=await sharp({create:{width:1280,height:720,channels:3,background:'#667788'}}).png().toBuffer();
  try{
   await cacheRecordImages(record,{directory,fetchImage:async url=>{
    if(url===urls[1])throw Error('simulated missing day two image');
-   return bytes;
+   return url===urls[2]?third:bytes;
   }});
   assert.equal(game.cachedPosterScreenshots?.length,3);
   assert.equal(game.cachedPosterScreenshotsSmall?.length,3);
@@ -80,6 +82,41 @@ test('Mythic screenshot album caches each distinct image and keeps returned orde
   assert.ok(game.cachedPosterScreenshotsSmall?.[2]?.endsWith(imageCacheName(urls[2],480)));
   assert.equal(validateRecord(record).games[0].cachedPosterScreenshots?.[1],'');
   assert.equal(validateRecord(record).games[0].cachedPosterScreenshotsSmall?.[1],'');
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
+
+
+test('distinct Store screenshot addresses with identical pixels rotate as one unique frame',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'playlog-mythic-visual-dedupe-'));
+ const urls=['a1','a2','b1','b2'].map(id=>'https://store-images.s-microsoft.com/image/'+id);
+ const game:RecordData['games'][number]={id:'2',name:'Mythic',image:urls[0],posterImage:urls[0],
+  posterScreenshots:[...urls],posterRotationStartDay:'2026-11-06',
+  devices:[],lastPlayed:null,minutes:0,earned:1,total:1,score:0,maxScore:0};
+ const record:RecordData={id:'x',at:new Date().toISOString(),
+  profile:{xuid:'4285437',gamertag:'test',avatar:''},source:'Xbox',warnings:[],games:[game]};
+ const first=await sharp({create:{width:1280,height:720,channels:3,background:'#223344'}}).png().toBuffer();
+ const second=await sharp({create:{width:1280,height:720,channels:3,background:'#bb8833'}}).png().toBuffer();
+ try{
+  await cacheRecordImages(record,{directory,fetchImage:async url=>urls.indexOf(url)<2?first:second});
+  assert.deepEqual(game.posterScreenshots,[urls[0],urls[2]],'first instance of each picture survives');
+  assert.equal(game.posterRotationStartDay,'2026-11-06','existing daily sequence is not reset');
+  assert.equal(game.cachedPosterScreenshots?.length,2);
+  assert.equal(game.cachedPosterScreenshotsSmall?.length,2);
+  assert.ok(game.cachedPosterScreenshots?.[0]?.endsWith(imageCacheName(urls[0],1600)));
+  assert.ok(game.cachedPosterScreenshots?.[1]?.endsWith(imageCacheName(urls[2],1600)));
+  const day0=beijingDay(Date.parse('2026-11-06T12:00:00Z'));
+  const day1=beijingDay(Date.parse('2026-11-07T12:00:00Z'));
+  assert.equal(mythicBackdrop(game,day0),game.cachedPosterScreenshots?.[0]);
+  assert.equal(mythicBackdrop(game,day1),game.cachedPosterScreenshots?.[1]);
+  assert.notEqual(mythicBackdrop(game,day0),mythicBackdrop(game,day1));
+  assert.equal(mythicBackdropPreview(game,day1),game.cachedPosterScreenshotsSmall?.[1]);
+  assert.deepEqual(validateRecord(record).games[0].posterScreenshots,[urls[0],urls[2]]);
+  const warm=await cacheRecordImages(record,{directory,fetchImage:async()=>{
+   throw Error('previously archived frames must not be downloaded again');
+  }});
+  assert.equal(warm.downloaded,0);
+  assert.equal(warm.failures,0);
+  assert.deepEqual(game.posterScreenshots,[urls[0],urls[2]]);
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });
 
