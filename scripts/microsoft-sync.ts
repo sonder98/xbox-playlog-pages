@@ -10,6 +10,7 @@ import {cacheRecordImages} from './image-cache.ts';
 import {appendPlaytimeSamples,boundaryPlaytimeSweep} from '../src/playtime-ledger.ts';
 import {fixedPcMetascores} from './fixed-pc-metascores.ts';
 import {completion} from '../src/completion.ts';
+import {achievementTimeSpan} from '../src/achievement-time-span.ts';
 import {distinctScreenshotIndices,normalizeSyncMechanism,type Game} from '../src/data.ts';
 /** Aggregate only. Never log the private game's name, ID or snapshot. */
 function logMythicArtworkCoverage(games:Game[]){
@@ -71,27 +72,17 @@ function auditReportedRotation(games:Game[],prior:Game[]){
   }));
  }
 }
-/** Diagnostic for a user-reported game span: aggregate counts only.
- * Never publish title IDs, account details, achievement titles or unlock times. */
-function auditFinalFantasySpan(games:Game[],previousGames:Game[]){
- const match=(name:string)=>/final\s*fantasy\s*resonance/i.test(name);
- const game=games.find(g=>match(g.name));
- const prior=previousGames.find(g=>match(g.name));
+/** Aggregate-only check of the first-play-to-final-achievement metric. */
+function auditFinalFantasySpan(games:Game[],ledger:any){
+ const game=games.find(g=>/final[ ]*fantasy[ ]*resonance/i.test(g.name));
  if(!game){console.log('FF Resonance 时间跨度诊断：{"found":false}');return;}
- const dates=(list:typeof game.achievements)=>{
-  return (list||[]).filter(a=>a.unlocked&&a.unlockedAt)
-   .map(a=>Date.parse(a.unlockedAt!)).filter(Number.isFinite).sort((a,b)=>a-b);
- };
- const timestamps=dates(game.achievements),earlier=dates(prior?.achievements);
- const earned=game.achievements?.filter(a=>a.unlocked).length||0;
- const span=timestamps.length?(timestamps.at(-1)!-timestamps[0])/86400_000:null;
+ const span=achievementTimeSpan(game,ledger);
+ const firstOffset=span?(Date.parse(span.firstPlayedDate+'T00:00:00Z')-Date.parse(ledger.since+'T00:00:00Z'))/86400_000:null;
  console.log('FF Resonance 时间跨度诊断：'+JSON.stringify({
-  found:true,achievementTotal:game.achievements?.length||0,earnedReported:game.earned,
-  unlockedDetails:earned,unlockedWithTimestamp:timestamps.length,
-  uniqueUnlockTimestamps:new Set(timestamps).size,
-  spanDays:span===null?null:Math.round(span*100)/100,
-  priorDated:earlier.length,priorSpanDays:earlier.length?Math.round((earlier.at(-1)!-earlier[0])/86400_000*100)/100:null,
-  lastPlayedAgeDays:game.lastPlayed?Math.round((Date.now()-Date.parse(game.lastPlayed))/86400_000*10)/10:null
+  found:true,achievementTotal:game.total,earned:game.earned,
+  unlockedWithTimestamp:(game.achievements||[]).filter(a=>a.unlocked&&a.unlockedAt).length,
+  firstPlayAvailable:!!span,firstPlayOffsetFromLedgerStartDays:firstOffset,
+  spanDays:span?.days??null
  }));
 }
 
@@ -112,7 +103,7 @@ if(ledger&&fresh?.source==='Xbox'&&!boundaryPlaytimeSweep(new Date().toISOString
  await cacheRecordImages(fresh);
  logMythicScreenshotCache(fresh.games);
  auditReportedRotation(fresh.games,previous[0]?.games||[]);
- auditFinalFantasySpan(fresh.games,previous[0]?.games||[]);
+ auditFinalFantasySpan(fresh.games,ledger);
  await publishSnapshot(fresh,previous.filter((r:any)=>r.id!==fresh.id).slice(0,29),target,ledger,fixedPcMetascores(fresh.games.map((g:any)=>String(g.id)),key));console.log('复用刚完成的微软快照。');process.exit(0);
 }
 const cacheBaseline=saved?.record??previous[0];
@@ -142,12 +133,12 @@ const mediaStarted=Date.now();
 await cacheRecordImages(result.record);
 logMythicScreenshotCache(result.record.games);
 auditReportedRotation(result.record.games,previous[0]?.games||[]);
-auditFinalFantasySpan(result.record.games,previous[0]?.games||[]);
 console.log('图片缓存耗时（秒）：'+Math.round((Date.now()-mediaStarted)/1000));
 writeState(root+'/candidate.json',{...result,record:{...result.record,games:allScannedGames},
  lastFullCatalogAt:result.audit.fullRefresh?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);
 session.save();
 const daily=appendPlaytimeSamples(ledger,result.statsSamples);
+auditFinalFantasySpan(result.record.games,daily);
 await publishSnapshot(result.record,previous.slice(0,29),target,daily,fixedPcMetascores(result.record.games.map(g=>g.id),key));
 console.log('每日时长采样：'+JSON.stringify({freshSamples:result.statsSamples.length,observedGames:Object.keys(daily.latest).length,dates:Object.keys(daily.days).length,crossDayIntervals:Object.keys(daily.crossDay).length}));
 console.log('微软正式同步完成：'+JSON.stringify({games:result.record.games.length,achievementsWithRarity:result.audit.rarityAchievements,baseGroups:result.audit.officialBaseGroups,dlcGroups:result.audit.officialAddonGroups,artwork,seconds:Math.round((Date.now()-began)/1000)}));
