@@ -184,11 +184,13 @@ try{
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
     await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
-    await switchMainTab('管理');
+    // Other tests cover scroll-triggered mobile nav. Here focus on the
+    // vault-reload behavior, including while the mobile tab bar is hidden.
+    await page.locator(mobile?'.mobile-nav':'.sidebar').getByRole('button',{name:'管理',exact:true}).evaluate(el=>el.click());
     await page.getByText('已自动加载最新同步记录。').waitFor();
     assert.equal(await page.locator('.history-row').count(),1,'The newest encrypted record appears in Manage history');
     assert.ok((await page.locator('.history-row').first().innerText()).includes('11/2'),'The newest published timestamp appears in sync history');
-    await switchMainTab('概览');
+    await page.locator(mobile?'.mobile-nav':'.sidebar').getByRole('button',{name:'概览',exact:true}).evaluate(el=>el.click());
     assert.ok((await page.locator('.recent-game-card').first().innerText()).includes('Updated Test Game 0'),
       'Latest cloud history refreshes the archive after cached records are already visible');
     activeEnvelope=envelope;
