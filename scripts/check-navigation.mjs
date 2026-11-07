@@ -1292,7 +1292,7 @@ try{
       Math.abs(searchRowAfter.fieldRight-searchRowAfter.right)<3,
       'Search field expands only to the right, fills the remaining row, and never covers sorting');
     assert.equal(await gameSearch.getAttribute('aria-expanded'),'true');
-    await gameSearchInput.fill('Test Game 1');
+    await gameSearchInput.fill('Test Game 0');
     await gameSearchInput.press('Enter');
     await gameSearchInput.waitFor({state:'hidden'});
     assert.equal(await gameSearch.getAttribute('aria-expanded'),'false');
