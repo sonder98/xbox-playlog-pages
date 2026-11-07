@@ -23,7 +23,8 @@ test('rotating screenshot albums are lossless and deduplicated in encrypted hist
  const input={records:Array.from({length:30},(_,n)=>({id:String(n),at:'2026-11-06T00:00:00Z',games:[{
   id:'2',name:'Mythic',posterSelectionVersion:3,posterRotationStartDay:'2026-11-06',
   posterScreenshots:['https://store-images.s-microsoft.com/a','https://store-images.s-microsoft.com/b'],
-  cachedPosterScreenshots:['https://cache.test/a.webp','']
+  cachedPosterScreenshots:['https://cache.test/a.webp',''],
+  cachedPosterScreenshotsSmall:['https://cache.test/a-480.webp','']
  }]}))};
  const packed=compactPayload(input);
  assert.equal(packed.detailTable.length,1);
