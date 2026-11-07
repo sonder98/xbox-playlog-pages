@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import {credentials} from './microsoft-credentials.ts';
-import {scanMicrosoft} from './microsoft-library.ts';
+import {scanMicrosoft,refreshGroupingWarnings} from './microsoft-library.ts';
 import {australianArtwork} from './microsoft-artwork.ts';
 import {readState,writeState} from './microsoft-state.ts';
 import {getPasswords,readVault} from './password.ts';
@@ -31,7 +31,7 @@ const ledger=existing.playtimeLedger;
 const recentCandidate=saved?.record?.games?.some((g:any)=>g.cachedImage)&&Date.now()-Date.parse(saved.record.at)<20*60_000?saved.record:null;
 // Private candidates may include zero-result titles; those never enter the public snapshot.
 const freshSource=recentCandidate||previous[0];
-const fresh=freshSource?{...freshSource,games:freshSource.games.filter((g:any)=>g.total>0||g.minutes!==null)}:undefined;
+const fresh=freshSource?refreshGroupingWarnings({...freshSource,games:freshSource.games.filter((g:any)=>g.total>0||g.minutes!==null)}):undefined;
 if(ledger&&fresh?.source==='Xbox'&&!boundaryPlaytimeSweep(new Date().toISOString())&&process.env.PLAYTIME_FORCE_SWEEP!=='true'&&Date.now()-Date.parse(fresh.at)<20*60_000){
  const artwork=await australianArtwork(fresh,fetch,previous[0]);
  console.log('快速快照澳区横幅覆盖：'+JSON.stringify(artwork));
@@ -57,6 +57,7 @@ logMythicArtworkCoverage(result.record.games);
 // so the next run can avoid re-reading 30+ unpublishable titles.
 const allScannedGames=result.record.games;
 result.record.games=result.record.games.filter(g=>g.total>0||g.minutes!==null);
+result.record=refreshGroupingWarnings(result.record);
 const mediaStarted=Date.now();
 await cacheRecordImages(result.record);
 console.log('图片缓存耗时（秒）：'+Math.round((Date.now()-mediaStarted)/1000));
