@@ -2,30 +2,50 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {shouldReuseRecentXboxSnapshot} from '../scripts/microsoft-sync-policy.ts';
 
-const recent={
- ledgerAvailable:true,source:'Xbox',snapshotAt:'2026-11-07T12:11:00.000Z',
- now:'2026-11-07T12:17:00.000Z',dayBoundary:false,forceSweep:false
-} as const;
+const base={
+ ledgerAvailable:true,source:'Xbox',priorMechanism:'manual' as const,
+ snapshotAt:'2026-11-07T12:14:00.000Z',
+ now:'2026-11-07T12:18:45.000Z',dayBoundary:false,forceSweep:false
+};
 
-test('Cloudflare hourly tick always scans even six minutes after a manual full sync',()=>{
- assert.equal(shouldReuseRecentXboxSnapshot({...recent,mechanism:'cloudflare'}),false);
+test('A scheduled :17 Cloudflare tick can reuse a preceding manual scan from :12–:17',()=>{
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare'}),true);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',snapshotAt:'2026-11-07T12:12:00Z'}),true);
 });
 
-test('Day-boundary auto checkpoints also never reuse snapshots',()=>{
- assert.equal(shouldReuseRecentXboxSnapshot({...recent,mechanism:'day-boundary'}),false);
+test('Manual sync NEVER reuses a snapshot, regardless of its proximity to automatic sync',()=>{
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'manual'}),false);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'manual',priorMechanism:'cloudflare'}),false);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'code-update'}),false);
 });
 
-test('Manual and code-update near-duplicate runs can keep their fast path',()=>{
- assert.equal(shouldReuseRecentXboxSnapshot({...recent,mechanism:'manual'}),true);
- assert.equal(shouldReuseRecentXboxSnapshot({...recent,mechanism:'code-update'}),true);
+test('Auto sync cannot reuse a manual scan that started AFTER the scheduled :17 tick',()=>{
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',snapshotAt:'2026-11-07T12:17:01Z'}),false);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',snapshotAt:'2026-11-07T12:18:00Z'}),false);
 });
 
-test('A fast path requires a recent Xbox record, a ledger, and no day boundary or forced sweep',()=>{
- assert.equal(shouldReuseRecentXboxSnapshot({...recent,mechanism:'manual',source:'Exophase'}),false);
- assert.equal(shouldReuseRecentXboxSnapshot({...recent,mechanism:'manual',ledgerAvailable:false}),false);
- assert.equal(shouldReuseRecentXboxSnapshot({...recent,mechanism:'manual',dayBoundary:true}),false);
- assert.equal(shouldReuseRecentXboxSnapshot({...recent,mechanism:'manual',forceSweep:true}),false);
- assert.equal(shouldReuseRecentXboxSnapshot({...recent,mechanism:'manual',snapshotAt:'2026-11-07T11:00:00.000Z'}),false);
- assert.equal(shouldReuseRecentXboxSnapshot({...recent,mechanism:'manual',snapshotAt:'invalid'}),false);
- assert.equal(shouldReuseRecentXboxSnapshot({...recent,mechanism:'manual',snapshotAt:'2026-11-07T12:21:00.000Z'}),false);
+test('Auto sync cannot reuse a manual scan more than 5 minutes before :17',()=>{
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',snapshotAt:'2026-11-07T12:11:59Z'}),false);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',snapshotAt:'2026-11-07T11:59:00Z'}),false);
+});
+
+test('Auto sync cannot reuse older auto or code-update snapshots',()=>{
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',priorMechanism:'cloudflare'}),false);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',priorMechanism:'code-update'}),false);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',priorMechanism:undefined}),false);
+});
+
+test('Queue delays allow :17 attribution but never open an indefinite reuse window',()=>{
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',now:'2026-11-07T12:29:00Z'}),true);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',now:'2026-11-07T12:33:01Z'}),false);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',now:'2026-11-07T13:00:00Z'}),false);
+});
+
+test('Day-boundary automatic scans and forced sweeps always fetch Microsoft',()=>{
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'day-boundary'}),false);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',dayBoundary:true}),false);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',forceSweep:true}),false);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',ledgerAvailable:false}),false);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',source:'Exophase'}),false);
+ assert.equal(shouldReuseRecentXboxSnapshot({...base,mechanism:'cloudflare',snapshotAt:'invalid'}),false);
 });
