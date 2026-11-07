@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeTitles,parseStats,validateRecord,compareRecords,officialGameVisible,syncMechanismLabel,type RecordData} from '../src/data.ts';
+import {normalizeTitles,parseStats,validateRecord,compareRecords,officialGameVisible,syncMechanismLabel,distinctScreenshotIndices,type RecordData} from '../src/data.ts';
 const game={id:'123',name:'测试',image:'',devices:[],lastPlayed:null,minutes:100,earned:2,total:10,score:20,maxScore:100};
 const record=(gs:any[]):RecordData=>({id:'a',at:'2026-10-30T00:00:00Z',profile:{xuid:'2530000000000000',gamertag:'Tester',avatar:''},games:gs,source:'OpenXBL',warnings:[]});
 test('first snapshot is baseline; new games do not inflate delta',()=>{assert.equal(compareRecords(record([game])).minutes,null);assert.equal(compareRecords(record([{...game,minutes:160},{...game,id:'456',minutes:5000}]),record([game])).minutes,60)});
@@ -66,4 +66,20 @@ test('snapshot sync trigger is validated; all three sources and code-change have
  assert.equal(syncMechanismLabel(validateRecord(record([game])).syncMechanism),'来源未记录',
   'Legacy encrypted history must not infer a trigger from the clock');
  assert.equal(validateRecord({...record([game]),syncMechanism:'untrusted'}).syncMechanism,undefined);
+});
+
+test('cached Xbox player avatar survives record validation and rejects invalid URLs',()=>{
+ const input={...record([game]),profile:{...record([game]).profile,avatar:'https://images-eds-ssl.xboxlive.com/image?key=original',
+ cachedAvatar:'https://sonder98.github.io/xbox-playlog-pages/media/11223344556677889900112233445566-96.webp'}};
+ assert.equal(validateRecord(input).profile.cachedAvatar,input.profile.cachedAvatar);
+ assert.equal(validateRecord({...input,profile:{...input.profile,cachedAvatar:'javascript:bad'}}).profile.cachedAvatar,undefined);
+});
+test('Store screenshots are distinct by underlying asset, not CDN resizing query',()=>{
+ const urls=['https://store-images.s-microsoft.com/image/apps.abc?w=720',
+  'https://store-images.s-microsoft.com/image/apps.abc?w=1440',
+  'https://store-images.s-microsoft.com/image/apps.def?w=720',
+  'https://store-images.s-microsoft.com/image/apps.def?w=1440',
+  'https://store-images.s-microsoft.com/image/apps.xyz?w=720'];
+ assert.deepEqual(distinctScreenshotIndices(urls),[0,2,4]);
+ assert.deepEqual(distinctScreenshotIndices([]),[]);
 });
