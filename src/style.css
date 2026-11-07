@@ -2893,6 +2893,11 @@ footer .dot {
   background:var(--surface-raised);
   box-shadow:0 12px 34px rgba(0,0,0,.48);
 }
+/* With Manage Display moved out of the library toolbar, sorting is the rightmost
+   control on desktop. Anchor its popup to that control's right edge. */
+@media(min-width:701px){
+  .game-library-sort .achievement-sort-menu {left:auto;right:0;}
+}
 .game-library-sort .achievement-sort-option {
   width:100%;
   display:flex;
