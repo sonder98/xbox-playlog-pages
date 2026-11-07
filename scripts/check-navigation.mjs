@@ -165,7 +165,7 @@ try{
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
     await page.locator('.recent-game-card').first().waitFor();
-    await page.getByText('当前显示本机保存的历史档案',{exact:false}).waitFor();
+    await page.getByText('最新云端档案暂时无法读取',{exact:false}).waitFor();
     assert.equal(await page.locator('.stats').count(),1,
       'Historical game records remain readable while cloud refresh fails in the background');
     await page.unroute('**/vault.json*',simulatedOutage);
