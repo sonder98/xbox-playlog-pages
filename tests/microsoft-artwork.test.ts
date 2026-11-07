@@ -164,3 +164,35 @@ test('a legacy Mythic with a version-two poster reloads the screenshot album onc
   'https://store-images.s-microsoft.com/image/shot-one','https://store-images.s-microsoft.com/image/shot-two'
  ]);
 });
+
+test('fresh AU screenshot metadata removes repeated size variants but keeps every distinct scene in order',async()=>{
+ const record={games:[{id:'7',name:'Way of the Sword',image:'',earned:1,total:1}]} as RecordData;
+ await australianArtwork(record,async()=>Response.json({Products:[{ProductKind:'Game',LocalizedProperties:[{
+  Language:'en-AU',ProductTitle:'Way of the Sword',Images:[
+   image('BoxArt',1024,1024,'image/cover'),
+   image('Screenshot',1280,720,'image/repeated?w=720'),
+   image('Screenshot',1920,1080,'image/repeated?w=1080'),
+   image('Screenshot',1920,1080,'image/next-scene?w=1080')
+  ]}]}]}));
+ assert.deepEqual(record.games[0].posterScreenshots,[
+  'https://store-images.s-microsoft.com/image/repeated?w=720',
+  'https://store-images.s-microsoft.com/image/next-scene?w=1080'
+ ]);
+});
+test('incremental Mythic gallery removes old repeated screenshots without resetting rotation start day',async()=>{
+ const old={games:[{id:'7',name:'Way of the Sword',image:'https://store-images.s-microsoft.com/image/cover',
+  detailImage:'https://store-images.s-microsoft.com/image/titled',
+  detailImagePurpose:'TitledHeroArt',posterImage:'https://store-images.s-microsoft.com/image/repeated',
+  posterImagePurpose:'Screenshot',posterSelectionVersion:3,earned:1,total:1,
+  posterScreenshots:['https://store-images.s-microsoft.com/image/repeated?w=720',
+   'https://store-images.s-microsoft.com/image/repeated?w=1080',
+   'https://store-images.s-microsoft.com/image/scene-two'],
+  posterRotationStartDay:'2026-11-06'}]} as RecordData;
+ const fresh={games:[{id:'7',name:'Way of the Sword',image:'',earned:1,total:1}]} as RecordData;
+ await australianArtwork(fresh,async()=>{throw Error('Must reuse prior gallery');},old);
+ assert.deepEqual(fresh.games[0].posterScreenshots,[
+  'https://store-images.s-microsoft.com/image/repeated?w=720',
+  'https://store-images.s-microsoft.com/image/scene-two'
+ ]);
+ assert.equal(fresh.games[0].posterRotationStartDay,'2026-11-06');
+});
