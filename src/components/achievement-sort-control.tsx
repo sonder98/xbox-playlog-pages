@@ -84,8 +84,8 @@ export function GameLibrarySortControl({sort,filter,onChange}:{
  </div>;
 }
 
-/** The library search stays out of the toolbar until the small button is opened.
- * The live filter is retained when dismissed; users can clear it explicitly. */
+/** An inline search that grows to the RIGHT of the search icon, in the same
+ * toolbar row as the sort button. Never overlays the sort control. */
 export function GameLibrarySearchControl({query,onChange}:{
  query:string;onChange:(next:string)=>void;
 }){
@@ -93,7 +93,7 @@ export function GameLibrarySearchControl({query,onChange}:{
  const wrapper=useRef<HTMLDivElement>(null);
  const trigger=useRef<HTMLButtonElement>(null);
  const input=useRef<HTMLInputElement>(null);
- const panelId=useId();
+ const fieldId=useId();
  useEffect(()=>{
   if(!open)return;
   input.current?.focus();
@@ -103,13 +103,13 @@ export function GameLibrarySearchControl({query,onChange}:{
   document.addEventListener('pointerdown',outside);
   return ()=>document.removeEventListener('pointerdown',outside);
  },[open]);
- return <div className="game-library-search" ref={wrapper}>
+ return <div className={'game-library-search'+(open?' is-open':'')} ref={wrapper}>
   <button type="button" ref={trigger}
    className={'achievement-sort-toggle game-library-search-toggle'+(open?' is-open':'')+(query?' has-query':'')}
-   aria-label="搜索游戏" aria-haspopup="dialog" aria-expanded={open}
-   aria-controls={open?panelId:undefined} title="搜索游戏"
+   aria-label="搜索游戏" aria-expanded={open}
+   aria-controls={open?fieldId:undefined} title="搜索游戏"
    onClick={()=>setOpen(v=>!v)}><Search size={17} aria-hidden="true"/></button>
-  {open&&<div className="game-library-search-panel" id={panelId} role="dialog" aria-label="搜索游戏">
+  {open&&<div className="game-library-search-field" id={fieldId} role="search" aria-label="搜索游戏库">
    <input ref={input} type="search" aria-label="搜索游戏名称" placeholder="搜索游戏名称…"
     value={query} onChange={event=>onChange(event.target.value)}
     onKeyDown={event=>{
