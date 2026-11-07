@@ -1237,10 +1237,42 @@ try{
     await page.getByRole('button',{name:'返回上一页',exact:true}).click();
     await page.getByRole('heading',{name:'我的游戏档案',exact:true}).waitFor();
     await page.getByRole('button',{name:'全部游戏',exact:true}).click();
-    await page.getByRole('textbox',{name:'搜索游戏名称'}).fill('Test Game 1');
+    const gameSort=page.getByRole('button',{name:'游戏排序',exact:true});
+    const gameSearch=page.getByRole('button',{name:'搜索游戏',exact:true});
+    assert.equal(await page.getByRole('searchbox',{name:'搜索游戏名称'}).count(),0,
+      'Library search input is collapsed by default');
+    const searchRowBefore=await page.locator('.library-toolbar-actions').evaluate(el=>{
+      const row=el.getBoundingClientRect();
+      const sort=el.querySelector('.game-library-sort')?.getBoundingClientRect();
+      const button=el.querySelector('.game-library-search-toggle')?.getBoundingClientRect();
+      return {top:row.top,height:row.height,right:row.right,sortRight:sort?.right,sortTop:sort?.top,buttonLeft:button?.left,buttonTop:button?.top};
+    });
+    assert.ok(searchRowBefore.buttonLeft>=searchRowBefore.sortRight,
+      'Small search button sits immediately to the right of sorting');
+    await gameSearch.click();
+    const gameSearchInput=page.getByRole('searchbox',{name:'搜索游戏名称'});
+    await gameSearchInput.waitFor();
+    const searchRowAfter=await page.locator('.library-toolbar-actions').evaluate(el=>{
+      const row=el.getBoundingClientRect();
+      const sort=el.querySelector('.game-library-sort')?.getBoundingClientRect();
+      const button=el.querySelector('.game-library-search-toggle')?.getBoundingClientRect();
+      const field=el.querySelector('.game-library-search-field')?.getBoundingClientRect();
+      return {top:row.top,height:row.height,right:row.right,sortRight:sort?.right,sortTop:sort?.top,buttonLeft:button?.left,buttonTop:button?.top,fieldLeft:field?.left,fieldRight:field?.right,fieldTop:field?.top};
+    });
+    assert.ok(Math.abs(searchRowAfter.height-searchRowBefore.height)<2&&
+      Math.abs(searchRowAfter.buttonTop-searchRowAfter.sortTop)<6,
+      'Expanding search does not create a dropdown or an extra toolbar row');
+    assert.ok(Math.abs(searchRowAfter.buttonLeft-searchRowBefore.buttonLeft)<2&&
+      searchRowAfter.fieldLeft>=searchRowAfter.sortRight&&
+      Math.abs(searchRowAfter.fieldRight-searchRowAfter.right)<3,
+      'Search field expands only to the right, fills the remaining row, and never covers sorting');
+    assert.equal(await gameSearch.getAttribute('aria-expanded'),'true');
+    await gameSearchInput.fill('Test Game 1');
+    await gameSearchInput.press('Enter');
+    await gameSearchInput.waitFor({state:'hidden'});
+    assert.equal(await gameSearch.getAttribute('aria-expanded'),'false');
     assert.equal(await page.locator('.toolbar').getByRole('button',{name:'CSV',exact:true}).count(),0,
       'The All Games toolbar no longer shows the CSV download action');
-    const gameSort=page.getByRole('button',{name:'游戏排序',exact:true});
     assert.equal(await page.getByRole('combobox',{name:'排序游戏'}).count(),0,'The library no longer uses the browser-native sort select');
     await gameSort.focus();
     await gameSort.press('ArrowDown');
@@ -1625,7 +1657,6 @@ try{
 
     await page.goBack();
     await page.getByRole('dialog').waitFor({state:'hidden'});
-    assert.equal(await page.getByRole('textbox',{name:'搜索游戏名称'}).inputValue(),'Test Game 1');
     const persistedGameSort=page.getByRole('button',{name:'游戏排序',exact:true});
     await persistedGameSort.click();
     const persistedGameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
@@ -1635,6 +1666,21 @@ try{
     assert.equal(await persistedGameSort.getAttribute('aria-expanded'),'false');
     await page.waitForFunction(y=>Math.abs(window.scrollY-y)<5,beforeDetail);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
+    const restoredSearch=page.getByRole('button',{name:'搜索游戏',exact:true});
+    await restoredSearch.click();
+    assert.equal(await page.getByRole('searchbox',{name:'搜索游戏名称'}).inputValue(),'Test Game 1',
+      'The search query persists while collapsed and across game details');
+    await page.getByRole('searchbox',{name:'搜索游戏名称'}).press('Escape');
+    assert.equal(await restoredSearch.getAttribute('aria-expanded'),'false');
+    await restoredSearch.click();
+    await page.getByRole('button',{name:'清空游戏搜索',exact:true}).click();
+    assert.equal(await page.getByRole('searchbox',{name:'搜索游戏名称'}).inputValue(),'');
+    await page.getByRole('searchbox',{name:'搜索游戏名称'}).fill('Test Game 1');
+    await page.locator('.game-library-sort .achievement-sort-toggle').click();
+    assert.equal(await restoredSearch.getAttribute('aria-expanded'),'false',
+      'Clicking the adjacent sort button dismisses the inline search');
+    await page.keyboard.press('Escape');
+    
     // Hiding is a reversible encrypted display preference, independent of fresh sync snapshots.
     const manageDisplay=async()=>{
       assert.equal(await page.locator('.toolbar').getByRole('button',{name:'管理展示',exact:true}).count(),0,
