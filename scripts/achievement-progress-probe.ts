@@ -33,7 +33,7 @@ try{
     }
     success=true;
     const req=Array.isArray(matched.progression?.requirements)?matched.progression.requirements:[];
-    const requirements=req.slice(0,5).map(r=>{
+    const requirements=req.slice(0,5).map((r:any)=>{
      const current=(typeof r.current==='string'||typeof r.current==='number')?Number(r.current):NaN;
      const target=(typeof r.target==='string'||typeof r.target==='number')?Number(r.target):NaN;
      return {current:Number.isFinite(current)?current:null,target:Number.isFinite(target)?target:null,
