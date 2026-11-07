@@ -4,7 +4,7 @@ import type {Profile,Achievement} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {posterLocalDate} from '../mythic-posters';
 import {MythicBadgeArt} from './mythic-badge';
-import {mythicBackdrop,mythicBackdropPreview,mythicCover,mythicImageAlreadyDecoded,useMythicRotationDay,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
+import {mythicAvatar,mythicBackdrop,mythicBackdropPreview,mythicCover,mythicImageAlreadyDecoded,useMythicRotationDay,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
 import {MythicOpeningFireworks} from './mythic-fireworks';
 
 const GOLD='#e6c47b';
@@ -70,7 +70,8 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
  const [previewReady]=useDecodedArt(previewBackground);
  const [backdropReady]=useDecodedArt(background);
  const [coverReady,onCoverLoaded]=useDecodedArt(cover);
- const [avatarReady,onAvatarLoaded]=useDecodedArt(profile.avatar);
+ const avatar=mythicAvatar(profile);
+  const [avatarReady,onAvatarLoaded]=useDecodedArt(avatar);
  return <article className={'mythic-poster'+(active?' is-active':'')+(opening?' is-opening':'')+(!fontReady?' is-type-loading':'')} data-poster-game={game.id}
   aria-label={game.name+' Mythic 纪念卡'}>
   {previewBackground&&previewBackground!==background&&
@@ -100,9 +101,9 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
   </div>
   <h2 className="mythic-poster-title">{game.name}</h2>
   <div className="mythic-poster-player">
-   {profile.avatar?<span className="mythic-poster-avatar-frame">
+   {avatar?<span className="mythic-poster-avatar-frame">
     <CircleUserRound size={24} color={GOLD} aria-hidden="true"/>
-    <img src={profile.avatar} alt="" className={'mythic-poster-avatar'+(avatarReady?' is-loaded':'')}
+    <img src={avatar} alt="" className={'mythic-poster-avatar'+(avatarReady?' is-loaded':'')}
      width={36} height={36} loading="eager" fetchPriority="high" decoding="async"
      onLoad={onAvatarLoaded}/>
    </span>:<CircleUserRound size={33} color={GOLD} aria-hidden="true"/>}

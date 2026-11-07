@@ -21,7 +21,7 @@ export async function cacheRecordImages(record:RecordData,options:Options={}){
   const deadline=Date.now()+(options.budgetMs??300_000);
   const fetchImage=options.fetchImage||(async(url:string)=>{
     const response=await fetch(url,{headers:{Accept:'image/*','User-Agent':'XboxPlaylog/1.0 (personal public artwork cache)'},redirect:'error',signal:AbortSignal.timeout(12000)});
-    if(response.status===403||response.status===429){blocked=true;throw Error('图片源拒绝云端请求，停止本轮下载。');}
+    if(response.status===403||response.status===429){if(url!==record.profile.avatar)blocked=true;throw Error('图片源拒绝云端请求，停止本轮下载。');}
     if(!response.ok||!response.headers.get('content-type')?.startsWith('image/'))throw Error('图片源未返回有效图片。');
     const reader=response.body!.getReader();const chunks:Uint8Array[]=[];let size=0;
     while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>8_000_000){await reader.cancel();throw Error('图片过大。');}chunks.push(value);}
@@ -55,6 +55,11 @@ export async function cacheRecordImages(record:RecordData,options:Options={}){
     }
   }
   for(const game of record.games)for(const a of game.achievements||[]){delete a.cachedImage;add(a.image,[168],urls=>{a.cachedImage=urls.get(168);});}
+  // The player avatar is public Xbox profile art; keep a 96px WebP
+  // beside thumbnails so a full-size Mythic card never hotlinks it.
+  delete record.profile.cachedAvatar;
+  add(record.profile.avatar,[96],urls=>{record.profile.cachedAvatar=urls.get(96);});
+
   const tasks=[...jobs];let cursor=0;
   async function worker(){
     while(cursor<tasks.length){
@@ -76,6 +81,6 @@ export async function cacheRecordImages(record:RecordData,options:Options={}){
   }
   await Promise.all(Array.from({length:8},worker));
   const covers=record.games.filter(g=>g.cachedImage).length,achievements=record.games.flatMap(g=>g.achievements||[]).filter(a=>a.cachedImage).length;
-  console.log(`图片缓存：封面 ${covers}/${record.games.length}，成就 ${achievements}；下载 ${downloaded}，复用 ${reused}，本地生成 ${derived}，失败 ${failures}；原图 ${originalBytes} 字节，WebP ${webpBytes} 字节${blocked?'；源站拒绝，已停止下载':''}`);
+  console.log(`图片缓存：封面 ${covers}/${record.games.length}，成就 ${achievements}，头像 ${record.profile.cachedAvatar?'已缓存':'仅原图'}；下载 ${downloaded}，复用 ${reused}，本地生成 ${derived}，失败 ${failures}；原图 ${originalBytes} 字节，WebP ${webpBytes} 字节${blocked?'；源站拒绝，已停止下载':''}`);
   return {covers,achievements,downloaded,reused,derived,failures,originalBytes,webpBytes};
 }

@@ -9,7 +9,7 @@ import {cacheRecordImages} from './image-cache.ts';
 import {appendPlaytimeSamples,boundaryPlaytimeSweep} from '../src/playtime-ledger.ts';
 import {fixedPcMetascores} from './fixed-pc-metascores.ts';
 import {completion} from '../src/completion.ts';
-import {normalizeSyncMechanism,type Game} from '../src/data.ts';
+import {distinctScreenshotIndices,normalizeSyncMechanism,type Game} from '../src/data.ts';
 /** Aggregate only. Never log the private game's name, ID or snapshot. */
 function logMythicArtworkCoverage(games:Game[]){
  const mythic=games.filter(g=>completion(g).mythic);
@@ -33,6 +33,34 @@ function logMythicScreenshotCache(games:Game[]){
   total,full,previews,missingFull:total-full,missingPreviews:total-previews
  }));
 }
+/** Temporary aggregate-only audit for a reported screenshot-rotation regression.
+ * Never print user IDs, game IDs, raw image URLs or Xbox profile data. */
+function auditReportedRotation(games:Game[],prior:Game[]){
+ const named=(list:Game[])=>list.find(g=>/way of the sword/i.test(g.name));
+ const game=named(games),old=named(prior);
+ if(!game)return;
+ const shots=game.posterScreenshots||[],indices=distinctScreenshotIndices(shots);
+ const today=Math.floor((Date.now()+8*3600_000)/86400_000);
+ const start=game.posterRotationStartDay?Date.parse(game.posterRotationStartDay+'T00:00:00Z')/86400_000:NaN;
+ const selected=(day:number)=>indices.length&&Number.isFinite(start)?indices[Math.max(0,day-start)%indices.length]:-1;
+ const yesterdayIndex=selected(today-1),todayIndex=selected(today);
+ const cached=game.cachedPosterScreenshotsSmall||[];
+ const file=(i:number)=>{
+  const u=cached[i];if(!u)return null;
+  const name=u.split('/').at(-1)||'';
+  return /^[a-f0-9]{32}-480\.webp$/.test(name)?'public/media/'+name:null;
+ };
+ const yesterdayFile=file(yesterdayIndex),todayFile=file(todayIndex);
+ const sameCachedPixels=!!(yesterdayFile&&todayFile&&fs.existsSync(yesterdayFile)&&fs.existsSync(todayFile)&&
+  fs.readFileSync(yesterdayFile).equals(fs.readFileSync(todayFile)));
+ console.log('Mythic 轮换核验（指定游戏）：'+JSON.stringify({
+  priorScreenshots:old?.posterScreenshots?.length??0,
+  priorDistinct:distinctScreenshotIndices(old?.posterScreenshots||[]).length,
+  screenshots:shots.length,distinct:indices.length,startDay:game.posterRotationStartDay||null,
+  yesterdayIndex,todayIndex,cachedYesterday:!!yesterdayFile,cachedToday:!!todayFile,
+  identicalCachedPictures:sameCachedPixels
+ }));
+}
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
 const root=process.env.MICROSOFT_STATE_DIR||'.private/microsoft',key=process.env.MICROSOFT_STATE_KEY!;
 const saved=readState(root+'/candidate.json',key);
@@ -49,6 +77,7 @@ if(ledger&&fresh?.source==='Xbox'&&!boundaryPlaytimeSweep(new Date().toISOString
  logMythicArtworkCoverage(fresh.games);
  await cacheRecordImages(fresh);
  logMythicScreenshotCache(fresh.games);
+ auditReportedRotation(fresh.games,previous[0]?.games||[]);
  await publishSnapshot(fresh,previous.filter((r:any)=>r.id!==fresh.id).slice(0,29),target,ledger,fixedPcMetascores(fresh.games.map((g:any)=>String(g.id)),key));console.log('复用刚完成的微软快照。');process.exit(0);
 }
 const cacheBaseline=saved?.record??previous[0];
@@ -77,6 +106,7 @@ result.record=refreshGroupingWarnings(result.record);
 const mediaStarted=Date.now();
 await cacheRecordImages(result.record);
 logMythicScreenshotCache(result.record.games);
+auditReportedRotation(result.record.games,previous[0]?.games||[]);
 console.log('图片缓存耗时（秒）：'+Math.round((Date.now()-mediaStarted)/1000));
 writeState(root+'/candidate.json',{...result,record:{...result.record,games:allScannedGames},
  lastFullCatalogAt:result.audit.fullRefresh?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);

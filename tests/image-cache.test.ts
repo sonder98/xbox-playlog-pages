@@ -109,3 +109,32 @@ test('new 480px screenshot variants are derived from existing 1600px cache witho
   assert.equal(warmed.failures,0);
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });
+
+test('Xbox gamerpic is persisted as 96px WebP and reused without remote requests',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'playlog-avatar-'));
+ const url='https://images-eds-ssl.xboxlive.com/image?gamerpic=fixture';
+ const record:RecordData={id:'x',at:'2026-11-07T00:00:00Z',
+  profile:{xuid:'4285437',gamertag:'Player',avatar:url},
+  source:'Xbox',warnings:[],games:[]};
+ const bytes=await sharp({create:{width:500,height:500,channels:3,background:'#b29277'}}).png().toBuffer();
+ let requests=0;
+ try{
+  const first=await cacheRecordImages(record,{directory,fetchImage:async requested=>{
+   assert.equal(requested,url);requests++;return bytes;
+  }});
+  assert.equal(first.downloaded,1);
+  assert.equal(requests,1);
+  assert.ok(record.profile.cachedAvatar?.endsWith(imageCacheName(url,96)));
+  assert.equal(record.profile.avatar,url,'Xbox original avatar remains as a fallback');
+  const meta=await sharp(fs.readFileSync(path.join(directory,imageCacheName(url,96)))).metadata();
+  assert.deepEqual([meta.width,meta.height,meta.format],[96,96,'webp']);
+  assert.equal(validateRecord(record).profile.cachedAvatar,record.profile.cachedAvatar);
+  const warm=await cacheRecordImages(record,{directory,fetchImage:async()=>{throw Error('Avatar must not hit Microsoft again');}});
+  assert.equal(warm.downloaded,0);assert.equal(warm.failures,0);
+  assert.equal(requests,1);
+  record.profile.avatar='https://images-eds-ssl.xboxlive.com/image?gamerpic=new-photo';
+  await cacheRecordImages(record,{directory,fetchImage:async()=>bytes});
+  assert.ok(record.profile.cachedAvatar?.endsWith(imageCacheName(record.profile.avatar,96)),
+   'A changed Xbox gamerpic gets a new durable cache key');
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
