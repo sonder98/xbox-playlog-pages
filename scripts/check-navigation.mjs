@@ -524,7 +524,7 @@ try{
     assert.equal(await rareTiles.first().locator('.ah-showcase-name').innerText(),'Achievement 0');
     assert.equal(await rareTiles.first().locator('time').innerText(),'2026.11.01 20:24',
       'Unlock time is rendered in Beijing time');
-    assert.equal(await rareTiles.first().locator('time').getAttribute('datetime'),'2026-11-02T12:24:00.000Z');
+    assert.equal(await rareTiles.first().locator('time').getAttribute('datetime'),'2026-11-01T12:24:00.000Z');
     const rarePreviewLayout=await rareTiles.first().evaluate(el=>{
       const art=el.querySelector('.ah-showcase-art').getBoundingClientRect();
       const rarity=el.querySelector('.ah-showcase-rarity-value').getBoundingClientRect();
