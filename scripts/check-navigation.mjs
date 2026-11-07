@@ -65,6 +65,7 @@ try{
     const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1000},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:2});
     const page=await context.newPage();
     let activeEnvelope=envelope;
+    let simulatedStatusAt=null;
     const errors=[];
     page.on('pageerror',error=>errors.push(error.message));
     await page.route('https://covers.example.test/**',route=>{
@@ -80,7 +81,7 @@ try{
     page.on('request',req=>{
       if(req.url().startsWith('https://xct.live/'))externalMythicRequests.push(req.url());
     });
-    await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
+    await page.route('**/status.json',route=>route.fulfill({json:{initialized:true,...(simulatedStatusAt?{latestAt:simulatedStatusAt}:{})}}));
     await page.route('**/vault.json*',route=>route.fulfill({json:activeEnvelope}));
     // Most visual regressions inject a fresh network fixture on each login.
     // Clear only the encrypted local snapshot before those fixture resets.
@@ -175,15 +176,23 @@ try{
     newerPayload.records[0].games[0].name='Updated Test Game 0';
     newerPayload.records[0].games[0].lastPlayed='2026-11-02T00:00:00.000Z';
     activeEnvelope=await encryptVault(newerPayload,password);
+    // A lagging public marker previously caused the PWA to falsely conclude
+    // that a new vault was unavailable, even though the encrypted vault changed.
+    simulatedStatusAt='2026-10-30T00:00:00Z';
     await page.reload();
     await page.getByRole('heading',{name:'欢迎回到 XBOX Playlog'}).waitFor();
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
     await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    await switchMainTab('管理');
     await page.getByText('已自动加载最新同步记录。').waitFor();
+    assert.equal(await page.locator('.history-row').count(),1,'The newest encrypted record appears in Manage history');
+    assert.ok((await page.locator('.history-row').first().innerText()).includes('11/2'),'The newest published timestamp appears in sync history');
+    await switchMainTab('概览');
     assert.ok((await page.locator('.recent-game-card').first().innerText()).includes('Updated Test Game 0'),
       'Latest cloud history refreshes the archive after cached records are already visible');
     activeEnvelope=envelope;
+    simulatedStatusAt=null;
     await unlock();
     await page.locator('.recent-game-card').first().waitFor();
     console.log((mobile?'Mobile':'Desktop')+': PASS offline-first encrypted history, network outage versus first sync, retry, background newer-snapshot refresh');
