@@ -61,6 +61,36 @@ try{
   assert.ok(exported.catalogs[0].data.achievements.every(a=>!a.unlocked&&a.unlockedAt===null));
   await exportContext.close();
   console.log('Public catalog exporter: PASS popup, document parsing, JSON download, sanitized metadata');
+  // A user who leaves Overview open (without returning focus or entering Manage)
+  // must see new Xbox snapshots after the cheap global status poll.
+  {
+    const pollContext=await browser.newContext({viewport:{width:1440,height:900}});
+    const pollPage=await pollContext.newPage();
+    await pollPage.clock.install();
+    let pollEnvelope=envelope,pollStatusAt='2026-10-30T00:00:00Z';
+    await pollPage.route('**/status.json*',route=>route.fulfill({json:{initialized:true,latestAt:pollStatusAt}}));
+    await pollPage.route('**/vault.json*',route=>route.fulfill({json:pollEnvelope}));
+    await pollPage.route('https://covers.example.test/**',route=>route.fulfill({
+      contentType:'image/svg+xml',
+      body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"></svg>'
+    }));
+    await pollPage.goto('http://127.0.0.1:4173/xbox-playlog-pages/');
+    await pollPage.locator('input[type="password"]').fill(password);
+    await pollPage.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    await pollPage.locator('.recent-game-card').first().waitFor();
+    assert.ok(pollPage.url().endsWith('/xbox-playlog-pages/'),'Poll case stays on Overview');
+    const newer=await decryptVault(envelope,password);
+    newer.records[0].at='2026-11-05T00:00:00.000Z';
+    newer.records[0].games[0].name='Background-Poll Updated Game';
+    pollEnvelope=await encryptVault(newer,password);
+    pollStatusAt='2026-11-05T00:00:00.000Z';
+    await pollPage.clock.fastForward(61_000);
+    await pollPage.getByText('已自动加载最新同步记录。').waitFor({timeout:15000});
+    assert.ok((await pollPage.locator('.recent-game-card').first().innerText()).includes('Background-Poll Updated Game'),
+      'Foreground Overview updates without visiting Manage or regaining focus');
+    await pollContext.close();
+    console.log('Overview background-poll test: PASS one-minute marker check refreshes encrypted data');
+  }
   for(const mobile of [true,false]){
     const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1000},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:2});
     const page=await context.newPage();
