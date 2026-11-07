@@ -37,6 +37,22 @@ export function safeImage(v:unknown):string {
   return u.href;
  }catch{return '';}
 }
+/** Xbox AU Store metadata may list the same Screenshot multiple times
+ * with different query parameters/sizes. Count unique image resources per
+ * *calendar day*, without shifting cached variants out of their source slots. */
+export function distinctScreenshotIndices(shots:readonly string[]):number[]{
+ const seen=new Set<string>(),indices:number[]=[];
+ for(let i=0;i<shots.length;i++){
+  const url=shots[i];let key=url;
+  try{
+   const parsed=new URL(url);
+   if(parsed.hostname==='store-images.s-microsoft.com'&&parsed.pathname.startsWith('/image/'))
+    key=parsed.origin+parsed.pathname; // Store resize/query variants of the same asset
+  }catch{}
+  if(!seen.has(key)){seen.add(key);indices.push(i);}
+ }
+ return indices;
+}
 export function normalizeTitles(data:any):Game[] {
  if(!Array.isArray(data?.titles))throw new Error('游戏列表返回格式不符合预期，未覆盖已有记录。');
  return data.titles.filter((g:any)=>g.type!=='App').map((g:any)=>({id:String(g.titleId),name:String(g.name||'未命名游戏'),image:safeImage(g.displayImage),...(typeof g.titleHistory?.visible==='boolean'?{officialHidden:!g.titleHistory.visible}:{}),devices:Array.isArray(g.devices)?g.devices.map(String):[],lastPlayed:g.titleHistory?.lastTimePlayed||null,minutes:null,earned:number(g.achievement?.currentAchievements),total:number(g.achievement?.totalAchievements),score:number(g.achievement?.currentGamerscore),maxScore:number(g.achievement?.totalGamerscore)}));
