@@ -92,7 +92,7 @@ export function ManualSyncDialog({onClose,onUpdated,onPhase,lastAt}:{
      update('error',{runUrl,deployUrl,detail:'Xbox 同步已成功，但 Pages 发布 '+(deploy.conclusion||'失败')+'。'});
      sessionStorage.removeItem(pendingKey);return;
     }
-    const next=await refreshCloudRecords();
+    const next=await refreshCloudRecords({force:true});
     if(next)onUpdated(next);
     if(next||Date.parse(lastAt||'')>=requestedAt-30_000){
      update('ready',{runUrl,deployUrl});
