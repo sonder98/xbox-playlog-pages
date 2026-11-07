@@ -22,6 +22,8 @@
 
 Cloudflare Worker 更新和控制台切换说明见 [每小时同步操作指南](docs/CLOUDFLARE_CRON_SETUP.md)。GitHub 仓库代码更新**不会自动更新** Cloudflare 已部署的 Worker。
 
+同步快照现在会记录 `Cloudflare 自动同步`、`手动同步`、`跨天触发同步` 或 `代码更新触发`；只有带明确来源标记的同步会显示对应类型，旧记录显示「来源未记录」。如使用 GitHub Actions 页面直接手动 Run workflow，请在 `sync_mechanism` 中填 `manual`；网页版手动同步会自动标记。Cloudflare Worker 修改需另外 Deploy，见操作指南。
+
 | 文件 | 职责 | 触发 |
 | --- | --- | --- |
 | `.github/workflows/sync.yml` | Xbox 正式同步、加密快照、素材缓存 | Cloudflare 每小时 :17 分派发，23:42 和 00:02 北京时间每日采样；同步代码变化或手动触发 |
