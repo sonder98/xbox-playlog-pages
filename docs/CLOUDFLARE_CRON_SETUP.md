@@ -62,7 +62,7 @@ Cloudflare 控制台需要**删除旧** `17 */2 * * *`，**添加新** `17 * * *
 - GitHub [Actions 的 Sync Xbox records](https://github.com/sonder98/xbox-playlog-pages/actions/workflows/sync.yml)：应出现 `workflow_dispatch` 触发、最终 Success。
 - [Deploy Playlog](https://github.com/sonder98/xbox-playlog-pages/actions/workflows/pages.yml) 应随后成功。
 
-此阶段可容许旧 Github Cron 与 Cloudflare 有短暂重合，因为既有同步工作流拥有 concurrency group；但不应长期保持两个来源同时调度。
+注意新旧 Cloudflare 普通同步 Cron 不能长期并存；GitHub 的原生 schedule 已取消，不再需要双调度容错。
 
 ### 6. GitHub 原生定时器已关闭
 
