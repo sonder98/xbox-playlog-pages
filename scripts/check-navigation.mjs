@@ -367,14 +367,19 @@ try{
     await page.locator('[data-page="manage"]').waitFor();
     assert.ok(page.url().endsWith('#manage'),'Fourth tab opens combined management screen');
     assert.equal(await navSurface.locator('button').nth(3).getAttribute(mobile?'aria-current':'class'),mobile?'page':'active');
-    assert.deepEqual(await page.locator('.manage-section-heading h2').allTextContents(),['连接与数据','同步历史'],
-      'Management groups retain the old content in the requested top-to-bottom order');
-    assert.equal(await page.locator('.manage-page .settings-grid>.panel').count(),3,
-      'Microsoft sync, backup/import and statistics description are preserved');
+    assert.deepEqual(await page.locator('.manage-section-heading h2').allTextContents(),['游戏展示','同步历史'],
+      'Management contains game visibility and sync history only');
+    assert.equal(await page.locator('.visibility-panel').count(),1,'One visibility card replaces the old three management cards');
+    assert.equal(await page.locator('.manage-page').getByRole('button',{name:'管理展示',exact:true}).count(),1,
+      'Display management is now entered from the Management tab');
+    for(const removed of ['微软 自动同步','备份与本机导入','统计口径']){
+      assert.equal(await page.locator('.manage-page').getByText(removed,{exact:true}).count(),0,
+        'Unused management card was removed: '+removed);
+    }
     assert.equal(await page.locator('#sync-history .history-row').count(),1,
-      'Existing full snapshot history is still rendered under connection/data');
+      'Existing snapshot history remains below game visibility');
     const groupOrder=await page.locator('.manage-section').evaluateAll(sections=>sections.map(section=>section.getBoundingClientRect().top));
-    assert.ok(groupOrder[0]<groupOrder[1],'Sync history visually follows the connection cards');
+    assert.ok(groupOrder[0]<groupOrder[1],'Sync history visually follows the game visibility section');
     for(const legacy of ['#settings','#history']){
       await page.evaluate(hash=>{location.hash=hash;},legacy);
       await page.locator('[data-page="manage"]').waitFor();
@@ -1631,7 +1636,16 @@ try{
     await page.waitForFunction(y=>Math.abs(window.scrollY-y)<5,beforeDetail);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
     // Hiding is a reversible encrypted display preference, independent of fresh sync snapshots.
-    const manageDisplay=()=>page.locator('.toolbar').getByRole('button',{name:'管理展示',exact:true}).click();
+    const manageDisplay=async()=>{
+      assert.equal(await page.locator('.toolbar').getByRole('button',{name:'管理展示',exact:true}).count(),0,
+        'There is no entry for managing visibility in the game library toolbar');
+      await switchMainTab('管理');
+      await page.locator('[data-page="manage"]').getByRole('button',{name:'管理展示',exact:true}).click();
+    };
+    const returnToLibrary=async()=>{
+      await switchMainTab('游戏库');
+      await page.getByRole('heading',{name:'我的游戏库',exact:true}).waitFor();
+    };
     await manageDisplay();
     assert.equal(await page.getByText('只管理 Xbox 明确标记可见的游戏。',{exact:false}).count(),0,
       'The long display-scope explanation is removed from the Manage Display dialog');
@@ -1656,6 +1670,7 @@ try{
     await page.getByRole('checkbox',{name:'显示 Test Game 1',exact:true}).uncheck();
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
     await page.getByRole('dialog',{name:'游戏库显示管理',exact:true}).waitFor({state:'hidden'});
+    await returnToLibrary();
     assert.equal(await page.locator('.game-card[data-game-id="101"]').count(),0);
     await switchMainTab('概览');
     assert.equal(await page.locator('.stats').innerText(),statsBeforeHiding,'Hiding never changes aggregate statistics');
@@ -1674,20 +1689,24 @@ try{
     await page.locator('.display-game-choice').waitFor({state:'hidden'});
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
     await page.getByRole('dialog',{name:'游戏库显示管理',exact:true}).waitFor({state:'hidden'});
+    await returnToLibrary();
     assert.equal(await page.locator('.game-card').count(),12);
     await manageDisplay();
     for(const checkbox of await page.locator('.display-game-choice input').all())await checkbox.uncheck();
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
     await page.getByRole('dialog',{name:'游戏库显示管理',exact:true}).waitFor({state:'hidden'});
+    await returnToLibrary();
     await page.getByRole('heading',{name:'所有游戏已隐藏',exact:true}).waitFor();
     await manageDisplay();
     await page.getByRole('button',{name:'全部展示',exact:true}).click();
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
     await page.getByRole('dialog',{name:'游戏库显示管理',exact:true}).waitFor({state:'hidden'});
+    await returnToLibrary();
     assert.equal(await page.locator('.game-card').count(),12);
     await manageDisplay();
     await page.getByRole('checkbox',{name:'显示 Test Game 1',exact:true}).uncheck();
     await page.getByRole('button',{name:'取消',exact:true}).click();
+    await returnToLibrary();
     assert.equal(await page.locator('.game-card[data-game-id="101"]').count(),1,'Cancel keeps the saved selection');
     console.log((mobile?'Mobile':'Desktop')+': PASS encrypted hide/restore preferences, unchanged statistics, new snapshot persistence, hide-all recovery and cancel');
     // Official Xbox hiding is independent from reversible local preferences.
@@ -1721,7 +1740,7 @@ try{
     await unlock('#library');
     await page.locator('.game-card').first().waitFor();
     assert.equal(await page.locator('.game-card').count(),12,'Officially unhidden game returns when Xbox snapshot updates');
-    console.log((mobile?'Mobile':'Desktop')+': PASS official hiding, manual hiding, history totals, unhide restoration and toolbar 50/50 layout');
+    console.log((mobile?'Mobile':'Desktop')+': PASS official hiding, manual hiding, history totals and unhide restoration through Management');
     // When the title has no verified base/DLC classification, there are no tabs.
     const uncategorized=await decryptVault(envelope,password);
     const noGroup=uncategorized.records[0].games.find(g=>g.id==='101');
