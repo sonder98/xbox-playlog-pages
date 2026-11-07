@@ -4,6 +4,7 @@ import {readDisplayPreferences,saveDisplayPreferences,normalizeDisplayPreference
 import {validateRecord,type RecordData} from './data';
 import type {DailyPlaytimeLedger} from './playtime-ledger';
 import {validatedPcMetascores,type PcMetascores} from './metascores';
+import {publishedSnapshotNewer} from './snapshot-freshness';
 export const repo='https://github.com/sonder98/xbox-playlog-pages';
 export const workflow=repo+'/actions/workflows/sync.yml';
 /** EdgeOne serves the same encrypted envelope through a Blob-backed Function; Pages keeps its static snapshot URL. */
@@ -40,6 +41,16 @@ export function clearManualSyncToken(){localStorage.removeItem(syncTokenKey);}
 /** Fetch the newly deployed encrypted archive; leave the old view untouched until validated. */
 export async function refreshCloudRecords():Promise<RecordData[]|null>{
  if(!password)throw Error('请先解锁档案。');
+ // A small public marker avoids re-downloading the entire encrypted history
+ // when an already-open PWA is resumed or the Manage tab is visited.
+ // Third-party vault endpoints are checked directly because their release
+ // timeline may differ from the Pages status marker.
+ if(cloudVaultUrl()===import.meta.env.BASE_URL+'vault.json'){
+  try{
+   const status=await fetch(import.meta.env.BASE_URL+'status.json?check='+Date.now(),{cache:'no-store'});
+   if(status.ok&&publishedSnapshotNewer(await status.json(),cloudLatestAt)===false)return null;
+  }catch{/* Old/missing status: use the encrypted cloud snapshot as before. */}
+ }
  const response=await fetch(cloudVaultUrl()+'?refresh='+Date.now(),{cache:'no-store'});
  if(!response.ok)throw Error('还无法从网站获取最新快照。');
  const envelope=await response.json();

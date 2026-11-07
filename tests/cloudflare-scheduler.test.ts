@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 
 const mod=await import(new URL('../cloudflare-sync/scheduler.mjs',import.meta.url).href);
 
@@ -36,4 +37,14 @@ test('Dispatch failure is surfaced without leaking secrets and missing secret ca
  await assert.rejects(mod.sendScheduledDispatch(mod.CRON_RULES[0],'fixture-secret',async()=>new Response(null,{status:401})),/HTTP 401/);
  const result=await mod.default.fetch();
  assert.equal(result.status,404,'Public URLs cannot initiate Xbox sync');
+});
+
+test('GitHub sync workflow attributes legacy Worker dispatches without a sync_mechanism input',()=>{
+ const workflow=readFileSync('.github/workflows/sync.yml','utf8');
+ assert.ok(workflow.includes("inputs.force_sweep == 'true' && 'day-boundary' || 'cloudflare'"),
+  'Unlabelled hourly workflow_dispatch should be attributed to Cloudflare');
+ assert.ok(workflow.includes("inputs.request_id != '' && 'manual'"),
+  'Manual sync request ID must take precedence over fallback');
+ assert.ok(workflow.includes("github.event_name == 'push' && 'code-update'"),
+  'Code updates retain their distinct source label');
 });

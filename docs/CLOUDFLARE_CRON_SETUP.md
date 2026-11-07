@@ -28,7 +28,7 @@
 
 打开 https://dash.cloudflare.com/ → **Workers & Pages** → **Create application**，创建一个普通 Worker（模板使用 Hello World / Start from scratch 即可），命名例如 `xbox-playlog-scheduler`。
 
-进入 **Edit code**，用 [scheduler.mjs](../cloudflare-sync/scheduler.mjs) 的**最新版完整代码**替换现有 Worker 并 **Deploy**。 **2026-11-07 新增同步来源标识：**代码会向 GitHub 一并传入 `sync_mechanism`（`cloudflare` 或 `day-boundary`）。如果已部署旧版 Worker，**仅需重新 Deploy 新源码，无须修改三条 Cron 或重新设置令牌**。旧版 Worker 在更新前仍能正常同步，但新快照不会凭时间被猜测为自动同步，会暂显示「来源未记录」。已经创建 Worker 的用户无需再次创建；**先部署代码，再修改 Cron**，因为旧线上代码不接受新表达式。
+进入 **Edit code**，用 [scheduler.mjs](../cloudflare-sync/scheduler.mjs) 的**最新版完整代码**替换现有 Worker 并 **Deploy**。 **2026-11-07 来源标记兼容修复：**最新版 Worker 会明确传入 `sync_mechanism`（`cloudflare` 或 `day-boundary`）。GitHub Actions 也兼容已经部署的旧版 Worker：没有 `request_id` 的普通定时派发默认为 `cloudflare`，跨天 `force_sweep` 默认为 `day-boundary`，所以**无需立即重新部署 Worker 也能正确记录新的自动同步来源**。仍建议有空将 Worker 更新到最新源码，避免依赖回退规则。通过 GitHub 网页手动运行同步时，需显式选择 `sync_mechanism=manual`，否则没有请求 ID 的派发会被当作定时任务。已经创建 Worker 的用户无需再次创建；**先部署代码，再修改 Cron**，因为旧线上代码不接受新表达式。
 
 它只有 `scheduled()` 能发起同步；公开 `workers.dev` 地址只返回 HTTP 404，避免别人通过网页点击乱触发。
 
