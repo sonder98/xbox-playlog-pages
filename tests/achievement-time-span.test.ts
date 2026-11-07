@@ -63,7 +63,6 @@ test('An achievement timestamp earlier than the first recorded play is rejected'
 });
 
 test('Sort supports longest and shortest first and consistently places missing data last',()=>{
- const first='2026-11-01T12:00:00Z';
  const a=achievementTimeSpan(game([{unlocked:true,unlockedAt:'2026-11-01T12:00:00Z'}]),ledger({'2026-11-01':{'42':1}}));
  const b=achievementTimeSpan(game([{unlocked:true,unlockedAt:'2026-11-03T12:00:00Z'}]),ledger({'2026-11-01':{'42':1}}));
  const c=achievementTimeSpan(game([{unlocked:true,unlockedAt:'2026-11-02T12:00:00Z'}]),ledger({'2026-11-01':{'42':1}}));
