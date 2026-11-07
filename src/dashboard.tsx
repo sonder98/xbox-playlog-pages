@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Download,Upload,Search,Clock3,Trophy,ShieldCheck,X,ArrowRight,Plug,ChevronRight,Loader2,SlidersHorizontal,EyeOff,Medal} from 'lucide-react';
+import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Search,Clock3,Trophy,ShieldCheck,X,ArrowRight,ChevronRight,SlidersHorizontal,EyeOff,Medal} from 'lucide-react';
 import {compareRecords,officialGameVisible,type Game,type RecordData} from './data';
 import {GameCard,GameCover,GameDetail,Modal} from './components/game';
 import {MythicPosterWall} from './components/mythic-wall';
@@ -14,7 +14,7 @@ import {AchievementPreview,AchievementJourney,AchievementShowcases} from './comp
 import {completion} from './completion';
 import {achievementTimeSpan,compareAchievementTimeSpans} from './achievement-time-span';
 import {compareGameCompletionDates} from './game-completion-date';
-import {api,workflow,repo,playtimeLedgerForBackup,pcMetascoresForDisplay,refreshCloudRecords} from './vault';
+import {api,playtimeLedgerForBackup,pcMetascoresForDisplay,refreshCloudRecords} from './vault';
 import {ManualSyncDialog} from './components/manual-sync';
 import {GameLibrarySortControl} from './components/achievement-sort-control';
 import {normalizeGameLibrarySort,type GameLibraryFilter,type GameLibrarySort} from './game-library-sort';
@@ -22,9 +22,8 @@ import {usePageNavigation} from './navigation';
 import {PullToRefresh} from './pull-to-refresh';
 const fmt=(m:number|null)=>m===null?'暂无数据':(m/60).toLocaleString('zh-CN',{maximumFractionDigits:1})+' 小时';
 const dt=(s:string|null)=>s?new Date(s).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'尚未同步';
-function download(name:string,content:string,type:string){const u=URL.createObjectURL(new Blob([content],{type}));const a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
 export default function Dashboard({onLock,locking=false,refreshFromCache=false}:{onLock:()=>void;locking?:boolean;refreshFromCache?:boolean}){
- const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState(false),[busy,setBusy]=useState(false),[progress]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState<GameLibrarySort>('recent'),[filter,setFilter]=useState<GameLibraryFilter>('all');
+ const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState<GameLibrarySort>('recent'),[filter,setFilter]=useState<GameLibraryFilter>('all');
  const [manualPhase,setManualPhase]=useState<'idle'|'queued'|'running'|'deploying'|'ready'|'error'>('idle');
  const [mythicWallStart,setMythicWallStart]=useState<{gameId:string|null}|null>(null);
  const [showcaseOpen,setShowcaseOpen]=useState(false);
@@ -88,7 +87,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   setMobileNavVisible(false);
   window.clearTimeout(mobileNavHideTimer.current);
  },[tab,gameId,dayId,showcase,gapShowcase]);
- const input=useRef<HTMLInputElement>(null);const current=records[0],games=current?.games||[],prev=records[1];const playtimeLedger=playtimeLedgerForBackup();const pcScores=pcMetascoresForDisplay();const dusty=useMemo(()=>rankDustyGames(games,pcScores,Date.now(),current?.source||''),[current,pcScores]);const dustyIds=new Set(dusty.map(item=>item.game.id));const selected=games.find(g=>g.id===gameId&&(tab==='achievements'||dustyIds.has(g.id)||(officialGameVisible(g,current?.source||'')&&!hiddenIds.includes(g.id))));const delta=current?compareRecords(current,prev):null;
+ const current=records[0],games=current?.games||[],prev=records[1];const playtimeLedger=playtimeLedgerForBackup();const pcScores=pcMetascoresForDisplay();const dusty=useMemo(()=>rankDustyGames(games,pcScores,Date.now(),current?.source||''),[current,pcScores]);const dustyIds=new Set(dusty.map(item=>item.game.id));const selected=games.find(g=>g.id===gameId&&(tab==='achievements'||dustyIds.has(g.id)||(officialGameVisible(g,current?.source||'')&&!hiddenIds.includes(g.id))));const delta=current?compareRecords(current,prev):null;
  useEffect(()=>{api('/api/records').then(async d=>{try{const preferences=await api('/api/display-preferences');setHiddenIds(preferences.hiddenGameIds);}catch(e){setError((e as Error).message);}setRecords(d.records);}).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
  useEffect(()=>{
   if(!refreshFromCache)return;
@@ -143,8 +142,6 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   setSort(current=>normalizeGameLibrarySort(next,current));
  }
  function sync(){setModal(true);}
- async function importFile(f:File){setError('');if(f.size>4000000){setError('请选择小于 4MB 的 JSON 文件。');return;}setBusy(true);try{const data=JSON.parse(await f.text());const d=await api('/api/records',{...(data.records?.[0]||data),source:'导入'});setRecords(r=>[d.record,...r]);setNotice('导入成功，已在本机加密保存；云端记录不会被修改。');}catch(e){setError('导入失败：'+(e as Error).message);}finally{setBusy(false);if(input.current)input.current.value='';}}
- function exportCSV(){if(!current)return;const esc=(v:unknown)=>'"'+String(v??'').replaceAll('"','""')+'"';const rows=[['游戏','Title ID','游玩分钟','已解锁成就','总成就','玩家积分','总积分','最近游玩','快照时间'],...games.map(g=>[g.name,g.id,g.minutes,g.earned,g.total,g.score,g.maxScore,g.lastPlayed,current.at])];download('xbox-playlog.csv','\uFEFF'+rows.map(r=>r.map(v=>esc(typeof v==='string'&&/^[=+@\-\t\r]/.test(v)?"'"+v:v)).join(',')).join('\r\n'),'text/csv;charset=utf-8');}
  function loadAchievements(g:Game){openGame(g.id);}
  const nav=[['overview','概览',LayoutDashboard],['library','游戏库',Library],['achievements','成就',CalendarDays],['manage','管理',Settings]] as const;
  const recent=[...displayGames].filter(g=>g.lastPlayed).sort((a,b)=>Date.parse(b.lastPlayed!)-Date.parse(a.lastPlayed!)||a.name.localeCompare(b.name)).slice(0,10);
@@ -154,8 +151,8 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   disabled={!mythicPosters.length} aria-label="打开Mythic纪念墙">
   <Medal size={17}/><span>Mythic纪念墙</span>
  </button>
- </div>:<h1>{tab==='overview'?'我的游戏档案':'管理中心'}</h1>}<p>{tab==='overview'?'从第一小时，到最后一个成就。收藏属于你的游戏旅程。':tab==='library'?`${displayGames.length} 个游戏展示中${hiddenCount?` · ${hiddenCount} 个已隐藏`:``}。`:'连接账号、管理数据，并回顾每次同步记录。'}</p></div><button className="primary overview-refresh" aria-label={['queued','running','deploying'].includes(manualPhase)?'查看同步进度':'立即同步'} disabled={busy||loading} onClick={sync}><RefreshCw size={18} aria-hidden="true" className={['queued','running','deploying'].includes(manualPhase)?'spin':''}/><span className="refresh-label">{['queued','running','deploying'].includes(manualPhase)?'同步中…':'立即同步'}</span></button></div>}
- {error&&<div className="alert error" role="alert">{error}{error.includes('登录')&&<a href={import.meta.env.BASE_URL} target="_top">前往登录</a>}<button aria-label="关闭错误" onClick={()=>setError('')}><X size={16}/></button></div>}{notice&&<div className="alert success" role="status">{notice}<button aria-label="关闭提示" onClick={()=>setNotice('')}><X size={16}/></button></div>}{busy&&<div className="alert" role="status"><Loader2 size={17} className="spin"/>{progress||'正在保存…'}</div>}
+ </div>:<h1>{tab==='overview'?'我的游戏档案':'管理中心'}</h1>}<p>{tab==='overview'?'从第一小时，到最后一个成就。收藏属于你的游戏旅程。':tab==='library'?`${displayGames.length} 个游戏展示中${hiddenCount?` · ${hiddenCount} 个已隐藏`:``}。`:'管理游戏展示，并查看每次同步记录。'}</p></div><button className="primary overview-refresh" aria-label={['queued','running','deploying'].includes(manualPhase)?'查看同步进度':'立即同步'} disabled={loading} onClick={sync}><RefreshCw size={18} aria-hidden="true" className={['queued','running','deploying'].includes(manualPhase)?'spin':''}/><span className="refresh-label">{['queued','running','deploying'].includes(manualPhase)?'同步中…':'立即同步'}</span></button></div>}
+ {error&&<div className="alert error" role="alert">{error}{error.includes('登录')&&<a href={import.meta.env.BASE_URL} target="_top">前往登录</a>}<button aria-label="关闭错误" onClick={()=>setError('')}><X size={16}/></button></div>}{notice&&<div className="alert success" role="status">{notice}<button aria-label="关闭提示" onClick={()=>setNotice('')}><X size={16}/></button></div>}
  {tab==='overview'&&<>
  <AchievementPreview games={games} records={records} playtimeLedger={playtimeLedger} onOpen={()=>setTab('achievements')} onOpenDay={openAchievementDay} onOpenGame={openAchievementGame}/>
  <section className="panel games-panel" data-overview-section="recent"><div className="section-title"><h2>最近游玩 <span className="count">{recent.length}</span></h2><button className="text-button" onClick={()=>setTab('library')}>全部游戏 <ArrowUpRight size={16}/></button></div><RecentGamesRail games={recent} onGame={openGame}/></section>
@@ -167,18 +164,22 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
 </>}
  {tab==='dusty'&&<DustyDetails items={dusty} onBack={back} onGame={openGame}/>}
  {tab==='achievements'&&<AchievementJourney games={games} records={records} playtimeLedger={playtimeLedger} dayId={dayId} showcase={showcase} gapShowcase={gapShowcase} onBack={dayId?back:()=>setTab('overview')} onOpenDay={openAchievementDay} onChangeDay={changeAchievementDay} onOpenGame={openAchievementGame}/>} 
- {tab==='library'&&<section className="panel games-panel"><div className="toolbar"><label className="search"><Search size={17}/><input placeholder="搜索游戏名称…" aria-label="搜索游戏名称" value={query} onChange={e=>setQuery(e.target.value)}/></label><div className="filters"><div className="filter-pills" role="group" aria-label="筛选游戏">{([['all','全部'],['playing','未完成'],['mythic','Mythic'],['full','Full']] as const).map(([id,label])=><button key={id} aria-pressed={filter===id} className={filter===id?'active':''} onClick={()=>changeLibraryFilter(id)}>{label}</button>)}</div><GameLibrarySortControl sort={sort} filter={filter} onChange={setSort}/><button className="secondary" aria-label="管理展示" disabled={!current||loading} onClick={openDisplayManager}><SlidersHorizontal size={15}/>管理展示{hiddenCount>0&&<span className="hidden-count">{hiddenCount}</span>}</button></div></div>{renderGames(visible)}</section>}
+ {tab==='library'&&<section className="panel games-panel"><div className="toolbar"><label className="search"><Search size={17}/><input placeholder="搜索游戏名称…" aria-label="搜索游戏名称" value={query} onChange={e=>setQuery(e.target.value)}/></label><div className="filters"><div className="filter-pills" role="group" aria-label="筛选游戏">{([['all','全部'],['playing','未完成'],['mythic','Mythic'],['full','Full']] as const).map(([id,label])=><button key={id} aria-pressed={filter===id} className={filter===id?'active':''} onClick={()=>changeLibraryFilter(id)}>{label}</button>)}</div><GameLibrarySortControl sort={sort} filter={filter} onChange={setSort}/></div></div>{renderGames(visible)}</section>}
  {tab==='manage'&&<div className="manage-page" data-page="manage">
-  <section className="manage-section" aria-labelledby="manage-connection-title">
-   <div className="manage-section-heading"><div><span className="eyebrow">ACCOUNT & DATA</span><h2 id="manage-connection-title">连接与数据</h2></div><p>账户同步、数据备份与使用说明</p></div>
-   <div className="settings-grid"><section className="panel"><div className="section-title"><h2>微软 自动同步</h2><Plug size={20}/></div><p className="muted">GitHub Actions 每半小时读取 微软 Xbox 记录并加密发布，目前配置在每小时 17、47 分触发，实际运行可能因排队延迟。微软授权若失效，数据不会更新；请查看任务结果。APP_PASSWORD 仅用于加密。</p><button className="primary" onClick={sync}><RefreshCw size={16}/>立即同步</button><a className="external" href={workflow} target="_blank" rel="noreferrer">查看同步运行记录 ↗</a><a className="external" href={repo+'/settings/secrets/actions'} target="_blank" rel="noreferrer">管理同步密钥 ↗</a></section><section className="panel"><h2>备份与本机导入</h2><p className="muted">下载的 JSON / CSV 为明文，请自行保管。导入的最新快照只在本机加密保存，不会覆盖 GitHub 中的记录。</p><div className="data-actions"><button className="secondary" disabled={!current} onClick={()=>download('xbox-playlog-backup.json',JSON.stringify({version:1,records,...(playtimeLedgerForBackup()?{playtimeLedger:playtimeLedgerForBackup()}:{}),...(Object.keys(pcScores).length?{metacriticScores:pcScores}:{})},null,2),'application/json')}><Download size={17}/>完整备份 JSON</button><button className="secondary" disabled={!current} onClick={exportCSV}><Download size={17}/>导出游戏 CSV</button><button className="secondary" disabled={busy} onClick={()=>input.current?.click()}><Upload size={17}/>导入 JSON 快照</button></div><p className="note">云端和本机只存放加密文件。解锁密码仅在当前页面内存中保留。</p></section><section className="panel settings-note"><ShieldCheck size={22}/><div><h2>统计口径</h2><p>Mythic 表示 微软 本体成就已完成；Full 表示本体、DLC 和更新成就全部完成。这里按微软官方本体成就集合计算，根据成就进度计算 Mythic 状态。分组未确认时不推断本体数量；全部成就完成的游戏仍可确认本体完成。累计时长来自最近一次成功同步。</p></div></section></div>
+  <section className="manage-section" aria-labelledby="manage-visibility-title">
+   <div className="manage-section-heading"><div><span className="eyebrow">GAME VISIBILITY</span><h2 id="manage-visibility-title">游戏展示</h2></div><p>决定哪些游戏出现在游戏库和概览中</p></div>
+   <section className="panel visibility-panel">
+    <div className="section-title"><h2>管理游戏展示</h2><SlidersHorizontal size={20}/></div>
+    <p className="muted">当前展示 {displayGames.length} 款 · 已隐藏 {hiddenCount} 款</p>
+    <button type="button" className="primary" aria-label="管理展示" disabled={!current||loading} onClick={openDisplayManager}><SlidersHorizontal size={17}/>管理展示{hiddenCount>0&&<span className="hidden-count">{hiddenCount}</span>}</button>
+   </section>
   </section>
   <section className="manage-section" id="sync-history" aria-labelledby="manage-history-title">
    <div className="manage-section-heading"><div><span className="eyebrow">SYNC HISTORY</span><h2 id="manage-history-title">同步历史</h2></div><p>回顾每次同步的变化和数据快照</p></div>
    <section className="panel"><div className="section-title"><h2>同步快照</h2><span>共 {records.length} 次</span></div><p className="muted">新增时长属于两次同步之间的区间，不代表单日实际游玩时长。首次记录作为基线。</p>{records.length?records.map((r,i)=>{const d=compareRecords(r,records[i+1]);return <div className="history-row" key={r.id}><span className="history-icon"><History size={18}/></span><div><b>{new Date(r.at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}</b><small>{r.source} · {r.games.length} 个游戏{r.warnings.length?` · ${r.warnings.join('；')}`:''}</small></div><div className="history-delta"><b>{d.minutes===null?'基线记录':'+'+fmt(d.minutes)}</b><small>{d.achievements===null?'从此刻开始':'+'+d.achievements+' 个成就'}{d.corrections>0?' · 存在时长修正':''}</small></div></div>}):<Empty title="第一份记录，等你开始" text="微软 首次同步会建立统计基线。"/>}</section>
   </section>
  </div>}
- <footer><span><span className="dot green"/>XBOX Playlog · 只属于你的游戏旅程</span><span>{current?'最后记录 '+dt(current.at):'连接账号后开始记录'} · 时间显示为北京时间</span></footer></div></main><input ref={input} type="file" accept=".json,application/json" hidden onChange={e=>e.target.files?.[0]&&importFile(e.target.files[0])}/>
+ <footer><span><span className="dot green"/>XBOX Playlog · 只属于你的游戏旅程</span><span>{current?'最后记录 '+dt(current.at):'连接账号后开始记录'} · 时间显示为北京时间</span></footer></div></main>
  {modal&&<ManualSyncDialog onClose={()=>setModal(false)} lastAt={current?.at||null} onUpdated={setRecords} onPhase={setManualPhase}/>}
  {manageDisplay&&<Modal title="游戏库显示管理" onClose={()=>{if(!savingDisplay)setManageDisplay(false);}} className="display-manager">
    <h2>管理游戏展示</h2>
@@ -214,7 +215,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   }} aria-current={tab===id?'page':undefined}><Icon size={21}/><span>{label}</span></button>)}</nav>
 
  </div>;
- function renderGames(list:Game[]){return list.length?<div className="game-cards">{list.map((g,index)=><GameCard key={g.id} game={g} priority={index<2} onOpen={()=>loadAchievements(g)}/>)}</div>:<Empty title={loading?'正在读取记录…':hiddenCount===games.length&&games.length?'所有游戏已隐藏':query||filter!=='all'?'没有匹配的游戏':'游戏故事，从连接开始'} text={hiddenCount===games.length&&games.length?'打开管理展示，勾选想重新展示的游戏。':query||filter!=='all'?'试试其他名称或筛选条件。':'微软 首次同步成功后，你的游戏会出现在这里。'} action={hiddenCount===games.length&&games.length?<button className="secondary" onClick={openDisplayManager}>管理展示</button>:undefined}/>;}
+ function renderGames(list:Game[]){return list.length?<div className="game-cards">{list.map((g,index)=><GameCard key={g.id} game={g} priority={index<2} onOpen={()=>loadAchievements(g)}/>)}</div>:<Empty title={loading?'正在读取记录…':hiddenCount===games.length&&games.length?'所有游戏已隐藏':query||filter!=='all'?'没有匹配的游戏':'游戏故事，从连接开始'} text={hiddenCount===games.length&&games.length?'前往「管理」页面，恢复想展示的游戏。':query||filter!=='all'?'试试其他名称或筛选条件。':'微软 首次同步成功后，你的游戏会出现在这里。'}/>;}
 
 }
 function Stat({label,value,unit,icon,note}:{label:string;value:string;unit:string;icon:React.ReactNode;note:string}){return <div className="stat"><div className="stat-label">{label}<span>{icon}</span></div><div className="stat-value">{value}<small>{unit}</small></div><div className="stat-note">{note}</div></div>}
