@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import sharp from 'sharp';
-import type {RecordData} from '../src/data.ts';
+import type {RecordData,Game} from '../src/data.ts';
 
 const version='webp-v1';
 export function imageSource(value:string):string|null{
@@ -12,6 +12,31 @@ export function imageCacheName(url:string,width:number){return `${createHash('sh
 export async function convertImage(bytes:Uint8Array,width:number){
   return sharp(bytes,{limitInputPixels:32_000_000}).rotate().resize({width,withoutEnlargement:true}).webp({quality:80,effort:4}).toBuffer();
 }
+
+/** Store screenshot URLs may differ even when their locally generated 480px
+ * WebPs are byte-identical. Keep the first actual picture in official order.
+ * Uncached frames stay in the album so original-URL fallback still works. */
+export function dedupeCachedScreenshotFrames(game:Game,directory:string):number{
+ const shots=game.posterScreenshots;
+ if(!shots||shots.length<2)return 0;
+ const fingerprints=new Set<string>(),keep:number[]=[];
+ for(let i=0;i<shots.length;i++){
+  const filename=game.cachedPosterScreenshotsSmall?.[i]?.split('/').at(-1)||'';
+  const filepath=path.join(directory,filename);
+  const fingerprint=/^[a-f0-9]{32}-480\.webp$/.test(filename)&&fs.existsSync(filepath)
+   ?createHash('sha256').update(fs.readFileSync(filepath)).digest('hex'):null;
+  if(fingerprint&&fingerprints.has(fingerprint))continue;
+  if(fingerprint)fingerprints.add(fingerprint);
+  keep.push(i);
+ }
+ const removed=shots.length-keep.length;
+ if(!removed)return 0;
+ game.posterScreenshots=keep.map(i=>shots[i]);
+ game.cachedPosterScreenshots=keep.map(i=>game.cachedPosterScreenshots?.[i]||'');
+ game.cachedPosterScreenshotsSmall=keep.map(i=>game.cachedPosterScreenshotsSmall?.[i]||'');
+ return removed;
+}
+
 type Options={directory?:string;baseUrl?:string;budgetMs?:number;fetchImage?:(url:string)=>Promise<Uint8Array>};
 /** Only public CDN artwork is mirrored; records and credentials never enter this directory. */
 export async function cacheRecordImages(record:RecordData,options:Options={}){
@@ -80,6 +105,8 @@ export async function cacheRecordImages(record:RecordData,options:Options={}){
     }
   }
   await Promise.all(Array.from({length:8},worker));
+  const duplicatedFrames=record.games.reduce((sum,game)=>sum+dedupeCachedScreenshotFrames(game,directory),0);
+  if(duplicatedFrames)console.log(`Mythic Screenshot 内容去重：移除 ${duplicatedFrames} 张实际重复的图片，保留官方顺序。`);
   const covers=record.games.filter(g=>g.cachedImage).length,achievements=record.games.flatMap(g=>g.achievements||[]).filter(a=>a.cachedImage).length;
   console.log(`图片缓存：封面 ${covers}/${record.games.length}，成就 ${achievements}，头像 ${record.profile.cachedAvatar?'已缓存':'仅原图'}；下载 ${downloaded}，复用 ${reused}，本地生成 ${derived}，失败 ${failures}；原图 ${originalBytes} 字节，WebP ${webpBytes} 字节${blocked?'；源站拒绝，已停止下载':''}`);
   return {covers,achievements,downloaded,reused,derived,failures,originalBytes,webpBytes};
