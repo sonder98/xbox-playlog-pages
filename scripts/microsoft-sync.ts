@@ -56,8 +56,10 @@ function auditReportedRotation(games:Game[],prior:Game[]){
   };
   const bytes=(i:number)=>{const filename=file(i);return filename&&fs.existsSync(filename)?fs.readFileSync(filename):null;};
   const yesterday=bytes(yesterdayIndex),todayArt=bytes(todayIndex);
-  const imageFingerprints=indices.map(i=>bytes(i)).filter((b):b is Buffer=>!!b)
-   .map(b=>createHash('sha256').update(b).digest('hex'));
+  const imageFingerprints=indices.flatMap(i=>{
+   const art=bytes(i);
+   return art?[createHash('sha256').update(art).digest('hex')]:[];
+  });
   console.log('Mythic 轮换核验（'+sample.label+'）：'+JSON.stringify({
    priorScreenshots:old?.posterScreenshots?.length??0,
    priorDistinct:distinctScreenshotIndices(old?.posterScreenshots||[]).length,
