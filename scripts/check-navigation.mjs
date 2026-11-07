@@ -752,8 +752,8 @@ try{
     assert.equal(await page.locator('.ah-month-card').first().getByRole('heading').innerText(),'2026 年 11 月');
     assert.equal(await page.locator('.ah-month-card .ah-month-played').count(),59,
       'Every monthly achievement calendar includes its own played-games list');
-    assert.equal(await page.locator('.ah-month-card[data-month="11"][data-year="2026"] .ah-month-played-game').count(),0,
-      'November correctly has no dated Xbox play activity in the test data');
+    assert.equal(await page.locator('.ah-month-card[data-month="11"][data-year="2026"] .ah-month-played-game').count(),1,
+      'November includes the one game with a recorded positive playtime increase');
     assert.equal(await page.locator('.ah-month-card[data-month="10"][data-year="2026"] .ah-month-played-game').count(),12,
       'October combines lastPlayed evidence and unlocked achievements across all twelve games');
     assert.equal(await page.locator('.ah-month-card[data-month="10"][data-year="2026"] .ah-month-played-game .ah-month-played-cover').count(),12,
