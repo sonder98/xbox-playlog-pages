@@ -3,6 +3,7 @@
 import {credentials} from './microsoft-credentials.ts';
 import {microsoftProvider} from './microsoft.ts';
 import {collectPages} from './microsoft-probe.ts';
+import {readState} from './microsoft-state.ts';
 
 const session=await credentials(process.env);
 try{
@@ -15,8 +16,14 @@ try{
  const history=await collectPages(token=>provider.call('/player/titleHistory'+
   (token?'?continuationToken='+encodeURIComponent(token):'')),'titles');
  const title=history.values.find(t=>/forza\s*horizon\s*4/i.test(String(t.name||'')));
- if(!title)throw Error('Forza Horizon 4 not found in authorized title history');
- const id=String(title.titleId);
+ // Microsoft's recent title history may omit inactive games. The private
+ // encrypted scan baseline retains the older official titleId if available.
+ const prior=readState((process.env.MICROSOFT_STATE_DIR||'.private/microsoft')+'/candidate.json',
+  process.env.MICROSOFT_STATE_KEY||'');
+ const cached=prior?.record?.games?.find((g:any)=>/forza\s*horizon\s*4/i.test(String(g.name||'')));
+ const id=String(title?.titleId||cached?.id||'');
+ console.log('FH4_TITLE_LOOKUP '+JSON.stringify({inCurrentHistory:!!title,inEncryptedBaseline:!!cached}));
+ if(!id)throw Error('Forza Horizon 4 not present in authorized history or encrypted baseline');
  if(!/^\d{1,10}$/.test(id))throw Error('Unexpected title identity');
  const label=/jolly\s+cooperation|欢乐并肩|合作无间/i;
  let success=false;
