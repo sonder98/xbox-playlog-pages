@@ -39,7 +39,7 @@ export async function saveManualSyncToken(token:string):Promise<void>{
 }
 export function clearManualSyncToken(){localStorage.removeItem(syncTokenKey);}
 /** Fetch the newly deployed encrypted archive; leave the old view untouched until validated. */
-export async function refreshCloudRecords():Promise<RecordData[]|null>{
+export async function refreshCloudRecords({force=false}:{force?:boolean}={}):Promise<RecordData[]|null>{
  if(!password)throw Error('请先解锁档案。');
  // A small public marker avoids re-downloading the entire encrypted history
  // when an already-open PWA is resumed or the Manage tab is visited.
@@ -48,7 +48,7 @@ export async function refreshCloudRecords():Promise<RecordData[]|null>{
  if(cloudVaultUrl()===import.meta.env.BASE_URL+'vault.json'){
   try{
    const status=await fetch(import.meta.env.BASE_URL+'status.json?check='+Date.now(),{cache:'no-store'});
-   if(status.ok&&publishedSnapshotNewer(await status.json(),cloudLatestAt)===false)return null;
+   if(status.ok&&publishedSnapshotNewer(await status.json(),cloudLatestAt)===false&&!force)return null;
   }catch{/* Old/missing status: use the encrypted cloud snapshot as before. */}
  }
  const response=await fetch(cloudVaultUrl()+'?refresh='+Date.now(),{cache:'no-store'});
