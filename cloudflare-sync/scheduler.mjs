@@ -3,12 +3,14 @@
 // remain on GitHub Actions. Never put GitHub tokens in this source file.
 const endpoint='https://api.github.com/repos/sonder98/xbox-playlog-pages/actions/workflows/sync.yml/dispatches';
 export const CRON_RULES=Object.freeze([
- '17 */2 * * *', // every two hours at :17 UTC; same cadence as existing GitHub schedule
+ '17 * * * *', // every hour at :17 UTC; Beijing hourly at :17
  '42 15 * * *',           // Beijing 23:42: force end-of-day playtime sample
  '2 16 * * *'             // Beijing 00:02: force next-day baseline
 ]);
+// Keep the old two-hour trigger valid during the Cloudflare dashboard cutover.
+const LEGACY_TWO_HOUR_CRON='17 */2 * * *';
 export function dispatchRequest(cron){
- if(!CRON_RULES.includes(cron))throw new Error('Unexpected Cron Trigger: '+cron);
+ if(!CRON_RULES.includes(cron)&&cron!==LEGACY_TWO_HOUR_CRON)throw new Error('Unexpected Cron Trigger: '+cron);
  const forceSweep=cron==='42 15 * * *'||cron==='2 16 * * *';
  return {ref:'main',inputs:{force_sweep:forceSweep?'true':'false'}};
 }
