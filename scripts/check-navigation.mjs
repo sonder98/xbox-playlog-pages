@@ -815,7 +815,7 @@ try{
     });
     assert.ok(Math.abs(artFrame.ratio-1)<.04,'Square achievement art retains a square fitting frame');
     assert.equal(artFrame.fit,'contain','Achievement art is not cropped');
-    assert.equal(await page.locator('.ah-day-detail .ah-achievement-card[data-rarity-tier="ultra"]').count(),12,'Daily unlocks share the ultra-rare tier');
+    assert.equal(await page.locator('.ah-day-detail .ah-achievement-card[data-rarity-tier="ultra"]').count(),11,'Remaining October daily unlocks share the ultra-rare tier');
     const dailyFrame=await page.locator('.ah-day-detail .ah-achievement-art.ah-rarity-ultra').first().evaluate(el=>({
       border:getComputedStyle(el).borderTopWidth,shine:getComputedStyle(el,'::after').animationName,
       fit:getComputedStyle(el.querySelector('img')).objectFit
