@@ -84,7 +84,7 @@ const recentCandidate=saved?.record?.games?.some((g:any)=>g.cachedImage)&&Date.n
 // Private candidates may include zero-result titles; those never enter the public snapshot.
 const freshSource=recentCandidate||previous[0];
 const fresh=freshSource?refreshGroupingWarnings({...freshSource,games:freshSource.games.filter((g:any)=>g.total>0||g.minutes!==null)}):undefined;
-if(shouldReuseRecentXboxSnapshot({
+if(fresh&&shouldReuseRecentXboxSnapshot({
  mechanism:syncMechanism,ledgerAvailable:!!ledger,source:fresh?.source,snapshotAt:fresh?.at,
  now:new Date().toISOString(),dayBoundary:boundaryPlaytimeSweep(new Date().toISOString()),
  forceSweep:process.env.PLAYTIME_FORCE_SWEEP==='true'
