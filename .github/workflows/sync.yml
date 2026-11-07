@@ -75,7 +75,7 @@ jobs:
           NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
           MICROSOFT_STATE_KEY: ${{ secrets.MICROSOFT_STATE_KEY }}
           PLAYTIME_FORCE_SWEEP: ${{ github.event_name == 'workflow_dispatch' && inputs.force_sweep == 'true' }}
-          PLAYLOG_SYNC_MECHANISM: ${{ github.event_name == 'push' && 'code-update' || inputs.force_sweep == 'true' && 'day-boundary' || inputs.sync_mechanism == 'cloudflare' && 'cloudflare' || inputs.sync_mechanism == 'manual' && 'manual' || inputs.request_id != '' && 'manual' || '' }}
+          PLAYLOG_SYNC_MECHANISM: ${{ github.event_name == 'push' && 'code-update' || inputs.sync_mechanism == 'manual' && 'manual' || inputs.sync_mechanism == 'cloudflare' && 'cloudflare' || inputs.sync_mechanism == 'day-boundary' && 'day-boundary' || inputs.request_id != '' && 'manual' || inputs.force_sweep == 'true' && 'day-boundary' || '' }}
         run: node --experimental-strip-types scripts/microsoft-sync.ts
       - name: Save encrypted Microsoft authorization
         if: steps.microsoft_sync.outcome == 'success' || steps.microsoft_sync.outcome == 'failure'
