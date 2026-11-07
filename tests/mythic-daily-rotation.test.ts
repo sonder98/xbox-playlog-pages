@@ -59,3 +59,21 @@ test('480px preview uses the identical midnight index and safely falls back for 
  delete game.posterScreenshots;
  assert.equal(mythicBackdropPreview(game),'https://store-images.s-microsoft.com/first');
 });
+
+test('reused galleries do not repeat yesterday when the Store lists duplicate size variants',()=>{
+ const game=base();
+ game.posterScreenshots=[
+  'https://store-images.s-microsoft.com/image/apps.abc?w=720',
+  'https://store-images.s-microsoft.com/image/apps.abc?w=1080',
+  'https://store-images.s-microsoft.com/image/apps.def?w=720',
+  'https://store-images.s-microsoft.com/image/apps.def?w=1080'];
+ game.cachedPosterScreenshots=['https://cache.test/a.webp','https://cache.test/a2.webp',
+  'https://cache.test/b.webp','https://cache.test/b2.webp'];
+ game.cachedPosterScreenshotsSmall=['https://cache.test/a-480.webp','https://cache.test/a2-480.webp',
+  'https://cache.test/b-480.webp','https://cache.test/b2-480.webp'];
+ assert.equal(mythicBackdrop(game,from('2026-11-06T15:59:59Z')),'https://cache.test/a.webp');
+ assert.equal(mythicBackdrop(game,from('2026-11-06T16:00:00Z')),'https://cache.test/b.webp',
+  'Midnight selects the next distinct screenshot instead of a duplicate URL variant');
+ assert.equal(mythicBackdropPreview(game,from('2026-11-06T16:00:00Z')),'https://cache.test/b-480.webp');
+ assert.equal(mythicBackdrop(game,from('2026-11-07T16:00:00Z')),'https://cache.test/a.webp');
+});
