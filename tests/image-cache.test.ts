@@ -71,9 +71,41 @@ test('Mythic screenshot album caches each distinct image and keeps returned orde
    return bytes;
   }});
   assert.equal(game.cachedPosterScreenshots?.length,3);
+  assert.equal(game.cachedPosterScreenshotsSmall?.length,3);
   assert.ok(game.cachedPosterScreenshots?.[0]?.endsWith(imageCacheName(urls[0],1600)));
+  assert.ok(game.cachedPosterScreenshotsSmall?.[0]?.endsWith(imageCacheName(urls[0],480)));
   assert.equal(game.cachedPosterScreenshots?.[1],'');
+  assert.equal(game.cachedPosterScreenshotsSmall?.[1],'');
   assert.ok(game.cachedPosterScreenshots?.[2]?.endsWith(imageCacheName(urls[2],1600)));
+  assert.ok(game.cachedPosterScreenshotsSmall?.[2]?.endsWith(imageCacheName(urls[2],480)));
   assert.equal(validateRecord(record).games[0].cachedPosterScreenshots?.[1],'');
+  assert.equal(validateRecord(record).games[0].cachedPosterScreenshotsSmall?.[1],'');
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
+
+test('new 480px screenshot variants are derived from existing 1600px cache without downloading again',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'playlog-mythic-small-'));
+ const shot='https://store-images.s-microsoft.com/image/previously-cached-screenshot';
+ const game:RecordData['games'][number]={
+  id:'9',name:'Mythic cached shot',image:shot,posterImage:shot,posterScreenshots:[shot],
+  posterRotationStartDay:'2026-11-06',devices:[],lastPlayed:null,minutes:0,
+  earned:1,total:1,score:0,maxScore:0
+ };
+ const record:RecordData={id:'x',at:new Date().toISOString(),profile:{xuid:'4285437',gamertag:'test',avatar:''},source:'Xbox',warnings:[],games:[game]};
+ try{
+  const full=await sharp({create:{width:1600,height:900,channels:3,background:'#334466'}}).webp().toBuffer();
+  fs.writeFileSync(path.join(directory,imageCacheName(shot,1600)),full);
+  const result=await cacheRecordImages(record,{directory,fetchImage:async()=>{throw Error('Must NOT contact Microsoft to build preview');}});
+  assert.equal(result.downloaded,0);
+  assert.equal(result.failures,0);
+  assert.equal(result.derived,1);
+  assert.equal(game.cachedPosterScreenshots?.[0]?.endsWith(imageCacheName(shot,1600)),true);
+  assert.equal(game.cachedPosterScreenshotsSmall?.[0]?.endsWith(imageCacheName(shot,480)),true);
+  const small=await sharp(fs.readFileSync(path.join(directory,imageCacheName(shot,480)))).metadata();
+  assert.deepEqual([small.width,small.height,small.format],[480,270,'webp']);
+  const warmed=await cacheRecordImages(record,{directory,fetchImage:async()=>{throw Error('Already warm');}});
+  assert.equal(warmed.derived,0,'Later hourly sync must not regenerate an existing preview');
+  assert.equal(warmed.downloaded,0);
+  assert.equal(warmed.failures,0);
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });
