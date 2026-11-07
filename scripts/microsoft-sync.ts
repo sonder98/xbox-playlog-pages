@@ -8,6 +8,7 @@ import {getPasswords,readVault} from './password.ts';
 import {publishSnapshot} from './snapshot.ts';
 import {cacheRecordImages} from './image-cache.ts';
 import {appendPlaytimeSamples,boundaryPlaytimeSweep} from '../src/playtime-ledger.ts';
+import {shouldReuseRecentXboxSnapshot} from './microsoft-sync-policy.ts';
 import {fixedPcMetascores} from './fixed-pc-metascores.ts';
 import {completion} from '../src/completion.ts';
 import {distinctScreenshotIndices,normalizeSyncMechanism,type Game} from '../src/data.ts';
@@ -73,6 +74,7 @@ function auditReportedRotation(games:Game[],prior:Game[]){
 }
 
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
+const syncMechanism=normalizeSyncMechanism(process.env.PLAYLOG_SYNC_MECHANISM);
 const root=process.env.MICROSOFT_STATE_DIR||'.private/microsoft',key=process.env.MICROSOFT_STATE_KEY!;
 const saved=readState(root+'/candidate.json',key);
 const existing=fs.existsSync('public/vault.json')?await readVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),old,target):{records:[]};
@@ -82,7 +84,11 @@ const recentCandidate=saved?.record?.games?.some((g:any)=>g.cachedImage)&&Date.n
 // Private candidates may include zero-result titles; those never enter the public snapshot.
 const freshSource=recentCandidate||previous[0];
 const fresh=freshSource?refreshGroupingWarnings({...freshSource,games:freshSource.games.filter((g:any)=>g.total>0||g.minutes!==null)}):undefined;
-if(ledger&&fresh?.source==='Xbox'&&!boundaryPlaytimeSweep(new Date().toISOString())&&process.env.PLAYTIME_FORCE_SWEEP!=='true'&&Date.now()-Date.parse(fresh.at)<20*60_000){
+if(fresh&&shouldReuseRecentXboxSnapshot({
+ mechanism:syncMechanism,ledgerAvailable:!!ledger,source:fresh?.source,snapshotAt:fresh?.at,
+ now:new Date().toISOString(),dayBoundary:boundaryPlaytimeSweep(new Date().toISOString()),
+ forceSweep:process.env.PLAYTIME_FORCE_SWEEP==='true'
+})){
  const artwork=await australianArtwork(fresh,fetch,previous[0]);
  console.log('快速快照澳区横幅覆盖：'+JSON.stringify(artwork));
  logMythicArtworkCoverage(fresh.games);
@@ -96,11 +102,11 @@ const cachedGames=cacheBaseline?.games||[];
 // Counts only: confirm that the prior detail baseline was recovered without logging private data.
 console.log('微软增量缓存基线：'+JSON.stringify({source:saved?.record?'private-cache':previous[0]?'encrypted-vault':'none',games:cachedGames.length,completeCatalogs:cachedGames.filter((g:any)=>Array.isArray(g.achievements)&&g.achievements.length>0&&g.achievements.length===g.total).length}));
 const began=Date.now();
+if(syncMechanism==='cloudflare')console.log('Cloudflare 定时同步：执行新的微软扫描，不复用最近手动快照。');
 const result=await scanMicrosoft(session.config,{previous:cacheBaseline,emptyTitles:saved?.emptyTitles,lastFullCatalogAt:saved?.lastFullCatalogAt??cacheBaseline?.at,expectedOwner:session.state.owner,forcePlaytimeSweep:process.env.PLAYTIME_FORCE_SWEEP==='true',progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
 const scanSeconds=Math.round((Date.now()-began)/1000);
 // The workflow injects explicit provenance. Old snapshots remain unlabelled rather
 // than being guessed from their timestamps.
-const syncMechanism=normalizeSyncMechanism(process.env.PLAYLOG_SYNC_MECHANISM);
 if(syncMechanism)result.record.syncMechanism=syncMechanism;
 // Only aggregate counts: no XUID, game names, credentials, private snapshots or timestamps.
 console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,emptySkipped:result.audit.emptySkipped,emptyCached:result.emptyTitles.length,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed}));
