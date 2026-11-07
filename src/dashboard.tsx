@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useMemo,useRef,useState} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Search,Clock3,Trophy,ShieldCheck,X,ArrowRight,ChevronRight,SlidersHorizontal,EyeOff,Medal} from 'lucide-react';
 import {compareRecords,officialGameVisible,syncMechanismLabel,type Game,type RecordData} from './data';
 import {GameCard,GameCover,GameDetail,Modal} from './components/game';
@@ -89,18 +89,52 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  },[tab,gameId,dayId,showcase,gapShowcase]);
  const current=records[0],games=current?.games||[],prev=records[1];const playtimeLedger=playtimeLedgerForBackup();const pcScores=pcMetascoresForDisplay();const dusty=useMemo(()=>rankDustyGames(games,pcScores,Date.now(),current?.source||''),[current,pcScores]);const dustyIds=new Set(dusty.map(item=>item.game.id));const selected=games.find(g=>g.id===gameId&&(tab==='achievements'||dustyIds.has(g.id)||(officialGameVisible(g,current?.source||'')&&!hiddenIds.includes(g.id))));const delta=current?compareRecords(current,prev):null;
  useEffect(()=>{api('/api/records').then(async d=>{try{const preferences=await api('/api/display-preferences');setHiddenIds(preferences.hiddenGameIds);}catch(e){setError((e as Error).message);}setRecords(d.records);}).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
- useEffect(()=>{
-  if(!refreshFromCache)return;
-  // Keep history visible while fetching the latest cloud envelope.
-  // Network errors or an Xbox sync never clear an already unlocked archive.
-  let active=true;
-  refreshCloudRecords().then(latest=>{
-   if(active&&latest){setRecords(latest);setNotice('已自动加载最新同步记录。');}
+ // The Manage tab and resumed PWA should show the latest *published* snapshot,
+ // not only the records that were decrypted when this page opened.
+ // A shared promise prevents duplicate downloads from tab, focus and initial unlock.
+ const autoRefreshPromise=useRef<Promise<void>|null>(null);
+ const lastAutoRefreshAt=useRef(refreshFromCache?0:Date.now());
+ const activeRef=useRef(true);
+ useEffect(()=>()=>{activeRef.current=false;},[]);
+ const refreshLatest=useCallback((warnForCachedStartup=false,minIntervalMs=15_000):Promise<void>=>{
+  if(autoRefreshPromise.current)return autoRefreshPromise.current;
+  if(Date.now()-lastAutoRefreshAt.current<minIntervalMs)return Promise.resolve();
+  lastAutoRefreshAt.current=Date.now();
+  const task=refreshCloudRecords().then(latest=>{
+   if(activeRef.current&&latest){setRecords(latest);setNotice('已自动加载最新同步记录。');}
   }).catch(()=>{
-   if(active)setNotice('当前显示本机保存的历史档案；云端暂时无法连接，历史数据仍可正常查看。');
-  });
-  return()=>{active=false;};
- },[refreshFromCache]);
+   if(activeRef.current&&warnForCachedStartup)
+    setNotice('当前显示本机保存的历史档案；云端暂时无法连接，历史数据仍可正常查看。');
+  }).finally(()=>{autoRefreshPromise.current=null;});
+  autoRefreshPromise.current=task;
+  return task;
+ },[]);
+ useEffect(()=>{
+  if(refreshFromCache)void refreshLatest(true,0);
+ },[refreshFromCache,refreshLatest]);
+ useEffect(()=>{
+  if(tab!=='manage')return;
+  void refreshLatest();
+  // While a user stays on the history page, check a tiny status marker every
+  // five minutes. The full encrypted vault downloads only if it actually changed.
+  const interval=window.setInterval(()=>{
+   if(document.visibilityState==='visible')void refreshLatest();
+  },5*60_000);
+  return()=>window.clearInterval(interval);
+ },[tab,refreshLatest]);
+ useEffect(()=>{
+  const onResume=()=>{
+   if(document.visibilityState==='visible')void refreshLatest();
+  };
+  document.addEventListener('visibilitychange',onResume);
+  window.addEventListener('focus',onResume);
+  window.addEventListener('pageshow',onResume);
+  return()=>{
+   document.removeEventListener('visibilitychange',onResume);
+   window.removeEventListener('focus',onResume);
+   window.removeEventListener('pageshow',onResume);
+  };
+ },[refreshLatest]);
  const hiddenSet=new Set(hiddenIds);
  const officialAvailableGames=games.filter(g=>officialGameVisible(g,current?.source||''));
  const officialAvailableIds=new Set(officialAvailableGames.map(g=>g.id));
