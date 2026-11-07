@@ -10,8 +10,11 @@ test('Cloudflare schedules match the hourly sync and daily Beijing day-boundary 
   '2 16 * * *'
  ]);
  assert.equal(mod.dispatchRequest(mod.CRON_RULES[0]).inputs.force_sweep,'false');
+ assert.equal(mod.dispatchRequest(mod.CRON_RULES[0]).inputs.sync_mechanism,'cloudflare');
  for(const cron of mod.CRON_RULES.slice(1))
   assert.equal(mod.dispatchRequest(cron).inputs.force_sweep,'true');
+ for(const cron of mod.CRON_RULES.slice(1))
+  assert.equal(mod.dispatchRequest(cron).inputs.sync_mechanism,'day-boundary');
  assert.equal(mod.dispatchRequest('17 */2 * * *').inputs.force_sweep,'false','legacy two-hour cron accepted during Cloudflare cutover');
  assert.throws(()=>mod.dispatchRequest('*/1 * * * *'),/Unexpected Cron/);
 });
@@ -26,7 +29,7 @@ test('Worker sends one authenticated, least-privilege workflow_dispatch per tick
  assert.equal(seen.length,1);
  assert.equal(seen[0].url,'https://api.github.com/repos/sonder98/xbox-playlog-pages/actions/workflows/sync.yml/dispatches');
  assert.equal(new Headers(seen[0].init.headers).get('authorization'),'Bearer github_pat_fixture_test');
- assert.deepEqual(JSON.parse(String(seen[0].init.body)),{ref:'main',inputs:{force_sweep:'true'}});
+ assert.deepEqual(JSON.parse(String(seen[0].init.body)),{ref:'main',inputs:{force_sweep:'true',sync_mechanism:'day-boundary'}});
 });
 test('Dispatch failure is surfaced without leaking secrets and missing secret cannot dispatch',async()=>{
  await assert.rejects(mod.sendScheduledDispatch(mod.CRON_RULES[0],'',async()=>new Response(null,{status:204})),/Missing GITHUB_ACTIONS_TOKEN/);
