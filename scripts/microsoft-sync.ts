@@ -71,6 +71,30 @@ function auditReportedRotation(games:Game[],prior:Game[]){
   }));
  }
 }
+/** Diagnostic for a user-reported game span: aggregate counts only.
+ * Never publish title IDs, account details, achievement titles or unlock times. */
+function auditFinalFantasySpan(games:Game[],previousGames:Game[]){
+ const match=(name:string)=>/final\s*fantasy\s*resonance/i.test(name);
+ const game=games.find(g=>match(g.name));
+ const prior=previousGames.find(g=>match(g.name));
+ if(!game){console.log('FF Resonance 时间跨度诊断：{"found":false}');return;}
+ const dates=(list:typeof game.achievements)=>{
+  return (list||[]).filter(a=>a.unlocked&&a.unlockedAt)
+   .map(a=>Date.parse(a.unlockedAt!)).filter(Number.isFinite).sort((a,b)=>a-b);
+ };
+ const timestamps=dates(game.achievements),earlier=dates(prior?.achievements);
+ const earned=game.achievements?.filter(a=>a.unlocked).length||0;
+ const span=timestamps.length?(timestamps.at(-1)!-timestamps[0])/86400_000:null;
+ console.log('FF Resonance 时间跨度诊断：'+JSON.stringify({
+  found:true,achievementTotal:game.achievements?.length||0,earnedReported:game.earned,
+  unlockedDetails:earned,unlockedWithTimestamp:timestamps.length,
+  uniqueUnlockTimestamps:new Set(timestamps).size,
+  spanDays:span===null?null:Math.round(span*100)/100,
+  priorDated:earlier.length,priorSpanDays:earlier.length?Math.round((earlier.at(-1)!-earlier[0])/86400_000*100)/100:null,
+  lastPlayedAgeDays:game.lastPlayed?Math.round((Date.now()-Date.parse(game.lastPlayed))/86400_000*10)/10:null
+ }));
+}
+
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
 const root=process.env.MICROSOFT_STATE_DIR||'.private/microsoft',key=process.env.MICROSOFT_STATE_KEY!;
 const saved=readState(root+'/candidate.json',key);
@@ -88,6 +112,7 @@ if(ledger&&fresh?.source==='Xbox'&&!boundaryPlaytimeSweep(new Date().toISOString
  await cacheRecordImages(fresh);
  logMythicScreenshotCache(fresh.games);
  auditReportedRotation(fresh.games,previous[0]?.games||[]);
+ auditFinalFantasySpan(fresh.games,previous[0]?.games||[]);
  await publishSnapshot(fresh,previous.filter((r:any)=>r.id!==fresh.id).slice(0,29),target,ledger,fixedPcMetascores(fresh.games.map((g:any)=>String(g.id)),key));console.log('复用刚完成的微软快照。');process.exit(0);
 }
 const cacheBaseline=saved?.record??previous[0];
@@ -117,6 +142,7 @@ const mediaStarted=Date.now();
 await cacheRecordImages(result.record);
 logMythicScreenshotCache(result.record.games);
 auditReportedRotation(result.record.games,previous[0]?.games||[]);
+auditFinalFantasySpan(result.record.games,previous[0]?.games||[]);
 console.log('图片缓存耗时（秒）：'+Math.round((Date.now()-mediaStarted)/1000));
 writeState(root+'/candidate.json',{...result,record:{...result.record,games:allScannedGames},
  lastFullCatalogAt:result.audit.fullRefresh?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);
