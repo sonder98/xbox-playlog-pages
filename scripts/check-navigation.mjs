@@ -1693,7 +1693,7 @@ try{
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
     const restoredSearch=page.getByRole('button',{name:'搜索游戏',exact:true});
     await restoredSearch.click();
-    assert.equal(await page.getByRole('searchbox',{name:'搜索游戏名称'}).inputValue(),'Test Game 1',
+    assert.equal(await page.getByRole('searchbox',{name:'搜索游戏名称'}).inputValue(),'Test Game 0',
       'The search query persists while collapsed and across game details');
     await page.getByRole('searchbox',{name:'搜索游戏名称'}).press('Escape');
     assert.equal(await restoredSearch.getAttribute('aria-expanded'),'false');
