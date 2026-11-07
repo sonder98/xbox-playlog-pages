@@ -14,7 +14,7 @@ games[0].posterScreenshots=['https://covers.example.test/landscape.svg'];
 games[0].cachedPosterScreenshots=['https://covers.example.test/landscape.svg'];
 games[0].cachedPosterScreenshotsSmall=['https://covers.example.test/preview.svg'];
 games[0].posterRotationStartDay='2026-11-06';
-for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),points:[10,20,0,15][i],name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:i===1?'https://covers.example.test/wide.svg':'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
+for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),points:[10,20,0,15][i],name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:i===1?'https://covers.example.test/wide.svg':'https://covers.example.test/square.svg',unlocked:i<2,...(i===2?{progressPercent:80}:{}),unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
 // Game 0 has a recorded first-play day and a final unlock on the following day.
 games[0].achievements[0].unlockedAt='2026-11-01T12:24:00.000Z';
 games[0].achievements[1].unlockedAt='2026-11-02T12:24:00.000Z';
@@ -1581,6 +1581,25 @@ try{
 
     const achievementIds=()=>page.locator('.achievement').evaluateAll(rows=>rows.map(row=>row.getAttribute('data-achievement-id')));
     assert.deepEqual(await achievementIds(),['2','1','3','4'],'All-classes tab sorts achievements globally, newest first');
+    const progressCard=page.locator('.game-detail .achievement[data-achievement-id="3"]');
+    assert.equal(await progressCard.locator('.achievement-progress-value').innerText(),'80%');
+    assert.equal(await progressCard.getByRole('progressbar',{name:'成就完成进度'}).getAttribute('aria-valuenow'),'80');
+    const grayscale=await progressCard.evaluate(el=>{
+      const label=el.querySelector('.achievement-progress-value');
+      const lock=el.querySelector('.achievement-unlock');
+      const track=el.querySelector('.achievement-progress-track');
+      const fill=track?.firstElementChild;
+      return {label:getComputedStyle(label).color,locked:getComputedStyle(lock).color,
+        fill:getComputedStyle(fill).backgroundColor,track:getComputedStyle(track).backgroundColor,
+        fillWidth:fill.getBoundingClientRect().width,trackWidth:track.getBoundingClientRect().width};
+    });
+    assert.equal(grayscale.label,grayscale.locked,'Percentage matches the muted unlocked-status gray');
+    assert.ok(grayscale.fillWidth>0&&Math.abs(grayscale.fillWidth/grayscale.trackWidth-.8)<.02,'Track fills 80%');
+    assert.ok(grayscale.fill!==grayscale.track,'Light-gray fill contrasts with dark-gray track');
+    assert.equal(await page.locator('.game-detail .achievement[data-achievement-id="4"] .achievement-progress-track').count(),0,
+      'Locked awards without official progress have no placeholder zero bar');
+    assert.equal(await page.locator('.game-detail .achievement:not(.locked) .achievement-progress-track').count(),0,
+      'Unlocked awards never have a progress bar');
     assert.equal(await page.locator('.game-detail .eyebrow').count(),0,'GAME DETAILS heading is removed');
     assert.equal(await page.locator('.game-detail .detail-achievements').innerText(),'2/4','Achievement count drops redundant suffix');
     assert.deepEqual(await page.locator('.detail-summary .detail-stat').allTextContents(),['1 小时','2/4','10/100']);
