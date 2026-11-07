@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {appendPlaytimeSamples,boundaryPlaytimeSweep,emptyPlaytimeLedger,dailyGameMinutes,shanghaiDate,PLAYTIME_SINCE} from '../src/playtime-ledger.ts';
+import {appendPlaytimeSamples,boundaryPlaytimeSweep,emptyPlaytimeLedger,dailyGameMinutes,firstRecordedPlayDate,shanghaiDate,PLAYTIME_SINCE} from '../src/playtime-ledger.ts';
 import {compactPayload,expandPayload} from '../src/record-payload.ts';
 
 const first='2026-11-01T11:03:00.000Z'; // 19:03 Beijing time
@@ -71,4 +71,15 @@ test('multi-day unsampled differences are assigned to the earlier observed day',
  const next=appendPlaytimeSamples(base,[{id:'11',minutes:345,at:'2026-11-03T08:00:00Z'}]);
  assert.equal(dailyGameMinutes(next,'2026-11-01','11'),45);
  assert.equal(dailyGameMinutes(next,'2026-11-03','11'),null);
+});
+
+test('first recorded play day is the earliest positive daily increase, including legacy cross-day data',()=>{
+ const ledger=emptyPlaytimeLedger();
+ ledger.days['2026-11-03']={'10':15};
+ ledger.days['2026-11-01']={'10':8,'11':12};
+ ledger.crossDay['2026-11-02..2026-11-03']={'10':7};
+ assert.equal(firstRecordedPlayDate(ledger,'10'),'2026-11-01');
+ assert.equal(firstRecordedPlayDate(ledger,'11'),'2026-11-01');
+ assert.equal(firstRecordedPlayDate(ledger,'12'),null);
+ assert.equal(firstRecordedPlayDate(ledger,'bad'),null);
 });
