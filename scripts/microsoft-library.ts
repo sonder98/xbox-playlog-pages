@@ -153,7 +153,7 @@ export function shouldReadPlaytime(lastPlayed:string|null,oldMinutes:number|null
  * Xbox omits currentGamerscore on some title summaries, and can change the textual
  * timestamp precision without changing the actual last-played instant.
  * The total and earned counts are mandatory: absent ones must trigger a fresh read. */
-export type DetailDecision='newGame'|'incompleteCache'|'dailyRefresh'|'playedAgain'|'missingSummary'|'totalChanged'|'earnedChanged'|'scoreChanged'|'reused'|'verifiedEarned'|'inactiveReuse'|'emptyCache';
+export type DetailDecision='newGame'|'incompleteCache'|'dailyRefresh'|'playedAgain'|'missingSummary'|'totalChanged'|'earnedChanged'|'scoreChanged'|'reused'|'verifiedEarned'|'inactiveReuse'|'emptyCache'|'recentVerification';
 export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:string|null,fullRefresh:boolean):DetailDecision {
  if(!old)return 'newGame';
  const awards=old.achievements||[],groups=old.groups||[];
@@ -173,7 +173,7 @@ export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:st
  if(typeof summary.currentGamerscore==='number'&&summary.currentGamerscore!==old.score)return 'scoreChanged';
  return 'reused';
 }
-export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;emptyTitles?:EmptyTitleCache[];lastFullCatalogAt?:string;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string;forcePlaytimeSweep?:boolean}={}){
+export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;emptyTitles?:EmptyTitleCache[];lastFullCatalogAt?:string;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string;forcePlaytimeSweep?:boolean;recentAchievementLookbackDays?:number}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
  // Sustained pacing, no retries against permissions/security errors. 429 stops this scan.
  const request:typeof fetch=async(input,init)=>{await pause(1050);return (options.request||fetch)(input,init);};
@@ -240,6 +240,16 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
     audit.processed++;options.progress?.(audit.processed,games.length,audit);continue;
    }
    let decision=detailCacheDecision(old,summary,lastPlayed,audit.fullRefresh);
+   // The official achievement detail endpoint can reflect new unlocks before
+   // Xbox title-history summary counters update. Re-read recent games even
+   // when the title-history summary looks unchanged.
+   const playedAt=Date.parse(lastPlayed||'');
+   const lookbackDays=options.recentAchievementLookbackDays||0;
+   const playedAge=Date.parse(audit.at)-playedAt;
+   if(old&&lookbackDays>0&&Number.isFinite(playedAt)&&playedAge>=0&&
+      playedAge<=lookbackDays*86400_000&&
+      (decision==='reused'||decision==='missingSummary'))
+    decision='recentVerification';
    if(decision==='missingSummary'&&old&&!shouldProbeMissingSummary(old,summary,lastPlayed,audit.at,
      audit.fullRefresh||!!options.onlyIds?.has(game.id)))decision='inactiveReuse';
    // The title-history API occasionally omits mandatory counters (86 titles in
@@ -310,7 +320,12 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    const returnedScore=awards.reduce((sum,a)=>sum+(a.points||0),0),expectedScore=typeof titleSummary?.totalGamerscore==='number'&&titleSummary.totalGamerscore>0?titleSummary.totalGamerscore:null;
    if(audit.diagnostics.length<3)audit.diagnostics.push({summaryKeys:Object.keys(titleSummary||{}).filter(k=>/^[A-Za-z]{1,40}$/.test(k)).slice(0,30),awardKeys:Object.keys(data.raw[0]||{}).filter(k=>/^[A-Za-z]{1,40}$/.test(k)).slice(0,30),expectedTotal,expectedEarned,returned:awards.length,unlocked,expectedScore,returnedScore,rarityKeys:Object.keys(data.raw[0]?.rarity||{}).filter(k=>/^[A-Za-z]{1,40}$/.test(k)),completionShape:Array.isArray(data.pages[0]?.completion)?'array':typeof data.pages[0]?.completion,groupFields:Object.keys(Object.values(data.pages[0]?.completion?.[0]?.groups||{})[0]||{}).filter(k=>/^[A-Za-z]{1,40}$/.test(k))});
    if(expectedTotal===null){game.total=awards.length;audit.summaryTotalsDerived++;}
-   if(expectedEarned===null)game.earned=unlocked;
+   // A verified increase in a complete catalog is fresher than a lagging
+   // title-summary counter. Never accept a decrease relative to previous data.
+   if(expectedEarned===null||unlocked>game.earned&&unlocked>=(old?.earned||0)){
+    game.earned=unlocked;
+    if(expectedEarned!==null)game.score=Math.max(game.score,awards.filter(a=>a.unlocked).reduce((sum,a)=>sum+(a.points||0),0));
+   }
    if(version==='1')game.score=awards.filter(a=>a.unlocked).reduce((sum,a)=>sum+(a.points||0),0);
    if(expectedScore===null)game.maxScore=returnedScore;
    if(awards.length!==game.total||unlocked!==game.earned||(expectedScore!==null&&expectedScore!==returnedScore)){audit.summaryMismatches++;throw Error('Xbox 成就明细与摘要不一致。');}

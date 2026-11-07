@@ -424,3 +424,41 @@ test('daily catalog sweep is scheduled only once during its UTC hour',()=>{
  assert.equal(shouldReadPlaytime('2026-10-31T00:00:00Z',42,'2026-11-01T01:30:00Z'),true);
  assert.equal(shouldReadPlaytime(null,null,'2026-11-01T01:30:00Z'),true);
 });
+
+
+test('Manual recent-achievement verification detects a newly unlocked achievement despite stale title-history counts',async()=>{
+ const now='2026-11-07T12:30:00Z',recent='2026-11-06T12:00:00Z';
+ const prior={...game('1'),officialHidden:false,lastPlayed:recent};
+ let detailCalls=0;
+ const request:typeof fetch=async input=>{
+  const u=new URL(String(input));
+  if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});
+  if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
+  if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{
+   titleId:'1',name:'PRIVATE-GAME',titleHistory:{visible:true,lastTimePlayed:recent},
+   achievement:{totalAchievements:2,currentAchievements:1,currentGamerscore:10,totalGamerscore:20}
+  }]});
+  if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});
+  if(u.hostname==='userstats.xboxlive.com')return Response.json({stats:[{name:'MinutesPlayed',value:42}]});
+  detailCalls++;
+  return Response.json({achievements:[
+   {id:'1',name:'Award 1',progressState:'Achieved',progression:{timeUnlocked:'2026-11-01T00:00:00Z'},gamerscore:10,rarity:{currentPercentage:1}},
+   {id:'2',name:'Award 2',progressState:'Achieved',progression:{timeUnlocked:'2026-11-07T10:00:00Z'},gamerscore:10,rarity:{currentPercentage:2}}
+  ],completion:[{titleId:'1',groups:{base:{groupType:'BaseGame',achievementIds:['1','2'],unlockedAchievementIds:['1','2']}}}]});
+ };
+ const oldBehavior=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([prior]),now});
+ assert.equal(oldBehavior.audit.reusedDetails,1);
+ assert.equal(oldBehavior.record.games[0].earned,1);
+ assert.equal(detailCalls,0,'Unchanged summary ordinarily skips the details');
+ const verified=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([prior]),now,recentAchievementLookbackDays:14});
+ assert.equal(verified.audit.failed,0);
+ assert.equal(verified.audit.reusedDetails,0);
+ assert.equal(verified.audit.detailedReads,1);
+ assert.equal(verified.audit.reuseReasons.recentVerification,1);
+ assert.equal(verified.record.games[0].earned,2);
+ assert.equal(verified.record.games[0].score,20);
+ assert.equal(verified.record.games[0].achievements?.find(a=>a.id==='2')?.unlocked,true);
+ assert.ok(detailCalls>0);
+});

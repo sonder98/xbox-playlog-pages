@@ -65,6 +65,7 @@ try{
     const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1000},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:2});
     const page=await context.newPage();
     let activeEnvelope=envelope;
+    let simulatedStatusAt=null;
     const errors=[];
     page.on('pageerror',error=>errors.push(error.message));
     await page.route('https://covers.example.test/**',route=>{
@@ -80,7 +81,7 @@ try{
     page.on('request',req=>{
       if(req.url().startsWith('https://xct.live/'))externalMythicRequests.push(req.url());
     });
-    await page.route('**/status.json',route=>route.fulfill({json:{initialized:true}}));
+    await page.route('**/status.json*',route=>route.fulfill({json:{initialized:true,...(simulatedStatusAt?{latestAt:simulatedStatusAt}:{})}}));
     await page.route('**/vault.json*',route=>route.fulfill({json:activeEnvelope}));
     // Most visual regressions inject a fresh network fixture on each login.
     // Clear only the encrypted local snapshot before those fixture resets.
@@ -117,13 +118,13 @@ try{
     // On a new device, network failure is not evidence that the site awaits its first sync.
     const simulatedOutage=route=>route.abort('failed');
     await page.route('**/vault.json*',simulatedOutage);
-    await page.route('**/status.json',simulatedOutage);
+    await page.route('**/status.json*',simulatedOutage);
     await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/');
     await page.getByRole('heading',{name:'暂时无法连接游戏档案'}).waitFor();
     assert.equal(await page.getByText('等待首次同步').count(),0,
       'A failed network request never masquerades as a first synchronization');
     await page.unroute('**/vault.json*',simulatedOutage);
-    await page.unroute('**/status.json',simulatedOutage);
+    await page.unroute('**/status.json*',simulatedOutage);
     await page.getByRole('button',{name:'重新读取游戏档案'}).click();
     await page.getByRole('heading',{name:'欢迎回到 XBOX Playlog'}).waitFor();
     await unlock();
@@ -156,7 +157,7 @@ try{
       'Only the encrypted envelope, never decrypted records, is saved for offline use');
     // The app now opens historic records even when both cloud endpoints are unreachable.
     await page.route('**/vault.json*',simulatedOutage);
-    await page.route('**/status.json',simulatedOutage);
+    await page.route('**/status.json*',simulatedOutage);
     await page.reload();
     await page.getByRole('heading',{name:'欢迎回到 XBOX Playlog'}).waitFor();
     assert.equal(await page.locator('.entry-screen').getByText('等待首次同步').count(),0);
@@ -164,26 +165,36 @@ try{
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
     await page.locator('.recent-game-card').first().waitFor();
-    await page.getByText('当前显示本机保存的历史档案',{exact:false}).waitFor();
+    await page.getByText('最新云端档案暂时无法读取',{exact:false}).waitFor();
     assert.equal(await page.locator('.stats').count(),1,
       'Historical game records remain readable while cloud refresh fails in the background');
     await page.unroute('**/vault.json*',simulatedOutage);
-    await page.unroute('**/status.json',simulatedOutage);
+    await page.unroute('**/status.json*',simulatedOutage);
     // A newer encrypted cloud snapshot replaces the local history without hiding the archive.
     const newerPayload=await decryptVault(envelope,password);
     newerPayload.records[0].at='2026-11-02T00:00:00.000Z';
     newerPayload.records[0].games[0].name='Updated Test Game 0';
     newerPayload.records[0].games[0].lastPlayed='2026-11-02T00:00:00.000Z';
     activeEnvelope=await encryptVault(newerPayload,password);
+    // A lagging public marker previously caused the PWA to falsely conclude
+    // that a new vault was unavailable, even though the encrypted vault changed.
+    simulatedStatusAt='2026-10-30T00:00:00Z';
     await page.reload();
     await page.getByRole('heading',{name:'欢迎回到 XBOX Playlog'}).waitFor();
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
     await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    // Other tests cover scroll-triggered mobile nav. Here focus on the
+    // vault-reload behavior, including while the mobile tab bar is hidden.
+    await page.locator(mobile?'.mobile-nav':'.sidebar').getByRole('button',{name:'管理',exact:true}).evaluate(el=>el.click());
     await page.getByText('已自动加载最新同步记录。').waitFor();
+    assert.equal(await page.locator('.history-row').count(),1,'The newest encrypted record appears in Manage history');
+    assert.ok((await page.locator('.history-row').first().innerText()).includes('11/2'),'The newest published timestamp appears in sync history');
+    await page.locator(mobile?'.mobile-nav':'.sidebar').getByRole('button',{name:'概览',exact:true}).evaluate(el=>el.click());
     assert.ok((await page.locator('.recent-game-card').first().innerText()).includes('Updated Test Game 0'),
       'Latest cloud history refreshes the archive after cached records are already visible');
     activeEnvelope=envelope;
+    simulatedStatusAt=null;
     await unlock();
     await page.locator('.recent-game-card').first().waitFor();
     console.log((mobile?'Mobile':'Desktop')+': PASS offline-first encrypted history, network outage versus first sync, retry, background newer-snapshot refresh');
@@ -1940,7 +1951,7 @@ try{
     await page.locator('.game-card, .recent-game-card').first().waitFor();
     assert.ok(await page.locator('.game-card, .recent-game-card').count()>0,
       'A password rotation in the cloud cannot lock the user out of previously decrypted encrypted history');
-    await page.getByText('当前显示本机保存的历史档案',{exact:false}).waitFor();
+    await page.getByText('最新云端档案暂时无法读取',{exact:false}).waitFor();
     // When no valid cached archive remains, a remembered old password must not unlock new cloud ciphertext.
     await clearCachedEnvelope();
     await page.reload();

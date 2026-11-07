@@ -1,4 +1,4 @@
-import {createHash} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import fs from 'node:fs';
 import {credentials} from './microsoft-credentials.ts';
 import {scanMicrosoft,refreshGroupingWarnings} from './microsoft-library.ts';
@@ -84,26 +84,31 @@ const recentCandidate=saved?.record?.games?.some((g:any)=>g.cachedImage)&&Date.n
 // Private candidates may include zero-result titles; those never enter the public snapshot.
 const freshSource=recentCandidate||previous[0];
 const fresh=freshSource?refreshGroupingWarnings({...freshSource,games:freshSource.games.filter((g:any)=>g.total>0||g.minutes!==null)}):undefined;
-if(fresh&&shouldReuseRecentXboxSnapshot({
- mechanism:syncMechanism,ledgerAvailable:!!ledger,source:fresh?.source,snapshotAt:fresh?.at,
- now:new Date().toISOString(),dayBoundary:boundaryPlaytimeSweep(new Date().toISOString()),
+const syncStartedAt=new Date().toISOString();
+if(fresh&&fresh.id===previous[0]?.id&&shouldReuseRecentXboxSnapshot({
+ mechanism:syncMechanism,priorMechanism:previous[0]?.syncMechanism,
+ ledgerAvailable:!!ledger,source:fresh.source,snapshotAt:fresh.at,
+ now:syncStartedAt,dayBoundary:boundaryPlaytimeSweep(syncStartedAt),
  forceSweep:process.env.PLAYTIME_FORCE_SWEEP==='true'
 })){
- const artwork=await australianArtwork(fresh,fetch,previous[0]);
+ const reused:typeof fresh={...fresh,id:randomUUID(),at:syncStartedAt,syncMechanism:'cloudflare',syncReusedFromAt:fresh.at};
+ const artwork=await australianArtwork(reused,fetch,previous[0]);
  console.log('快速快照澳区横幅覆盖：'+JSON.stringify(artwork));
- logMythicArtworkCoverage(fresh.games);
- await cacheRecordImages(fresh);
- logMythicScreenshotCache(fresh.games);
- auditReportedRotation(fresh.games,previous[0]?.games||[]);
- await publishSnapshot(fresh,previous.filter((r:any)=>r.id!==fresh.id).slice(0,29),target,ledger,fixedPcMetascores(fresh.games.map((g:any)=>String(g.id)),key));console.log('复用刚完成的微软快照。');process.exit(0);
+ logMythicArtworkCoverage(reused.games);
+ await cacheRecordImages(reused);
+ logMythicScreenshotCache(reused.games);
+ auditReportedRotation(reused.games,previous[0]?.games||[]);
+ await publishSnapshot(reused,previous.slice(0,29),target,ledger,fixedPcMetascores(reused.games.map((g:any)=>String(g.id)),key));
+ console.log('Cloudflare 近五分钟内复用先前手动同步数据；已单独记录触发时间，未执行微软扫描。');process.exit(0);
 }
 const cacheBaseline=saved?.record??previous[0];
 const cachedGames=cacheBaseline?.games||[];
 // Counts only: confirm that the prior detail baseline was recovered without logging private data.
 console.log('微软增量缓存基线：'+JSON.stringify({source:saved?.record?'private-cache':previous[0]?'encrypted-vault':'none',games:cachedGames.length,completeCatalogs:cachedGames.filter((g:any)=>Array.isArray(g.achievements)&&g.achievements.length>0&&g.achievements.length===g.total).length}));
 const began=Date.now();
-if(syncMechanism==='cloudflare')console.log('Cloudflare 定时同步：执行新的微软扫描，不复用最近手动快照。');
-const result=await scanMicrosoft(session.config,{previous:cacheBaseline,emptyTitles:saved?.emptyTitles,lastFullCatalogAt:saved?.lastFullCatalogAt??cacheBaseline?.at,expectedOwner:session.state.owner,forcePlaytimeSweep:process.env.PLAYTIME_FORCE_SWEEP==='true',progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
+if(syncMechanism==='manual')console.log('手动同步：完整执行微软增量扫描，优先重新核验近期游玩游戏的成就。');
+if(syncMechanism==='cloudflare')console.log('Cloudflare 定时同步：非允许的五分钟复用窗口，执行新的微软增量扫描。');
+const result=await scanMicrosoft(session.config,{previous:cacheBaseline,emptyTitles:saved?.emptyTitles,lastFullCatalogAt:saved?.lastFullCatalogAt??cacheBaseline?.at,expectedOwner:session.state.owner,forcePlaytimeSweep:process.env.PLAYTIME_FORCE_SWEEP==='true',recentAchievementLookbackDays:syncMechanism==='manual'?14:syncMechanism==='cloudflare'?3:0,progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
 const scanSeconds=Math.round((Date.now()-began)/1000);
 // The workflow injects explicit provenance. Old snapshots remain unlabelled rather
 // than being guessed from their timestamps.
