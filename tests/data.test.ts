@@ -6,6 +6,18 @@ const record=(gs:any[]):RecordData=>({id:'a',at:'2026-10-30T00:00:00Z',profile:{
 test('first snapshot is baseline; new games do not inflate delta',()=>{assert.equal(compareRecords(record([game])).minutes,null);assert.equal(compareRecords(record([{...game,minutes:160},{...game,id:'456',minutes:5000}]),record([game])).minutes,60)});
 test('missing values and downward corrections are handled explicitly',()=>{const d=compareRecords(record([{...game,minutes:50}]),record([game]));assert.equal(d.minutes,0);assert.equal(d.corrections,1);assert.equal(compareRecords(record([{...game,minutes:null}]),record([game])).minutes,0)});
 test('Xbox hidden titles remain in encrypted records with an explicit visibility flag',()=>{const g=normalizeTitles({titles:[{titleId:'123',name:'Game',titleHistory:{visible:true}},{titleId:'456',type:'App'},{titleId:'789',name:'Private Game',titleHistory:{visible:false}},{titleId:'555',name:'Unknown'}]});assert.equal(g.length,3);assert.equal(g[0].minutes,null);assert.equal(g[0].officialHidden,false);assert.equal(g[1].officialHidden,true);assert.equal(g[2].officialHidden,undefined);assert.throws(()=>normalizeTitles({}));const saved=validateRecord(record(g));assert.equal(saved.games[1].officialHidden,true);assert.equal(saved.games[0].officialHidden,false);assert.equal(saved.games[2].officialHidden,undefined);});
+test('encrypted record validation retains only genuine locked achievement progress and scan status',()=>{
+ const example={...game,progressScanVersion:1,achievements:[
+  {id:'1',name:'FH4 coop',image:'',rarity:12,unlocked:false,unlockedAt:null,progressPercent:80},
+  {id:'2',name:'Earned',image:'',rarity:8,unlocked:true,unlockedAt:'2026-11-01T10:00:00Z',progressPercent:100},
+  {id:'3',name:'Unknown',image:'',rarity:null,unlocked:false,unlockedAt:null,progressPercent:-1},
+  {id:'4',name:'Over limit',image:'',rarity:null,unlocked:false,unlockedAt:null,progressPercent:120}
+ ]};
+ const valid=validateRecord(record([example])).games[0];
+ assert.equal(valid.progressScanVersion,1);
+ assert.deepEqual(valid.achievements?.map(a=>a.progressPercent),[80,undefined,undefined,undefined]);
+ assert.equal(validateRecord(record([{...example,progressScanVersion:2}])).games[0].progressScanVersion,undefined);
+});
 test('stats parse zero, reject invalid values',()=>assert.deepEqual(parseStats({users:[{titles:[{titleId:'123',stats:[{name:'MinutesPlayed',value:'0'}]},{titleId:'456',stats:[{name:'MinutesPlayed',value:'bad'}]}]}]}),{'123':0}));
 test('import rejects duplicate IDs and invalid minutes; filters image URLs',()=>{assert.throws(()=>validateRecord(record([game,game])));assert.throws(()=>validateRecord(record([{...game,minutes:-1}])));assert.equal(validateRecord(record([{...game,image:'javascript:alert(1)'}])).games[0].image,'')});
 
