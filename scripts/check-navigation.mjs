@@ -1951,7 +1951,7 @@ try{
     await page.locator('.game-card, .recent-game-card').first().waitFor();
     assert.ok(await page.locator('.game-card, .recent-game-card').count()>0,
       'A password rotation in the cloud cannot lock the user out of previously decrypted encrypted history');
-    await page.getByText('当前显示本机保存的历史档案',{exact:false}).waitFor();
+    await page.getByText('最新云端档案暂时无法读取',{exact:false}).waitFor();
     // When no valid cached archive remains, a remembered old password must not unlock new cloud ciphertext.
     await clearCachedEnvelope();
     await page.reload();
