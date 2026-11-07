@@ -11,5 +11,5 @@ export async function publishSnapshot(record:RecordData,previous:RecordData[],pa
  const envelope=await encryptVault(payload,password);
  if(!isDeepStrictEqual(await readVault(envelope,password,password),JSON.parse(JSON.stringify(payload))))throw Error('重新加密后的记录校验失败；未覆盖历史文件。');
  fs.writeFileSync('public/vault.json',JSON.stringify(envelope));
- fs.writeFileSync('public/status.json',JSON.stringify({initialized:true}));
+ fs.writeFileSync('public/status.json',JSON.stringify({initialized:true,latestAt:record.at}));
 }
