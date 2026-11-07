@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import fs from 'node:fs';
 import {credentials} from './microsoft-credentials.ts';
 import {scanMicrosoft,refreshGroupingWarnings} from './microsoft-library.ts';
@@ -36,30 +37,37 @@ function logMythicScreenshotCache(games:Game[]){
 /** Temporary aggregate-only audit for a reported screenshot-rotation regression.
  * Never print user IDs, game IDs, raw image URLs or Xbox profile data. */
 function auditReportedRotation(games:Game[],prior:Game[]){
- const named=(list:Game[])=>list.find(g=>/way of the sword/i.test(g.name));
- const game=named(games),old=named(prior);
- if(!game)return;
- const shots=game.posterScreenshots||[],indices=distinctScreenshotIndices(shots);
- const today=Math.floor((Date.now()+8*3600_000)/86400_000);
- const start=game.posterRotationStartDay?Date.parse(game.posterRotationStartDay+'T00:00:00Z')/86400_000:NaN;
- const selected=(day:number)=>indices.length&&Number.isFinite(start)?indices[Math.max(0,day-start)%indices.length]:-1;
- const yesterdayIndex=selected(today-1),todayIndex=selected(today);
- const cached=game.cachedPosterScreenshotsSmall||[];
- const file=(i:number)=>{
-  const u=cached[i];if(!u)return null;
-  const name=u.split('/').at(-1)||'';
-  return /^[a-f0-9]{32}-480\.webp$/.test(name)?'public/media/'+name:null;
- };
- const yesterdayFile=file(yesterdayIndex),todayFile=file(todayIndex);
- const sameCachedPixels=!!(yesterdayFile&&todayFile&&fs.existsSync(yesterdayFile)&&fs.existsSync(todayFile)&&
-  fs.readFileSync(yesterdayFile).equals(fs.readFileSync(todayFile)));
- console.log('Mythic 轮换核验（指定游戏）：'+JSON.stringify({
-  priorScreenshots:old?.posterScreenshots?.length??0,
-  priorDistinct:distinctScreenshotIndices(old?.posterScreenshots||[]).length,
-  screenshots:shots.length,distinct:indices.length,startDay:game.posterRotationStartDay||null,
-  yesterdayIndex,todayIndex,cachedYesterday:!!yesterdayFile,cachedToday:!!todayFile,
-  identicalCachedPictures:sameCachedPixels
- }));
+ const cases=[
+  {label:'Way of the Sword',matches:(name:string)=>/way of the sword/i.test(name)},
+  {label:'Black Ops 6 Launcher',matches:(name:string)=>/black\\s*ops\\s*6.*launcher/i.test(name)}
+ ];
+ for(const sample of cases){
+  const game=games.find(g=>sample.matches(g.name)),old=prior.find(g=>sample.matches(g.name));
+  if(!game){console.log('Mythic 轮换核验（'+sample.label+'）：notInSnapshot');continue;}
+  const shots=game.posterScreenshots||[],indices=distinctScreenshotIndices(shots);
+  const today=Math.floor((Date.now()+8*3600_000)/86400_000);
+  const start=game.posterRotationStartDay?Date.parse(game.posterRotationStartDay+'T00:00:00Z')/86400_000:NaN;
+  const selected=(day:number)=>indices.length&&Number.isFinite(start)?indices[Math.max(0,day-start)%indices.length]:-1;
+  const yesterdayIndex=selected(today-1),todayIndex=selected(today);
+  const cached=game.cachedPosterScreenshotsSmall||[];
+  const file=(i:number)=>{
+   const name=cached[i]?.split('/').at(-1)||'';
+   return /^[a-f0-9]{32}-480\\.webp$/.test(name)?'public/media/'+name:null;
+  };
+  const bytes=(i:number)=>{const filename=file(i);return filename&&fs.existsSync(filename)?fs.readFileSync(filename):null;};
+  const yesterday=bytes(yesterdayIndex),todayArt=bytes(todayIndex);
+  const imageFingerprints=indices.map(i=>bytes(i)).filter((b):b is Buffer=>!!b)
+   .map(b=>createHash('sha256').update(b).digest('hex'));
+  console.log('Mythic 轮换核验（'+sample.label+'）：'+JSON.stringify({
+   priorScreenshots:old?.posterScreenshots?.length??0,
+   priorDistinct:distinctScreenshotIndices(old?.posterScreenshots||[]).length,
+   screenshots:shots.length,distinct:indices.length,startDay:game.posterRotationStartDay||null,
+   yesterdayIndex,todayIndex,cachedYesterday:!!yesterday,cachedToday:!!todayArt,
+   identicalCachedPictures:!!(yesterday&&todayArt&&yesterday.equals(todayArt)),
+   cachedSlots:imageFingerprints.length,uniqueCachedPictures:new Set(imageFingerprints).size,
+   posterPurpose:game.posterImagePurpose||null,posterVersion:game.posterSelectionVersion||null
+  }));
+ }
 }
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
 const root=process.env.MICROSOFT_STATE_DIR||'.private/microsoft',key=process.env.MICROSOFT_STATE_KEY!;
