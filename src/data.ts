@@ -6,7 +6,7 @@ export type Game = { id:string; name:string; image:string; imageWide?:string; im
 export function officialGameVisible(game:Game,source:string):boolean {
  return source==='Xbox'?game.officialHidden===false:game.officialHidden!==true;
 }
-export type Profile = { xuid:string; gamertag:string; avatar:string };
+export type Profile = { xuid:string; gamertag:string; avatar:string; cachedAvatar?:string };
 export type SyncMechanism='cloudflare'|'manual'|'day-boundary'|'code-update';
 export const normalizeSyncMechanism=(value:unknown):SyncMechanism|undefined=>
  value==='cloudflare'||value==='manual'||value==='day-boundary'||value==='code-update'?value:undefined;
@@ -62,7 +62,7 @@ export function validateRecord(input:any):{profile:Profile;games:Game[];source:s
  ...(typeof g.posterRotationStartDay==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(g.posterRotationStartDay)&&Number.isFinite(Date.parse(g.posterRotationStartDay+'T00:00:00Z'))?{posterRotationStartDay:g.posterRotationStartDay}:{}),
  ...(safeImage(g.cachedPosterImage)?{cachedPosterImage:safeImage(g.cachedPosterImage)}:{}),...(safeImage(g.cachedImage)?{cachedImage:safeImage(g.cachedImage)}:{}),...(safeImage(g.cachedImageLarge)?{cachedImageLarge:safeImage(g.cachedImageLarge)}:{}),...(safeImage(g.imageWide)?{imageWide:safeImage(g.imageWide)}:{}),...(safeImage(g.image2x)?{image2x:safeImage(g.image2x)}:{}),...(safeImage(g.image3x)?{image3x:safeImage(g.image3x)}:{}),devices:Array.isArray(g.devices)?g.devices.slice(0,10).map(String):[],lastPlayed:typeof g.lastPlayed==='string'&&Number.isFinite(Date.parse(g.lastPlayed))?new Date(g.lastPlayed).toISOString():null,minutes:g.minutes??null,earned:number(g.earned),total:number(g.total),score:number(g.score),maxScore:number(g.maxScore),...(achievements?{achievements}:{}),...(typeof g.catalogAt==='string'&&Number.isFinite(Date.parse(g.catalogAt))?{catalogAt:new Date(g.catalogAt).toISOString()}:{}),...(groups&&g.groupStatus==='verified'?{groups,groupStatus:'verified' as const}:{groupStatus:'unavailable' as const})};
  });
- return {profile:{xuid:input.profile.xuid,gamertag:String(input.profile.gamertag||'Xbox 玩家').slice(0,100),avatar:safeImage(input.profile.avatar)},games,source:input.source==='Exophase'?'Exophase':input.source==='Xbox'?'Xbox':input.source==='OpenXBL'?'OpenXBL':'导入',warnings:Array.isArray(input.warnings)?input.warnings.slice(0,30).map((v:any)=>String(v).slice(0,300)):[],...(normalizeSyncMechanism(input.syncMechanism)?{syncMechanism:normalizeSyncMechanism(input.syncMechanism)}:{})};
+ return {profile:{xuid:input.profile.xuid,gamertag:String(input.profile.gamertag||'Xbox 玩家').slice(0,100),avatar:safeImage(input.profile.avatar),...(safeImage(input.profile.cachedAvatar)?{cachedAvatar:safeImage(input.profile.cachedAvatar)}:{})},games,source:input.source==='Exophase'?'Exophase':input.source==='Xbox'?'Xbox':input.source==='OpenXBL'?'OpenXBL':'导入',warnings:Array.isArray(input.warnings)?input.warnings.slice(0,30).map((v:any)=>String(v).slice(0,300)):[],...(normalizeSyncMechanism(input.syncMechanism)?{syncMechanism:normalizeSyncMechanism(input.syncMechanism)}:{})};
 }
 export function compareRecords(current:RecordData, previous?:RecordData){
  if(!previous||previous.profile.xuid!==current.profile.xuid)return {minutes:null,achievements:null,corrections:0};
