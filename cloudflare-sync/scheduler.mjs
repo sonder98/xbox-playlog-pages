@@ -12,7 +12,7 @@ const LEGACY_TWO_HOUR_CRON='17 */2 * * *';
 export function dispatchRequest(cron){
  if(!CRON_RULES.includes(cron)&&cron!==LEGACY_TWO_HOUR_CRON)throw new Error('Unexpected Cron Trigger: '+cron);
  const forceSweep=cron==='42 15 * * *'||cron==='2 16 * * *';
- return {ref:'main',inputs:{force_sweep:forceSweep?'true':'false'}};
+ return {ref:'main',inputs:{force_sweep:forceSweep?'true':'false',sync_mechanism:forceSweep?'day-boundary':'cloudflare'}};
 }
 export async function sendScheduledDispatch(cron,token,request=fetch){
  if(typeof token!=='string'||!token.trim())throw new Error('Missing GITHUB_ACTIONS_TOKEN Worker Secret');

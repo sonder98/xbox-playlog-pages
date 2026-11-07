@@ -28,7 +28,7 @@
 
 打开 https://dash.cloudflare.com/ → **Workers & Pages** → **Create application**，创建一个普通 Worker（模板使用 Hello World / Start from scratch 即可），命名例如 `xbox-playlog-scheduler`。
 
-进入 **Edit code**，用 [scheduler.mjs](../cloudflare-sync/scheduler.mjs) 的**最新版完整代码**替换现有 Worker 并 **Deploy**。已经创建 Worker 的用户无需再次创建；**先部署代码，再修改 Cron**，因为旧线上代码不接受新表达式。
+进入 **Edit code**，用 [scheduler.mjs](../cloudflare-sync/scheduler.mjs) 的**最新版完整代码**替换现有 Worker 并 **Deploy**。 **2026-11-07 新增同步来源标识：**代码会向 GitHub 一并传入 `sync_mechanism`（`cloudflare` 或 `day-boundary`）。如果已部署旧版 Worker，**仅需重新 Deploy 新源码，无须修改三条 Cron 或重新设置令牌**。旧版 Worker 在更新前仍能正常同步，但新快照不会凭时间被猜测为自动同步，会暂显示「来源未记录」。已经创建 Worker 的用户无需再次创建；**先部署代码，再修改 Cron**，因为旧线上代码不接受新表达式。
 
 它只有 `scheduled()` 能发起同步；公开 `workers.dev` 地址只返回 HTTP 404，避免别人通过网页点击乱触发。
 

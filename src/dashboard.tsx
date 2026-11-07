@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Search,Clock3,Trophy,ShieldCheck,X,ArrowRight,ChevronRight,SlidersHorizontal,EyeOff,Medal} from 'lucide-react';
-import {compareRecords,officialGameVisible,type Game,type RecordData} from './data';
+import {compareRecords,officialGameVisible,syncMechanismLabel,type Game,type RecordData} from './data';
 import {GameCard,GameCover,GameDetail,Modal} from './components/game';
 import {MythicPosterWall} from './components/mythic-wall';
 import {MythicShowcase} from './components/mythic-showcase';
@@ -176,7 +176,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   </section>
   <section className="manage-section" id="sync-history" aria-labelledby="manage-history-title">
    <div className="manage-section-heading"><div><span className="eyebrow">SYNC HISTORY</span><h2 id="manage-history-title">同步历史</h2></div><p>回顾每次同步的变化和数据快照</p></div>
-   <section className="panel"><div className="section-title"><h2>同步快照</h2><span>共 {records.length} 次</span></div><p className="muted">新增时长属于两次同步之间的区间，不代表单日实际游玩时长。首次记录作为基线。</p>{records.length?records.map((r,i)=>{const d=compareRecords(r,records[i+1]);return <div className="history-row" key={r.id}><span className="history-icon"><History size={18}/></span><div><b>{new Date(r.at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}</b><small>{r.source} · {r.games.length} 个游戏{r.warnings.length?` · ${r.warnings.join('；')}`:''}</small></div><div className="history-delta"><b>{d.minutes===null?'基线记录':'+'+fmt(d.minutes)}</b><small>{d.achievements===null?'从此刻开始':'+'+d.achievements+' 个成就'}{d.corrections>0?' · 存在时长修正':''}</small></div></div>}):<Empty title="第一份记录，等你开始" text="微软 首次同步会建立统计基线。"/>}</section>
+   <section className="panel"><div className="section-title"><h2>同步快照</h2><span>共 {records.length} 次</span></div><p className="muted">新增时长属于两次同步之间的区间，不代表单日实际游玩时长。首次记录作为基线。</p>{records.length?records.map((r,i)=>{const d=compareRecords(r,records[i+1]);return <div className="history-row" key={r.id}><span className="history-icon"><History size={18}/></span><div><b>{new Date(r.at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}</b><span className="history-sync-mechanism">{syncMechanismLabel(r.syncMechanism)}</span><small>{r.source} · {r.games.length} 个游戏{r.warnings.length?` · ${r.warnings.join('；')}`:''}</small></div><div className="history-delta"><b>{d.minutes===null?'基线记录':'+'+fmt(d.minutes)}</b><small>{d.achievements===null?'从此刻开始':'+'+d.achievements+' 个成就'}{d.corrections>0?' · 存在时长修正':''}</small></div></div>}):<Empty title="第一份记录，等你开始" text="微软 首次同步会建立统计基线。"/>}</section>
   </section>
  </div>}
  <footer><span><span className="dot green"/>XBOX Playlog · 只属于你的游戏旅程</span><span>{current?'最后记录 '+dt(current.at):'连接账号后开始记录'} · 时间显示为北京时间</span></footer></div></main>

@@ -9,7 +9,7 @@ test('manual GitHub sync dispatches once with scoped bearer token and correlatab
   assert.equal(String(input),'https://api.github.com/repos/sonder98/xbox-playlog-pages/actions/workflows/sync.yml/dispatches');
   assert.equal(init?.method,'POST');
   assert.equal((init?.headers as Record<string,string>)?.Authorization,'Bearer github_pat_fixture');
-  assert.deepEqual(JSON.parse(String(init?.body)),{ref:'main',inputs:{request_id:id}});
+  assert.deepEqual(JSON.parse(String(init?.body)),{ref:'main',inputs:{request_id:id,sync_mechanism:'manual'}});
   return new Response(null,{status:204});
  };
  await dispatchXboxSync('github_pat_fixture',id,mock);
