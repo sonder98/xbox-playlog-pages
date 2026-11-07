@@ -14,6 +14,9 @@ test('snapshot is ciphertext, retains history, wrong password fails before repla
   const password='test-password',record:RecordData={id:'1',at:new Date().toISOString(),profile:{xuid:'4285437',gamertag:'PRIVATE-TEST',avatar:''},games:[{id:'123',name:'PRIVATE-GAME',image:'',image2x:undefined,devices:[],lastPlayed:null,minutes:60,earned:1,total:1,score:10,maxScore:10,achievements:[{id:'1',name:'Achievement',image:'',rarity:null,unlocked:true,unlockedAt:null}]}],source:'Exophase',warnings:[]};
   await publishSnapshot({...record,syncMechanism:'cloudflare'},[],password);
   const before=readFileSync('public/vault.json','utf8');assert.ok(!before.includes('PRIVATE-TEST'));
+  const publicStatus=JSON.parse(readFileSync('public/status.json','utf8'));
+  assert.deepEqual(publicStatus,{initialized:true,latestAt:record.at});
+  assert.ok(!JSON.stringify(publicStatus).includes('PRIVATE-TEST'));
   await assert.rejects(readVault(JSON.parse(before),'incorrect','incorrect'));
   assert.equal(readFileSync('public/vault.json','utf8'),before);
   const previous=(await readVault(JSON.parse(before),password,password)).records;
