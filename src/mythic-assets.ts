@@ -37,10 +37,12 @@ export function useMythicRotationDay(){
   const timer=window.setTimeout(refresh,Math.max(1,nextMidnight-Date.now()+50));
   document.addEventListener('visibilitychange',refresh);
   window.addEventListener('focus',refresh);
+  window.addEventListener('pageshow',refresh); // Back/forward cache and resumed PWA after midnight
   return()=>{
    window.clearTimeout(timer);
    document.removeEventListener('visibilitychange',refresh);
    window.removeEventListener('focus',refresh);
+   window.removeEventListener('pageshow',refresh);
   };
  },[day]);
  return day;
