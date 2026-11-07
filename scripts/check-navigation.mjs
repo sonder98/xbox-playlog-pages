@@ -1664,8 +1664,8 @@ try{
       'Manage Display uses small square cover thumbnails on desktop and mobile');
     if(mobile){
       const fonts=await page.locator('input:not([type="checkbox"]):not([type="file"]),select,textarea').evaluateAll(els=>els.filter(el=>el.getClientRects().length).map(el=>({label:el.getAttribute('aria-label'),size:parseFloat(getComputedStyle(el).fontSize)})));
-      assert.ok(fonts.length>=2);assert.ok(fonts.every(f=>f.size>=16),JSON.stringify(fonts));
-      console.log('Mobile: PASS >=16px text for password, library/manager search and selection controls; pinch zoom preserved');
+      assert.ok(fonts.length>=1,'Manager search is still visible in its relocated dialog');assert.ok(fonts.every(f=>f.size>=16),JSON.stringify(fonts));
+      console.log('Mobile: PASS >=16px text for relocated manager search and selection controls; pinch zoom preserved');
     }
     await page.getByRole('checkbox',{name:'显示 Test Game 1',exact:true}).uncheck();
     await page.getByRole('button',{name:'保存展示设置',exact:true}).click();
