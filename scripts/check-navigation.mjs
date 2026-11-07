@@ -15,8 +15,12 @@ games[0].cachedPosterScreenshots=['https://covers.example.test/landscape.svg'];
 games[0].cachedPosterScreenshotsSmall=['https://covers.example.test/preview.svg'];
 games[0].posterRotationStartDay='2026-11-06';
 for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),points:[10,20,0,15][i],name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:i===1?'https://covers.example.test/wide.svg':'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
+// Game 0 has a recorded first-play day and a final unlock on the following day.
+games[0].achievements[0].unlockedAt='2026-11-01T12:24:00.000Z';
+games[0].achievements[1].unlockedAt='2026-11-02T12:24:00.000Z';
 for(const game of games){game.total=4;game.earned=2;game.groupStatus='verified';game.groups=[{id:'base',name:'本体',kind:'base',earned:2,total:2,achievementIds:['1','2']},{id:'dlc',name:'追加故事',kind:'dlc',earned:0,total:2,achievementIds:['3','4']}];}
-const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:'https://covers.example.test/avatar.svg',cachedAvatar:'https://covers.example.test/avatar-cached.svg'},games,source:'Exophase',warnings:[],syncMechanism:'cloudflare'}]},password);
+const playtimeLedger={version:1,timeZone:'Asia/Shanghai',since:'2026-11-01',latest:{'100':{at:'2026-11-02T12:00:00.000Z',minutes:30}},days:{'2026-11-01':{'100':30}},crossDay:{},corrections:{}};
+const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:'https://covers.example.test/avatar.svg',cachedAvatar:'https://covers.example.test/avatar-cached.svg'},games,source:'Exophase',warnings:[],syncMechanism:'cloudflare'}],playtimeLedger},password);
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4173'],{stdio:'ignore'});
 let browser;
 try{
@@ -446,8 +450,8 @@ try{
     assert.equal(await page.locator('.ah-preview-axis').count(),0,'Overview omits explanatory direction text');
     assert.equal(await page.locator('[data-overview-section="heatmap"] .ah-month-played').count(),1,
       'Overview heatmap has the monthly played section beneath its calendar');
-    assert.equal((await page.locator('[data-overview-section="heatmap"] .ah-month-played-title').innerText()).replace(/\s+/g,' ').trim(),'本月在玩 0 款',
-      'November has no confirmed playing records in the example, so no games are invented');
+    assert.equal((await page.locator('[data-overview-section="heatmap"] .ah-month-played-title').innerText()).replace(/\s+/g,' ').trim(),'本月在玩 1 款',
+      'November shows only the one game with a recorded positive playtime increase');
     const previewDot=await page.locator('.ah-preview-cell .ah-dot').first().evaluate(el=>{
       const button=el.parentElement.getBoundingClientRect(),dot=el.getBoundingClientRect();
       return {ratio:dot.width/dot.height,relative:dot.width/button.width,radius:getComputedStyle(el).borderRadius};
@@ -518,9 +522,9 @@ try{
     assert.equal(await rareTiles.locator('.ah-showcase-unlock-time').count(),24,
       'Every rare achievement shows its unlock time on a separate third row');
     assert.equal(await rareTiles.first().locator('.ah-showcase-name').innerText(),'Achievement 0');
-    assert.equal(await rareTiles.first().locator('time').innerText(),'2026.10.27 20:24',
+    assert.equal(await rareTiles.first().locator('time').innerText(),'2026.11.01 20:24',
       'Unlock time is rendered in Beijing time');
-    assert.equal(await rareTiles.first().locator('time').getAttribute('datetime'),'2026-10-27T12:24:00.000Z');
+    assert.equal(await rareTiles.first().locator('time').getAttribute('datetime'),'2026-11-01T12:24:00.000Z');
     const rarePreviewLayout=await rareTiles.first().evaluate(el=>{
       const art=el.querySelector('.ah-showcase-art').getBoundingClientRect();
       const rarity=el.querySelector('.ah-showcase-rarity-value').getBoundingClientRect();
@@ -725,7 +729,7 @@ try{
     assert.equal(firstPairMeta.length,2,'Each achievement gets its own rarity and timestamp');
     assert.deepEqual(firstPairMeta.map(meta=>meta.rarity),['0%','9.9%'],
       'Each side shows its own original Xbox rarity before unlock date');
-    assert.ok(firstPairMeta.every(meta=>meta.order.join(',')==='span,time'&&meta.timestamp?.includes('2026.10.')),
+    assert.ok(firstPairMeta.every(meta=>meta.order.join(',')==='span,time'&&/^2026\.\d{2}\.\d{2} \d{2}:\d{2}$/.test(meta.timestamp||'')),
       'Rarity precedes the existing full timestamp in DOM order');
     assert.ok(firstPairMeta.every(meta=>meta.alignment==='center'&&!meta.overflow),
       'Rarity/date metadata stays centered without mobile overflow');
@@ -748,8 +752,8 @@ try{
     assert.equal(await page.locator('.ah-month-card').first().getByRole('heading').innerText(),'2026 年 11 月');
     assert.equal(await page.locator('.ah-month-card .ah-month-played').count(),59,
       'Every monthly achievement calendar includes its own played-games list');
-    assert.equal(await page.locator('.ah-month-card[data-month="11"][data-year="2026"] .ah-month-played-game').count(),0,
-      'November correctly has no dated Xbox play activity in the test data');
+    assert.equal(await page.locator('.ah-month-card[data-month="11"][data-year="2026"] .ah-month-played-game').count(),1,
+      'November includes the one game with a recorded positive playtime increase');
     assert.equal(await page.locator('.ah-month-card[data-month="10"][data-year="2026"] .ah-month-played-game').count(),12,
       'October combines lastPlayed evidence and unlocked achievements across all twelve games');
     assert.equal(await page.locator('.ah-month-card[data-month="10"][data-year="2026"] .ah-month-played-game .ah-month-played-cover').count(),12,
@@ -786,11 +790,11 @@ try{
     assert.notEqual(yearNavStyle.pillBackground,'rgba(0, 0, 0, 0)','Individual year pills remain distinguishable');
     await yearNav.getByRole('button',{name:'2026'}).click();
     await page.waitForFunction(()=>Math.abs(document.getElementById('ah-year-2026')?.getBoundingClientRect().top-85)<45);
-    await page.getByRole('button',{name:'2026 年 10 月 27 日，解锁 12 个成就',exact:true}).click();
+    await page.getByRole('button',{name:'2026 年 10 月 27 日，解锁 11 个成就',exact:true}).click();
     const sheet=page.getByRole('dialog',{name:'2026 年 10 月 27 日 成就摘要'});
     await sheet.waitFor();
-    assert.ok((await sheet.innerText()).includes('12'));
-    assert.ok((await sheet.innerText()).includes('Test Game 0'));
+    assert.ok((await sheet.innerText()).includes('11'));
+    assert.ok((await sheet.innerText()).includes('Test Game 1'));
     await sheet.getByRole('button',{name:/前一天 2026 年 10 月 26 日/}).click();
     const previousSheet=page.getByRole('dialog',{name:'2026 年 10 月 26 日 成就摘要'});
     await previousSheet.waitFor();
@@ -800,9 +804,9 @@ try{
     await sheet.waitFor();
     await sheet.getByRole('button',{name:'查看当天全部成就'}).click();
     await page.locator('.ah-achievement-card').first().waitFor();
-    assert.equal(await page.locator('.ah-achievement-card').count(),12,'All day unlocks across games appear');
+    assert.equal(await page.locator('.ah-achievement-card').count(),11,'All remaining October day unlocks across games appear');
     assert.ok(page.url().endsWith('#achievements/day/2026-10-27'),'Day detail is deep-linkable');
-    assert.equal(await page.locator('.ah-achievement-card .ah-game-source').count(),12,'Each achievement identifies its original game');
+    assert.equal(await page.locator('.ah-achievement-card .ah-game-source').count(),11,'Each achievement identifies its original game');
     assert.equal(await page.locator('.ah-achievement-card time').first().innerText(),'20:24');
     await page.locator('.ah-achievement-art img').first().waitFor();
     await page.waitForFunction(()=>document.querySelector('.ah-achievement-art')?.classList.contains('ah-art-square'));
@@ -811,7 +815,7 @@ try{
     });
     assert.ok(Math.abs(artFrame.ratio-1)<.04,'Square achievement art retains a square fitting frame');
     assert.equal(artFrame.fit,'contain','Achievement art is not cropped');
-    assert.equal(await page.locator('.ah-day-detail .ah-achievement-card[data-rarity-tier="ultra"]').count(),12,'Daily unlocks share the ultra-rare tier');
+    assert.equal(await page.locator('.ah-day-detail .ah-achievement-card[data-rarity-tier="ultra"]').count(),11,'Remaining October daily unlocks share the ultra-rare tier');
     const dailyFrame=await page.locator('.ah-day-detail .ah-achievement-art.ah-rarity-ultra').first().evaluate(el=>({
       border:getComputedStyle(el).borderTopWidth,shine:getComputedStyle(el,'::after').animationName,
       fit:getComputedStyle(el.querySelector('img')).objectFit
@@ -1288,7 +1292,7 @@ try{
       Math.abs(searchRowAfter.fieldRight-searchRowAfter.right)<3,
       'Search field expands only to the right, fills the remaining row, and never covers sorting');
     assert.equal(await gameSearch.getAttribute('aria-expanded'),'true');
-    await gameSearchInput.fill('Test Game 1');
+    await gameSearchInput.fill('Test Game 0');
     await gameSearchInput.press('Enter');
     await gameSearchInput.waitFor({state:'hidden'});
     assert.equal(await gameSearch.getAttribute('aria-expanded'),'false');
@@ -1318,7 +1322,7 @@ try{
       'The All games menu stays compact with only shared sort choices');
     await gameSortMenu.getByRole('menuitemradio',{name:'时间跨度：长 → 短'}).click();
     await gameSortMenu.waitFor({state:'hidden'});
-    assert.equal(await page.locator('.game-card .game-time-span').first().innerText(),'时间跨度：1.0天');
+    assert.equal(await page.locator('.game-card .game-time-span').first().innerText(),'时间跨度：1天');
     await gameSort.click();
     gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
     await gameSortMenu.getByRole('menuitemradio',{name:'时间跨度：短 → 长'}).click();
@@ -1689,7 +1693,7 @@ try{
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
     const restoredSearch=page.getByRole('button',{name:'搜索游戏',exact:true});
     await restoredSearch.click();
-    assert.equal(await page.getByRole('searchbox',{name:'搜索游戏名称'}).inputValue(),'Test Game 1',
+    assert.equal(await page.getByRole('searchbox',{name:'搜索游戏名称'}).inputValue(),'Test Game 0',
       'The search query persists while collapsed and across game details');
     await page.getByRole('searchbox',{name:'搜索游戏名称'}).press('Escape');
     assert.equal(await restoredSearch.getAttribute('aria-expanded'),'false');
