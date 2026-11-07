@@ -16,7 +16,7 @@ import {achievementTimeSpan,compareAchievementTimeSpans} from './achievement-tim
 import {compareGameCompletionDates} from './game-completion-date';
 import {api,playtimeLedgerForBackup,pcMetascoresForDisplay,refreshCloudRecords} from './vault';
 import {ManualSyncDialog} from './components/manual-sync';
-import {GameLibrarySortControl} from './components/achievement-sort-control';
+import {GameLibrarySortControl,GameLibrarySearchControl} from './components/achievement-sort-control';
 import {normalizeGameLibrarySort,type GameLibraryFilter,type GameLibrarySort} from './game-library-sort';
 import {usePageNavigation} from './navigation';
 import {PullToRefresh} from './pull-to-refresh';
@@ -164,7 +164,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
 </>}
  {tab==='dusty'&&<DustyDetails items={dusty} onBack={back} onGame={openGame}/>}
  {tab==='achievements'&&<AchievementJourney games={games} records={records} playtimeLedger={playtimeLedger} dayId={dayId} showcase={showcase} gapShowcase={gapShowcase} onBack={dayId?back:()=>setTab('overview')} onOpenDay={openAchievementDay} onChangeDay={changeAchievementDay} onOpenGame={openAchievementGame}/>} 
- {tab==='library'&&<section className="panel games-panel"><div className="toolbar"><label className="search"><Search size={17}/><input placeholder="搜索游戏名称…" aria-label="搜索游戏名称" value={query} onChange={e=>setQuery(e.target.value)}/></label><div className="filters"><div className="filter-pills" role="group" aria-label="筛选游戏">{([['all','全部'],['playing','未完成'],['mythic','Mythic'],['full','Full']] as const).map(([id,label])=><button key={id} aria-pressed={filter===id} className={filter===id?'active':''} onClick={()=>changeLibraryFilter(id)}>{label}</button>)}</div><GameLibrarySortControl sort={sort} filter={filter} onChange={setSort}/></div></div>{renderGames(visible)}</section>}
+ {tab==='library'&&<section className="panel games-panel"><div className="toolbar"><div className="filters"><div className="filter-pills" role="group" aria-label="筛选游戏">{([['all','全部'],['playing','未完成'],['mythic','Mythic'],['full','Full']] as const).map(([id,label])=><button key={id} aria-pressed={filter===id} className={filter===id?'active':''} onClick={()=>changeLibraryFilter(id)}>{label}</button>)}</div><div className="library-toolbar-actions"><GameLibrarySortControl sort={sort} filter={filter} onChange={setSort}/><GameLibrarySearchControl query={query} onChange={setQuery}/></div></div></div>{renderGames(visible)}</section>}
  {tab==='manage'&&<div className="manage-page" data-page="manage">
   <section className="manage-section" aria-labelledby="manage-visibility-title">
    <div className="manage-section-heading"><div><span className="eyebrow">GAME VISIBILITY</span><h2 id="manage-visibility-title">游戏展示</h2></div><p>决定哪些游戏出现在游戏库和概览中</p></div>
