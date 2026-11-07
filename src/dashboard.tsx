@@ -120,13 +120,16 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   // The published status marker can lag behind an already-uploaded encrypted
   // Release. Verify the full vault on Manage entry, at most once per 5 min.
   void refreshLatest(false,0,Date.now()-lastForcedCloudCheckAt.current>=5*60_000);
-  // While a user stays on the history page, check a tiny status marker every
-  // five minutes. The full encrypted vault downloads only if it actually changed.
+ },[tab,refreshLatest]);
+ useEffect(()=>{
+  // Check the tiny published timestamp on EVERY unlocked page, not only Manage.
+  // An open Overview/Library/Achievements tab must not sit on old Xbox data
+  // indefinitely. The ~25 MB encrypted vault is fetched only if latestAt advanced.
   const interval=window.setInterval(()=>{
    if(document.visibilityState==='visible')void refreshLatest();
-  },5*60_000);
+  },60_000);
   return()=>window.clearInterval(interval);
- },[tab,refreshLatest]);
+ },[refreshLatest]);
  useEffect(()=>{
   const onResume=()=>{
    if(document.visibilityState==='visible')void refreshLatest(false,0,Date.now()-lastForcedCloudCheckAt.current>=5*60_000);
