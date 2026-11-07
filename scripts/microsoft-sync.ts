@@ -39,7 +39,7 @@ function logMythicScreenshotCache(games:Game[]){
 function auditReportedRotation(games:Game[],prior:Game[]){
  const cases=[
   {label:'Way of the Sword',matches:(name:string)=>/way of the sword/i.test(name)},
-  {label:'Black Ops 6 Launcher',matches:(name:string)=>/black\\s*ops\\s*6.*launcher/i.test(name)}
+  {label:'Black Ops 6 Launcher',matches:(name:string)=>/black\s*ops\s*6.*launcher/i.test(name)}
  ];
  for(const sample of cases){
   const game=games.find(g=>sample.matches(g.name)),old=prior.find(g=>sample.matches(g.name));
@@ -52,7 +52,7 @@ function auditReportedRotation(games:Game[],prior:Game[]){
   const cached=game.cachedPosterScreenshotsSmall||[];
   const file=(i:number)=>{
    const name=cached[i]?.split('/').at(-1)||'';
-   return /^[a-f0-9]{32}-480\\.webp$/.test(name)?'public/media/'+name:null;
+   return /^[a-f0-9]{32}-480\.webp$/.test(name)?'public/media/'+name:null;
   };
   const bytes=(i:number)=>{const filename=file(i);return filename&&fs.existsSync(filename)?fs.readFileSync(filename):null;};
   const yesterday=bytes(yesterdayIndex),todayArt=bytes(todayIndex);
