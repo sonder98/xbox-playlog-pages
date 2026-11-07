@@ -99,7 +99,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  const activeRef=useRef(true);
  useEffect(()=>()=>{activeRef.current=false;},[]);
  const refreshLatest=useCallback((warnForCachedStartup=false,minIntervalMs=15_000,force=false):Promise<void>=>{
-  if(autoRefreshPromise.current)return autoRefreshPromise.current;
+  if(autoRefreshPromise.current)return force?autoRefreshPromise.current.then(()=>refreshLatest(warnForCachedStartup,0,true)):autoRefreshPromise.current;
   if(!force&&Date.now()-lastAutoRefreshAt.current<minIntervalMs)return Promise.resolve();
   lastAutoRefreshAt.current=Date.now();
   if(force){lastForcedCloudCheckAt.current=Date.now();setCloudChecking(true);}
