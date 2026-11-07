@@ -729,7 +729,7 @@ try{
     assert.equal(firstPairMeta.length,2,'Each achievement gets its own rarity and timestamp');
     assert.deepEqual(firstPairMeta.map(meta=>meta.rarity),['0%','9.9%'],
       'Each side shows its own original Xbox rarity before unlock date');
-    assert.ok(firstPairMeta.every(meta=>meta.order.join(',')==='span,time'&&meta.timestamp?.includes('2026.10.')),
+    assert.ok(firstPairMeta.every(meta=>meta.order.join(',')==='span,time'&&/^2026\\.\\d{2}\\.\\d{2} \\d{2}:\\d{2}$/.test(meta.timestamp||'')),
       'Rarity precedes the existing full timestamp in DOM order');
     assert.ok(firstPairMeta.every(meta=>meta.alignment==='center'&&!meta.overflow),
       'Rarity/date metadata stays centered without mobile overflow');
