@@ -78,17 +78,17 @@ export function appendPlaytimeSamples(existing:unknown,samples:PlaytimeSample[])
  * The ledger begins at PLAYTIME_SINCE; this is a first *recorded* play day,
  * not proof of the game's lifetime first session if it was played earlier. */
 export function firstRecordedPlayDate(ledger:DailyPlaytimeLedger|null|undefined,id:string):string|null{
- if(!ledger||!/^\\d{1,15}$/.test(id))return null;
+ if(!ledger||!/^\d{1,15}$/.test(id))return null;
  const dates:string[]=[];
  for(const [day,games] of Object.entries(ledger.days||{})){
   const minutes=games?.[id];
-  if(/^\\d{4}-\\d{2}-\\d{2}$/.test(day)&&day>=ledger.since&&Number.isSafeInteger(minutes)&&minutes>0)
+  if(/^\d{4}-\d{2}-\d{2}$/.test(day)&&day>=ledger.since&&Number.isSafeInteger(minutes)&&minutes>0)
    dates.push(day);
  }
  // Read pre-migration cross-day buckets too; they are assigned to their start day.
  for(const [interval,games] of Object.entries(ledger.crossDay||{})){
   const day=interval.split('..')[0],minutes=games?.[id];
-  if(/^\\d{4}-\\d{2}-\\d{2}$/.test(day)&&day>=ledger.since&&Number.isSafeInteger(minutes)&&minutes>0)
+  if(/^\d{4}-\d{2}-\d{2}$/.test(day)&&day>=ledger.since&&Number.isSafeInteger(minutes)&&minutes>0)
    dates.push(day);
  }
  return dates.length?dates.sort()[0]:null;
