@@ -14,7 +14,7 @@ games[0].posterScreenshots=['https://covers.example.test/landscape.svg'];
 games[0].cachedPosterScreenshots=['https://covers.example.test/landscape.svg'];
 games[0].cachedPosterScreenshotsSmall=['https://covers.example.test/preview.svg'];
 games[0].posterRotationStartDay='2026-11-06';
-for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),points:[10,20,0,15][i],name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:i===1?'https://covers.example.test/wide.svg':'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
+for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),points:[10,20,0,15][i],name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:i===1?'https://covers.example.test/wide.svg':'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-11-01T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
 // Game 0 has a recorded first-play day and a final unlock on the following day.
 games[0].achievements[0].unlockedAt='2026-11-01T12:24:00.000Z';
 games[0].achievements[1].unlockedAt='2026-11-02T12:24:00.000Z';
@@ -522,7 +522,7 @@ try{
     assert.equal(await rareTiles.locator('.ah-showcase-unlock-time').count(),24,
       'Every rare achievement shows its unlock time on a separate third row');
     assert.equal(await rareTiles.first().locator('.ah-showcase-name').innerText(),'Achievement 0');
-    assert.equal(await rareTiles.first().locator('time').innerText(),'2026.10.27 20:24',
+    assert.equal(await rareTiles.first().locator('time').innerText(),'2026.11.01 20:24',
       'Unlock time is rendered in Beijing time');
     assert.equal(await rareTiles.first().locator('time').getAttribute('datetime'),'2026-11-02T12:24:00.000Z');
     const rarePreviewLayout=await rareTiles.first().evaluate(el=>{
