@@ -20,7 +20,7 @@ export async function dispatchXboxSync(token:string,requestId:string,request:typ
   response=await request(api+'/actions/workflows/sync.yml/dispatches',{
    method:'POST',
    headers:{'Accept':accept,'X-GitHub-Api-Version':apiVersion,'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-   body:JSON.stringify({ref:'main',inputs:{request_id:requestId}}),
+   body:JSON.stringify({ref:'main',inputs:{request_id:requestId,sync_mechanism:'manual'}}),
    cache:'no-store'
   });
  }catch{throw Error('无法连接 GitHub API，请检查网络或在 GitHub Actions 中手动运行。');}
