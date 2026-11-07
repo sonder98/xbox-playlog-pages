@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import type {Profile,Game} from './data.ts';
+import {distinctScreenshotIndices,type Profile,type Game} from './data.ts';
 import type {MythicPoster} from './mythic-posters.ts';
 import {MYTHIC_BADGE_URL} from './mythic-posters.ts';
 
@@ -49,7 +49,8 @@ function rotatingScreenshotIndex(game:Game,day:number):number|null{
  const shots=game.posterScreenshots;
  if(!shots?.length||!game.posterRotationStartDay)return null;
  const firstDay=Date.parse(game.posterRotationStartDay+'T00:00:00Z')/86400_000;
- return Number.isFinite(firstDay)?Math.max(0,day-firstDay)%shots.length:null;
+ const distinct=distinctScreenshotIndices(shots);
+ return Number.isFinite(firstDay)&&distinct.length?distinct[Math.max(0,day-firstDay)%distinct.length]:null;
 }
 export function mythicBackdrop(game:Game,day=beijingDay(Date.now())){
  const index=rotatingScreenshotIndex(game,day);
@@ -64,6 +65,7 @@ export function mythicBackdropPreview(game:Game,day=beijingDay(Date.now())){
  const index=rotatingScreenshotIndex(game,day);
  return (index!==null?game.cachedPosterScreenshotsSmall?.[index]:undefined)||mythicBackdrop(game,day);
 }
+export function mythicAvatar(profile:Profile){return profile.cachedAvatar||profile.avatar;}
 export function mythicCover(game:Game){
  // The circular art is at most 141 CSS pixels wide; the existing 480px WebP
  // is sharp even on 3x screens and usually far smaller than the 1600px variant.
@@ -72,7 +74,7 @@ export function mythicCover(game:Game){
 export function warmMythicPoster(entry:MythicPoster,profile:Profile){
  // Start the tiny player identity and circle art *before* the 1600px
  // screenshot, so the biggest request cannot get a head start on avatars.
- for(const url of [profile.avatar,MYTHIC_BADGE_URL,mythicCover(entry.game)])
+ for(const url of [mythicAvatar(profile),MYTHIC_BADGE_URL,mythicCover(entry.game)])
   void warmMythicImage(url,'high');
  for(const url of [mythicBackdropPreview(entry.game),
   entry.firstAchievement?.cachedImage||entry.firstAchievement?.image,
@@ -86,7 +88,7 @@ export function warmMythicPoster(entry:MythicPoster,profile:Profile){
  * optional and fetched on deliberate hover; opening never waits for them. */
 export function prepareMythicPoster(entry:MythicPoster,profile:Profile,fullBackdrop=false):Promise<void>{
  const urls=[
-  profile.avatar,MYTHIC_BADGE_URL,mythicCover(entry.game),
+  mythicAvatar(profile),MYTHIC_BADGE_URL,mythicCover(entry.game),
   mythicBackdropPreview(entry.game),
   entry.firstAchievement?.cachedImage||entry.firstAchievement?.image,
   entry.lastBaseAchievement?.cachedImage||entry.lastBaseAchievement?.image,
