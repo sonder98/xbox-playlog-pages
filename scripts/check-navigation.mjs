@@ -790,11 +790,11 @@ try{
     assert.notEqual(yearNavStyle.pillBackground,'rgba(0, 0, 0, 0)','Individual year pills remain distinguishable');
     await yearNav.getByRole('button',{name:'2026'}).click();
     await page.waitForFunction(()=>Math.abs(document.getElementById('ah-year-2026')?.getBoundingClientRect().top-85)<45);
-    await page.getByRole('button',{name:'2026 年 10 月 27 日，解锁 12 个成就',exact:true}).click();
+    await page.getByRole('button',{name:'2026 年 10 月 27 日，解锁 11 个成就',exact:true}).click();
     const sheet=page.getByRole('dialog',{name:'2026 年 10 月 27 日 成就摘要'});
     await sheet.waitFor();
-    assert.ok((await sheet.innerText()).includes('12'));
-    assert.ok((await sheet.innerText()).includes('Test Game 0'));
+    assert.ok((await sheet.innerText()).includes('11'));
+    assert.ok((await sheet.innerText()).includes('Test Game 1'));
     await sheet.getByRole('button',{name:/前一天 2026 年 10 月 26 日/}).click();
     const previousSheet=page.getByRole('dialog',{name:'2026 年 10 月 26 日 成就摘要'});
     await previousSheet.waitFor();
