@@ -12,6 +12,7 @@ import {AchievementSortControl,AchievementUnlockFilterControl} from './achieveme
 import {sortAchievements,filterAchievements,type AchievementSort,type AchievementUnlockFilter} from '../achievement-sort';
 import type {Game,Achievement} from '../data';
 import {achievementTimeSpan,formatAchievementTimeSpan} from '../achievement-time-span';
+import type {DailyPlaytimeLedger} from '../playtime-ledger';
 import {achievementRarityTier} from '../rare-achievements';
 
 export const hours=(minutes:number|null)=>minutes===null?'暂无时长':`${(minutes/60).toLocaleString('zh-CN',{maximumFractionDigits:1})} 小时`;
@@ -48,13 +49,13 @@ export function GameCover({game,wide=false,priority=false}:{game:Game;wide?:bool
     {completed&&<CompletionOrnament/>}
   </span>;
 }
-export function GameCard({game,onOpen,priority=false}:{game:Game;onOpen:()=>void;priority?:boolean}){
+export function GameCard({game,onOpen,priority=false,playtimeLedger}:{game:Game;onOpen:()=>void;priority?:boolean;playtimeLedger?:DailyPlaytimeLedger|null}){
   const state=completion(game);
-  const span=achievementTimeSpan(game);
+  const span=achievementTimeSpan(game,playtimeLedger);
   const extra=state.base?{earned:game.earned-state.base.earned,total:game.total-state.base.total}:null;
   return <button className="game-card" data-game-id={game.id} onClick={onOpen} aria-label={`查看 ${game.name} 的游戏详情${state.mythic?'，本体全成就':''}`}>
     <span className="game-art"><GameCover game={game} priority={priority}/></span>
-    <span className="game-copy"><span className="game-title">{game.name}</span><span className="game-last"><span className="game-last-played">最近游玩 {date(game.lastPlayed)}</span><span className="game-time-span" title={span?'首次成就：'+new Date(span.firstUnlockedAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})+'；最近成就：'+new Date(span.lastUnlockedAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}):'没有可用的已解锁成就时间'}>时间跨度：{formatAchievementTimeSpan(span)}</span></span></span>
+    <span className="game-copy"><span className="game-title">{game.name}</span><span className="game-last"><span className="game-last-played">最近游玩 {date(game.lastPlayed)}</span><span className="game-time-span" title={span?'首次记录游玩：'+span.firstPlayedDate+'；最后解锁成就：'+new Date(span.lastUnlockedAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})+'；按上海自然日计算': '暂无可用的首次游玩日期或已解锁成就时间'}>时间跨度：{formatAchievementTimeSpan(span)}</span></span></span>
     <span className="game-progress"><span className="game-achievement"><span className="achievement-metric" aria-label={`${state.base?'本体':'已同步'}成就 ${state.earned}/${state.total}`} title={state.base?'本体成就':'成就总数 · 本体分组待确认'}><Trophy size={14}/><span>{state.earned}/{state.total}</span></span>{extra&&extra.total>0&&<span className="achievement-metric" aria-label={`追加内容成就 ${extra.earned}/${extra.total}`} title="DLC 与更新成就"><span className="dlc-mark">DLC</span><span>{extra.earned}/{extra.total}</span></span>}<span className="achievement-metric game-playtime" aria-label={'游玩时长 '+hours(game.minutes)}><Clock3 size={13}/>{hours(game.minutes)}</span></span><Progress earned={state.earned} total={state.total} complete={state.mythic} label={game.name+' 成就完成度'}/></span>
   </button>;
 }
