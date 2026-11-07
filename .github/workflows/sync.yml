@@ -13,6 +13,10 @@ on:
         required: false
         default: 'false'
         type: string
+      sync_mechanism:
+        description: 'Source: manual, cloudflare or day-boundary; GitHub UI manual runs should enter manual'
+        required: false
+        type: string
   push:
     branches: [main]
     paths:
@@ -71,6 +75,7 @@ jobs:
           NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
           MICROSOFT_STATE_KEY: ${{ secrets.MICROSOFT_STATE_KEY }}
           PLAYTIME_FORCE_SWEEP: ${{ github.event_name == 'workflow_dispatch' && inputs.force_sweep == 'true' }}
+          PLAYLOG_SYNC_MECHANISM: ${{ github.event_name == 'push' && 'code-update' || inputs.force_sweep == 'true' && 'day-boundary' || inputs.sync_mechanism == 'cloudflare' && 'cloudflare' || inputs.sync_mechanism == 'manual' && 'manual' || inputs.request_id != '' && 'manual' || '' }}
         run: node --experimental-strip-types scripts/microsoft-sync.ts
       - name: Save encrypted Microsoft authorization
         if: steps.microsoft_sync.outcome == 'success' || steps.microsoft_sync.outcome == 'failure'
