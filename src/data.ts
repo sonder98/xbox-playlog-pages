@@ -46,7 +46,7 @@ export function parseStats(data:any):Record<string,number> {
  for(const user of data?.users||[]){for(const title of user.titles||[]){ const s=(title.stats||[]).find((s:any)=>s.name==='MinutesPlayed');if(s&&s.value!==null&&s.value!==''&&Number.isFinite(Number(s.value))&&Number(s.value)>=0)out[String(title.titleId)]=Number(s.value); }}
  return out;
 }
-export function validateRecord(input:any):{profile:Profile;games:Game[];source:string;warnings:string[]} {
+export function validateRecord(input:any):{profile:Profile;games:Game[];source:string;warnings:string[];syncMechanism?:SyncMechanism} {
  if(!input?.profile||typeof input.profile.xuid!=='string'||!/^\d{5,25}$/.test(input.profile.xuid))throw new Error('缺少有效 XUID。');
  if(!Array.isArray(input.games)||input.games.length>5000)throw new Error('games 必须为数组，最多 5000 个游戏。');
  const ids=new Set(); const games:Game[]=input.games.map((g:any)=>{
