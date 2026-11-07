@@ -2936,6 +2936,48 @@ footer .dot {
 }
 
 
+/* Compact, same-row library search: sort is always to the LEFT; search grows
+   only into the remaining horizontal space to the RIGHT of its icon. */
+.games-panel>.toolbar>.filters {width:100%;display:flex;align-items:center;flex-wrap:wrap;gap:12px;}
+.games-panel .filter-pills {flex:0 0 auto;}
+.library-toolbar-actions {display:flex;align-items:center;gap:8px;flex:1 1 220px;min-width:0;min-height:44px;}
+.library-toolbar-actions .game-library-sort {flex:0 0 auto;min-width:0;z-index:9;}
+.library-toolbar-actions .game-library-search {
+ display:flex;align-items:center;flex:0 0 40px;min-width:0;height:36px;border-radius:12px;
+ transition:background 150ms ease;overflow:hidden;
+}
+.library-toolbar-actions .game-library-search.is-open {
+ flex:1 1 auto;background:var(--surface-raised);
+}
+.game-library-search .game-library-search-toggle {
+ display:inline-grid;place-items:center;flex:0 0 40px;width:40px;height:36px;
+ min-height:36px;padding:0;border:0;border-radius:12px;background:transparent;
+ color:var(--text-muted);cursor:pointer;
+}
+.game-library-search .game-library-search-toggle:hover,
+.game-library-search .game-library-search-toggle.is-open,
+.game-library-search .game-library-search-toggle:focus-visible {
+ color:var(--text-primary);background:var(--surface-hover);outline:none;box-shadow:none;
+}
+.game-library-search .game-library-search-toggle.has-query {color:var(--accent);}
+.game-library-search-field {display:flex;align-items:center;flex:1 1 0;min-width:0;height:36px;}
+.game-library-search-field input {
+ appearance:none;flex:1;min-width:0;width:100%;height:36px;border:0;outline:0;
+ background:transparent;color:var(--text-primary);font:inherit;font-size:16px;padding:0 8px;
+}
+.game-library-search-field input::-webkit-search-cancel-button {display:none;}
+.game-library-search-clear {
+ flex:0 0 32px;width:32px;height:32px;display:grid;place-items:center;
+ border:0;border-radius:10px;background:transparent;color:var(--text-muted);cursor:pointer;
+}
+.game-library-search-clear:hover,.game-library-search-clear:focus-visible {
+ background:var(--surface-hover);color:var(--text-primary);
+}
+@media(max-width:700px){
+ .games-panel .filter-pills {flex:1 0 100%;min-width:0;}
+ .games-panel .library-toolbar-actions {flex:1 1 100%;width:100%;}
+}
+
 /* Compact cached game artwork in the display-management list. */
 .display-game-cover {
   display:block;
