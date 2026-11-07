@@ -9,7 +9,7 @@ import {cacheRecordImages} from './image-cache.ts';
 import {appendPlaytimeSamples,boundaryPlaytimeSweep} from '../src/playtime-ledger.ts';
 import {fixedPcMetascores} from './fixed-pc-metascores.ts';
 import {completion} from '../src/completion.ts';
-import type {Game} from '../src/data.ts';
+import {normalizeSyncMechanism,type Game} from '../src/data.ts';
 /** Aggregate only. Never log the private game's name, ID or snapshot. */
 function logMythicArtworkCoverage(games:Game[]){
  const mythic=games.filter(g=>completion(g).mythic);
@@ -58,6 +58,10 @@ console.log('微软增量缓存基线：'+JSON.stringify({source:saved?.record?'
 const began=Date.now();
 const result=await scanMicrosoft(session.config,{previous:cacheBaseline,emptyTitles:saved?.emptyTitles,lastFullCatalogAt:saved?.lastFullCatalogAt??cacheBaseline?.at,expectedOwner:session.state.owner,forcePlaytimeSweep:process.env.PLAYTIME_FORCE_SWEEP==='true',progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
 const scanSeconds=Math.round((Date.now()-began)/1000);
+// The workflow injects explicit provenance. Old snapshots remain unlabelled rather
+// than being guessed from their timestamps.
+const syncMechanism=normalizeSyncMechanism(process.env.PLAYLOG_SYNC_MECHANISM);
+if(syncMechanism)result.record.syncMechanism=syncMechanism;
 // Only aggregate counts: no XUID, game names, credentials, private snapshots or timestamps.
 console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,emptySkipped:result.audit.emptySkipped,emptyCached:result.emptyTitles.length,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed}));
 if(result.audit.failed||result.audit.interrupted||result.audit.historySourcesFailed)throw Error('微软同步未完整完成。');
