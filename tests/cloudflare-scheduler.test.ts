@@ -3,15 +3,16 @@ import assert from 'node:assert/strict';
 
 const mod=await import(new URL('../cloudflare-sync/scheduler.mjs',import.meta.url).href);
 
-test('Cloudflare schedules match the two-hour sync and daily Beijing day-boundary checks',()=>{
+test('Cloudflare schedules match the hourly sync and daily Beijing day-boundary checks',()=>{
  assert.deepEqual(mod.CRON_RULES,[
-  '17 */2 * * *',
+  '17 * * * *',
   '42 15 * * *',
   '2 16 * * *'
  ]);
  assert.equal(mod.dispatchRequest(mod.CRON_RULES[0]).inputs.force_sweep,'false');
  for(const cron of mod.CRON_RULES.slice(1))
   assert.equal(mod.dispatchRequest(cron).inputs.force_sweep,'true');
+ assert.equal(mod.dispatchRequest('17 */2 * * *').inputs.force_sweep,'false','legacy two-hour cron accepted during Cloudflare cutover');
  assert.throws(()=>mod.dispatchRequest('*/1 * * * *'),/Unexpected Cron/);
 });
 test('Worker sends one authenticated, least-privilege workflow_dispatch per tick',async()=>{

@@ -1,13 +1,7 @@
 name: Sync Xbox records
 run-name: Xbox sync (${{ github.event_name }} · ${{ inputs.request_id }})
+# Hourly and day-boundary cron events are dispatched by Cloudflare Worker.
 on:
-  schedule:
-    # Every two hours at :17 UTC (Beijing :17 on all even local hours).
-    - cron: '17 */2 * * *'
-    # Asia/Shanghai 23:42 (15:42 UTC): capture a day-end cumulative-minute checkpoint.
-    - cron: '42 15 * * *'
-    # Asia/Shanghai 00:02 (16:02 UTC): capture next day's baseline.
-    - cron: '2 16 * * *'
   workflow_dispatch:
     inputs:
       request_id:
@@ -76,7 +70,7 @@ jobs:
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
           NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
           MICROSOFT_STATE_KEY: ${{ secrets.MICROSOFT_STATE_KEY }}
-          PLAYTIME_FORCE_SWEEP: ${{ (github.event_name == 'schedule' && (github.event.schedule == '42 15 * * *' || github.event.schedule == '2 16 * * *')) || (github.event_name == 'workflow_dispatch' && inputs.force_sweep == 'true') }}
+          PLAYTIME_FORCE_SWEEP: ${{ github.event_name == 'workflow_dispatch' && inputs.force_sweep == 'true' }}
         run: node --experimental-strip-types scripts/microsoft-sync.ts
       - name: Save encrypted Microsoft authorization
         if: steps.microsoft_sync.outcome == 'success' || steps.microsoft_sync.outcome == 'failure'
