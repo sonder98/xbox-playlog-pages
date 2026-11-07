@@ -3,14 +3,14 @@ import {ArrowLeft,ArrowUpRight,CircleUserRound,Diamond,Sparkles} from 'lucide-re
 import type {Profile} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {MYTHIC_BADGE_URL,posterLocalDate} from '../mythic-posters';
-import {mythicBackdropPreview,mythicCover,prepareMythicPoster,useMythicRotationDay,warmMythicFonts} from '../mythic-assets';
+import {mythicAvatar,mythicBackdropPreview,mythicCover,prepareMythicPoster,useMythicRotationDay,warmMythicFonts} from '../mythic-assets';
 
 function CollectionPreview({entry,profile,index,total,rotationDay,onOpen,onPrefetch}:{
  entry:MythicPoster;profile:Profile;index:number;total:number;rotationDay:number;
  onOpen:()=>void;onPrefetch:()=>void;
 }){
  const {game,firstAt,mythicAt,firstAchievement,lastBaseAchievement,daysToMythic,baseTotal}=entry;
- const background=mythicBackdropPreview(game,rotationDay),cover=mythicCover(game);
+ const background=mythicBackdropPreview(game,rotationDay),cover=mythicCover(game),avatar=mythicAvatar(profile);
  const first=posterLocalDate(firstAt),finish=posterLocalDate(mythicAt);
  const firstArt=firstAchievement?.cachedImage||firstAchievement?.image;
  const lastArt=lastBaseAchievement?.cachedImage||lastBaseAchievement?.image;
@@ -33,7 +33,7 @@ function CollectionPreview({entry,profile,index,total,rotationDay,onOpen,onPrefe
     <div className="mythic-showcase-greeting"><span>✧</span> 恭喜 MYTHIC <span>✧</span></div>
     <strong className="mythic-showcase-game-name">{game.name}</strong>
     <div className="mythic-showcase-player">
-     {profile.avatar?<img src={profile.avatar} alt="" width={26} height={26} loading="lazy" decoding="async"/>:
+     {avatar?<img src={avatar} alt="" width={26} height={26} loading="lazy" decoding="async"/>:
       <CircleUserRound aria-hidden="true" size={14}/>}
      <span>{profile.gamertag||'Xbox 玩家'}</span>
     </div>
