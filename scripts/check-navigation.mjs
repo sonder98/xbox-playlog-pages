@@ -16,7 +16,7 @@ games[0].cachedPosterScreenshotsSmall=['https://covers.example.test/preview.svg'
 games[0].posterRotationStartDay='2026-11-06';
 for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),points:[10,20,0,15][i],name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:i===1?'https://covers.example.test/wide.svg':'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
 for(const game of games){game.total=4;game.earned=2;game.groupStatus='verified';game.groups=[{id:'base',name:'本体',kind:'base',earned:2,total:2,achievementIds:['1','2']},{id:'dlc',name:'追加故事',kind:'dlc',earned:0,total:2,achievementIds:['3','4']}];}
-const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:'https://covers.example.test/avatar.svg'},games,source:'Exophase',warnings:[]}]},password);
+const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:'https://covers.example.test/avatar.svg'},games,source:'Exophase',warnings:[],syncMechanism:'cloudflare'}]},password);
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4173'],{stdio:'ignore'});
 let browser;
 try{
@@ -381,6 +381,8 @@ try{
       assert.equal(await page.locator('.manage-page').getByText(removed,{exact:true}).count(),0,
         'Unused management card was removed: '+removed);
     }
+    assert.equal(await page.locator('#sync-history .history-sync-mechanism').first().innerText(),'Cloudflare 自动同步',
+      'Snapshot provenance is visible without changing the history layout');
     assert.equal(await page.locator('#sync-history .history-row').count(),1,
       'Existing snapshot history remains below game visibility');
     const groupOrder=await page.locator('.manage-section').evaluateAll(sections=>sections.map(section=>section.getBoundingClientRect().top));
