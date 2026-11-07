@@ -4,7 +4,7 @@ import type {Profile,Achievement} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {posterLocalDate} from '../mythic-posters';
 import {MythicBadgeArt} from './mythic-badge';
-import {mythicBackdrop,mythicCover,mythicImageAlreadyDecoded,useMythicRotationDay,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
+import {mythicBackdrop,mythicBackdropPreview,mythicCover,mythicImageAlreadyDecoded,useMythicRotationDay,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
 import {MythicOpeningFireworks} from './mythic-fireworks';
 
 const GOLD='#e6c47b';
@@ -65,14 +65,20 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
  // Never stretch a square library cover into this area.
  const screenshot=game.posterImagePurpose==='Screenshot';
  const background=mythicBackdrop(game,rotationDay);
+ const previewBackground=mythicBackdropPreview(game,rotationDay);
  const cover=mythicCover(game);
+ const [previewReady]=useDecodedArt(previewBackground);
  const [backdropReady]=useDecodedArt(background);
  const [coverReady,onCoverLoaded]=useDecodedArt(cover);
  const [avatarReady,onAvatarLoaded]=useDecodedArt(profile.avatar);
  return <article className={'mythic-poster'+(active?' is-active':'')+(opening?' is-opening':'')+(!fontReady?' is-type-loading':'')} data-poster-game={game.id}
   aria-label={game.name+' Mythic 纪念卡'}>
+  {previewBackground&&previewBackground!==background&&
+   <div className={'mythic-poster-backdrop-preview'+(previewReady?' is-loaded':'')+(backdropReady?' is-replaced':'')}
+    data-art-tier="preview" style={{backgroundImage:`url("${previewBackground.replaceAll('"','%22')}")`}}/>}
   <div className={'mythic-poster-backdrop'+(background?' has-promotional-art':'')+(backdropReady?' is-loaded':'')}
    data-art-source={screenshot&&game.posterImage?'store-screenshot':game.posterImage?'store-poster':background?'store-hero':'no-promotional-art'}
+   data-art-tier="full"
    style={background?{backgroundImage:`url("${background.replaceAll('"','%22')}")`}:undefined}/>
   <div className="mythic-poster-backdrop-shade"/>
   <OrnateBorder/>

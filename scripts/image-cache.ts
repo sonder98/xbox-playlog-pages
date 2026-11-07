@@ -17,7 +17,7 @@ type Options={directory?:string;baseUrl?:string;budgetMs?:number;fetchImage?:(ur
 export async function cacheRecordImages(record:RecordData,options:Options={}){
   const directory=options.directory||'public/media',base=options.baseUrl||'https://sonder98.github.io/xbox-playlog-pages/media/';
   fs.mkdirSync(directory,{recursive:true});
-  let downloaded=0,reused=0,failures=0,originalBytes=0,webpBytes=0,blocked=false;
+  let downloaded=0,reused=0,derived=0,failures=0,originalBytes=0,webpBytes=0,blocked=false;
   const deadline=Date.now()+(options.budgetMs??300_000);
   const fetchImage=options.fetchImage||(async(url:string)=>{
     const response=await fetch(url,{headers:{Accept:'image/*','User-Agent':'XboxPlaylog/1.0 (personal public artwork cache)'},redirect:'error',signal:AbortSignal.timeout(12000)});
@@ -34,7 +34,7 @@ export async function cacheRecordImages(record:RecordData,options:Options={}){
   }
   for(const game of record.games){
     delete game.cachedImage;delete game.cachedImageLarge;delete game.cachedDetailImage;
-    delete game.cachedPosterImage;delete game.cachedPosterScreenshots;
+    delete game.cachedPosterImage;delete game.cachedPosterScreenshots;delete game.cachedPosterScreenshotsSmall;
     const source=game.image3x||game.image2x||game.image;
     add(source,[480,1600],urls=>{game.cachedImage=urls.get(480);game.cachedImageLarge=urls.get(1600);});
     const landscape=game.detailImage||game.imageWide;
@@ -44,9 +44,14 @@ export async function cacheRecordImages(record:RecordData,options:Options={}){
     // Non-Mythic games don't carry the gallery and cause no extra downloads.
     if(game.posterScreenshots?.length){
       const cached=game.posterScreenshots.map(()=>'');
+      const small=game.posterScreenshots.map(()=>'');
       game.cachedPosterScreenshots=cached;
+      game.cachedPosterScreenshotsSmall=small;
       game.posterScreenshots.forEach((url,index)=>
-        add(url,[1600],urls=>{cached[index]=urls.get(1600)||'';}));
+        add(url,[480,1600],urls=>{
+          cached[index]=urls.get(1600)||'';
+          small[index]=urls.get(480)||'';
+        }));
     }
   }
   for(const game of record.games)for(const a of game.achievements||[]){delete a.cachedImage;add(a.image,[168],urls=>{a.cachedImage=urls.get(168);});}
@@ -55,11 +60,15 @@ export async function cacheRecordImages(record:RecordData,options:Options={}){
     while(cursor<tasks.length){
       const [url,job]=tasks[cursor++],urls=new Map<number,string>();
       const missing=[...job.widths].filter(width=>{const name=imageCacheName(url,width),file=path.join(directory,name);if(fs.existsSync(file)&&fs.statSync(file).size>0){urls.set(width,base+name);reused++;return false;}return true;});
-      if(missing.length&&!blocked&&Date.now()<deadline){
+      // Screenshot thumbnails can be produced from the durable 1600px WebP.
+      // Do not re-download an existing Store screenshot to create a 480px variant.
+      const sourceWidth=missing.length?[...job.widths].filter(w=>w>Math.max(...missing)&&urls.has(w)).sort((a,b)=>a-b)[0]:undefined;
+      if(missing.length&&Date.now()<deadline&&(!blocked||sourceWidth!==undefined)){
         try{
-          const bytes=await fetchImage(url);originalBytes+=bytes.length;
+          const bytes=sourceWidth===undefined?await fetchImage(url):fs.readFileSync(path.join(directory,imageCacheName(url,sourceWidth)));
+          if(sourceWidth===undefined)originalBytes+=bytes.length;
           for(const width of missing){const output=await convertImage(bytes,width),name=imageCacheName(url,width),file=path.join(directory,name);fs.writeFileSync(file+'.tmp',output);fs.renameSync(file+'.tmp',file);urls.set(width,base+name);webpBytes+=output.length;}
-          downloaded++;
+          if(sourceWidth===undefined)downloaded++;else derived+=missing.length;
         }catch{failures++;}
       }
       for(const apply of job.apply)apply(urls);
@@ -67,6 +76,6 @@ export async function cacheRecordImages(record:RecordData,options:Options={}){
   }
   await Promise.all(Array.from({length:8},worker));
   const covers=record.games.filter(g=>g.cachedImage).length,achievements=record.games.flatMap(g=>g.achievements||[]).filter(a=>a.cachedImage).length;
-  console.log(`图片缓存：封面 ${covers}/${record.games.length}，成就 ${achievements}；下载 ${downloaded}，复用 ${reused}，失败 ${failures}；原图 ${originalBytes} 字节，WebP ${webpBytes} 字节${blocked?'；源站拒绝，已停止下载':''}`);
-  return {covers,achievements,downloaded,reused,failures,originalBytes,webpBytes};
+  console.log(`图片缓存：封面 ${covers}/${record.games.length}，成就 ${achievements}；下载 ${downloaded}，复用 ${reused}，本地生成 ${derived}，失败 ${failures}；原图 ${originalBytes} 字节，WebP ${webpBytes} 字节${blocked?'；源站拒绝，已停止下载':''}`);
+  return {covers,achievements,downloaded,reused,derived,failures,originalBytes,webpBytes};
 }

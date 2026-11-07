@@ -3,14 +3,14 @@ import {ArrowLeft,ArrowUpRight,CircleUserRound,Diamond,Sparkles} from 'lucide-re
 import type {Profile} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {MYTHIC_BADGE_URL,posterLocalDate} from '../mythic-posters';
-import {mythicBackdrop,mythicCover,prepareMythicPoster,useMythicRotationDay,warmMythicFonts} from '../mythic-assets';
+import {mythicBackdropPreview,mythicCover,prepareMythicPoster,useMythicRotationDay,warmMythicFonts} from '../mythic-assets';
 
 function CollectionPreview({entry,profile,index,total,rotationDay,onOpen,onPrefetch}:{
  entry:MythicPoster;profile:Profile;index:number;total:number;rotationDay:number;
  onOpen:()=>void;onPrefetch:()=>void;
 }){
  const {game,firstAt,mythicAt,firstAchievement,lastBaseAchievement,daysToMythic,baseTotal}=entry;
- const background=mythicBackdrop(game,rotationDay),cover=mythicCover(game);
+ const background=mythicBackdropPreview(game,rotationDay),cover=mythicCover(game);
  const first=posterLocalDate(firstAt),finish=posterLocalDate(mythicAt);
  const firstArt=firstAchievement?.cachedImage||firstAchievement?.image;
  const lastArt=lastBaseAchievement?.cachedImage||lastBaseAchievement?.image;
@@ -82,10 +82,8 @@ export function MythicShowcase({posters,profile,onClose,onOpen}:{
   document.body.style.overflow='hidden';
   return()=>{document.body.style.overflow=before;};
  },[]);
- // Visible cards preheat immediately. Once the visitor stays on the wall,
- // quietly complete the rest of the collection with only two background
- // prefetches in flight. Otherwise a card on row 5 can still be cold after
- // several minutes, because IntersectionObserver only warmed nearby rows.
+ // The idle queue warms every 480px preview without fetching all 70 HD
+ // screenshots. Intentional hover/focus preloads that poster's HD artwork.
  useEffect(()=>{
   const root=screenRef.current;
   if(!root)return;
@@ -166,7 +164,7 @@ export function MythicShowcase({posters,profile,onClose,onOpen}:{
     {posters.map((entry,index)=><CollectionPreview key={entry.game.id}
      entry={entry} profile={profile} index={index} total={posters.length} rotationDay={rotationDay}
      onOpen={()=>onOpen(entry.game.id)}
-     onPrefetch={()=>{void prepareMythicPoster(entry,profile);}}/>)}
+     onPrefetch={()=>{void prepareMythicPoster(entry,profile,true);}}/>)}
    </div>
    <div className="mythic-showcase-bottom">✧ <span>THE JOURNEY IS THE REWARD</span> ✧</div>
   </div>

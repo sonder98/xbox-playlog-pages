@@ -9,6 +9,11 @@ const password='navigation-test-only';
 const games=Array.from({length:12},(_,i)=>({id:String(100+i),name:'Test Game '+i,image:'https://covers.example.test/square.svg',image2x:'https://covers.example.test/medium.svg',image3x:'https://covers.example.test/original.svg',devices:['Xbox'],lastPlayed:'2026-10-30T00:00:00Z',minutes:60,earned:1,total:10,score:10,maxScore:100}));
 games[0].posterImage='https://covers.example.test/landscape.svg';
 games[0].posterImagePurpose='Screenshot';
+// Fake a screenshot pair already archived in GitHub Pages media: 480 + 1600.
+games[0].posterScreenshots=['https://covers.example.test/landscape.svg'];
+games[0].cachedPosterScreenshots=['https://covers.example.test/landscape.svg'];
+games[0].cachedPosterScreenshotsSmall=['https://covers.example.test/preview.svg'];
+games[0].posterRotationStartDay='2026-11-06';
 for(const game of games)game.achievements=[0,9.9,10,null].map((rarity,i)=>({id:String(i+1),points:[10,20,0,15][i],name:i===1?'Very long achievement name to check readable wrapping on mobile':'Achievement '+i,description:i===2?'这是一段很长的成就描述，用来验证它能与稀有度并排，内容自动换行且不挤出屏幕。':'完成一次挑战。',image:i===1?'https://covers.example.test/wide.svg':'https://covers.example.test/square.svg',unlocked:i<2,unlockedAt:i<2?(i===0?'2026-10-27T12:24:00.000Z':'2026-10-28T12:24:00.000Z'):null,rarity}));
 for(const game of games){game.total=4;game.earned=2;game.groupStatus='verified';game.groups=[{id:'base',name:'本体',kind:'base',earned:2,total:2,achievementIds:['1','2']},{id:'dlc',name:'追加故事',kind:'dlc',earned:0,total:2,achievementIds:['3','4']}];}
 const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:'https://covers.example.test/avatar.svg'},games,source:'Exophase',warnings:[]}]},password);
@@ -60,9 +65,9 @@ try{
     page.on('pageerror',error=>errors.push(error.message));
     await page.route('https://covers.example.test/**',route=>{
       const original=route.request().url().endsWith('original.svg'),medium=route.request().url().endsWith('medium.svg');
-      const wide=route.request().url().endsWith('/wide.svg'),landscape=route.request().url().endsWith('/landscape.svg');
+      const wide=route.request().url().endsWith('/wide.svg'),landscape=route.request().url().endsWith('/landscape.svg'),preview=route.request().url().endsWith('/preview.svg');
       // Slightly rectangular originals simulate the Cyberpunk 2077 Mythic frame gap.
-      const width=original||landscape?1920:medium?480:wide?160:64,height=landscape?1080:wide?90:original?1800:width;
+      const width=original||landscape?1920:medium||preview?480:wide?160:64,height=landscape?1080:preview?270:wide?90:original?1800:width;
       return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#789"/></svg>`});
     });
     // Use the real, committed first-party PNG; a regression must not silently
@@ -941,6 +946,8 @@ try{
       'The latest Mythic appears first in the showcase');
     assert.equal(await showcase.locator('.mythic-showcase-backdrop').first().getAttribute('loading'),'lazy',
       'The cabinet uses native lazy-loading for cinematic preview images');
+    assert.ok((await showcase.locator('.mythic-showcase-backdrop').first().getAttribute('src')).endsWith('preview.svg'),
+      'The wall uses the cached 480px screenshot rather than fetching the 1600px original for each thumbnail');
     await page.waitForFunction(()=>document.querySelector(
       '.mythic-showcase-item[data-showcase-game="100"]')?.getAttribute('data-poster-prepared')==='true');
     assert.equal(await showcase.locator('[data-showcase-game="100"]').getAttribute('data-poster-prepared'),'true',
@@ -1123,6 +1130,14 @@ try{
     const posterBackdrop=posterWall.locator('.mythic-poster.is-active .mythic-poster-backdrop');
     assert.equal(await posterBackdrop.getAttribute('data-art-source'),'store-screenshot',
       'The first Australian Store Screenshot is displayed instead of a stretched square cover');
+    const previewBackdrop=posterWall.locator('.mythic-poster.is-active .mythic-poster-backdrop-preview');
+    assert.equal(await previewBackdrop.getAttribute('data-art-tier'),'preview');
+    assert.ok((await previewBackdrop.getAttribute('style')).includes('preview.svg'),
+      'The full-size poster immediately uses the small warmed image while HD decodes');
+    assert.equal(await posterBackdrop.getAttribute('data-art-tier'),'full');
+    await page.waitForFunction(()=>document.querySelector('.mythic-poster.is-active .mythic-poster-backdrop-preview')?.classList.contains('is-replaced'));
+    assert.equal(await previewBackdrop.evaluate(el=>getComputedStyle(el).maskImage.includes('linear-gradient')),true,
+      'Preview and HD use the same cinematic mask');
     const artStyle=await posterBackdrop.evaluate(el=>({
       background:getComputedStyle(el).backgroundImage,
       size:getComputedStyle(el).backgroundSize,

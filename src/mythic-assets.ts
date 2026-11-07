@@ -45,18 +45,24 @@ export function useMythicRotationDay(){
  },[day]);
  return day;
 }
-export function mythicBackdrop(game:Game,day=beijingDay(Date.now())){
+function rotatingScreenshotIndex(game:Game,day:number):number|null{
  const shots=game.posterScreenshots;
- if(shots?.length&&game.posterRotationStartDay){
-  const firstDay=Date.parse(game.posterRotationStartDay+'T00:00:00Z')/86400_000;
-  if(Number.isFinite(firstDay)){
-   const index=Math.max(0,day-firstDay)%shots.length;
-   return game.cachedPosterScreenshots?.[index]||shots[index];
-  }
- }
+ if(!shots?.length||!game.posterRotationStartDay)return null;
+ const firstDay=Date.parse(game.posterRotationStartDay+'T00:00:00Z')/86400_000;
+ return Number.isFinite(firstDay)?Math.max(0,day-firstDay)%shots.length:null;
+}
+export function mythicBackdrop(game:Game,day=beijingDay(Date.now())){
+ const index=rotatingScreenshotIndex(game,day);
+ if(index!==null)return game.cachedPosterScreenshots?.[index]||game.posterScreenshots![index];
  return game.cachedPosterImage||game.posterImage||
   (game.detailImagePurpose==='SuperHeroArt'||game.detailImagePurpose==='TitledHeroArt'?
    game.cachedDetailImage||game.detailImage:undefined);
+}
+/** The small WebP uses the EXACT SAME daily screenshot index as the HD image.
+ * Older snapshots without preview assets automatically use the existing image. */
+export function mythicBackdropPreview(game:Game,day=beijingDay(Date.now())){
+ const index=rotatingScreenshotIndex(game,day);
+ return (index!==null?game.cachedPosterScreenshotsSmall?.[index]:undefined)||mythicBackdrop(game,day);
 }
 export function mythicCover(game:Game){
  // The circular art is at most 141 CSS pixels wide; the existing 480px WebP
@@ -68,27 +74,27 @@ export function warmMythicPoster(entry:MythicPoster,profile:Profile){
  // screenshot, so the biggest request cannot get a head start on avatars.
  for(const url of [profile.avatar,MYTHIC_BADGE_URL,mythicCover(entry.game)])
   void warmMythicImage(url,'high');
- for(const url of [mythicBackdrop(entry.game),
+ for(const url of [mythicBackdropPreview(entry.game),
   entry.firstAchievement?.cachedImage||entry.firstAchievement?.image,
   entry.lastBaseAchievement?.cachedImage||entry.lastBaseAchievement?.image])
   void warmMythicImage(url);
+ // The full-resolution background is fetched only for the open card or on
+ // deliberate hover, not for every item on a 70-card wall.
 }
 
-/** Prepare the *complete* enlarged card while its painted thumbnail is moving.
- * Fullscreen reveal waits for image decode and the final typography, so the
- * screenshot, gold ornaments, cover and badge cannot arrive in separate stages.
- * Failed resources resolve to their fixed-size placeholders instead of hanging.
- */
-export function prepareMythicPoster(entry:MythicPoster,profile:Profile):Promise<void>{
+/** Warm fast preview art for the wall's idle queue. High-res screenshots are
+ * optional and fetched on deliberate hover; opening never waits for them. */
+export function prepareMythicPoster(entry:MythicPoster,profile:Profile,fullBackdrop=false):Promise<void>{
  const urls=[
   profile.avatar,MYTHIC_BADGE_URL,mythicCover(entry.game),
-  mythicBackdrop(entry.game),
+  mythicBackdropPreview(entry.game),
   entry.firstAchievement?.cachedImage||entry.firstAchievement?.image,
-  entry.lastBaseAchievement?.cachedImage||entry.lastBaseAchievement?.image
+  entry.lastBaseAchievement?.cachedImage||entry.lastBaseAchievement?.image,
+  ...(fullBackdrop?[mythicBackdrop(entry.game)]:[])
  ];
  return Promise.all([
   warmMythicFonts(),
-  ...urls.map((url,i)=>warmMythicImage(url,i<3?'high':'auto'))
+  ...urls.map((url,i)=>warmMythicImage(url,i<4?'high':'auto'))
  ]).then(()=>{});
 }
 

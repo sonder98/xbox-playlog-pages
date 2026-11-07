@@ -22,6 +22,17 @@ function logMythicArtworkCoverage(games:Game[]){
   totalScreenshots:mythic.reduce((n,g)=>n+(g.posterScreenshots?.length||0),0)
  }));
 }
+/** Aggregate-only verification: distinguish AU Store screenshots listed in
+ * the catalog from variants actually archived in /media/. */
+function logMythicScreenshotCache(games:Game[]){
+ const mythic=games.filter(g=>completion(g).mythic);
+ const total=mythic.reduce((n,g)=>n+(g.posterScreenshots?.length||0),0);
+ const full=mythic.reduce((n,g)=>n+(g.cachedPosterScreenshots?.filter(Boolean).length||0),0);
+ const previews=mythic.reduce((n,g)=>n+(g.cachedPosterScreenshotsSmall?.filter(Boolean).length||0),0);
+ console.log('Mythic Screenshot 缓存：'+JSON.stringify({
+  total,full,previews,missingFull:total-full,missingPreviews:total-previews
+ }));
+}
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
 const root=process.env.MICROSOFT_STATE_DIR||'.private/microsoft',key=process.env.MICROSOFT_STATE_KEY!;
 const saved=readState(root+'/candidate.json',key);
@@ -37,6 +48,7 @@ if(ledger&&fresh?.source==='Xbox'&&!boundaryPlaytimeSweep(new Date().toISOString
  console.log('快速快照澳区横幅覆盖：'+JSON.stringify(artwork));
  logMythicArtworkCoverage(fresh.games);
  await cacheRecordImages(fresh);
+ logMythicScreenshotCache(fresh.games);
  await publishSnapshot(fresh,previous.filter((r:any)=>r.id!==fresh.id).slice(0,29),target,ledger,fixedPcMetascores(fresh.games.map((g:any)=>String(g.id)),key));console.log('复用刚完成的微软快照。');process.exit(0);
 }
 const cacheBaseline=saved?.record??previous[0];
@@ -60,6 +72,7 @@ result.record.games=result.record.games.filter(g=>g.total>0||g.minutes!==null);
 result.record=refreshGroupingWarnings(result.record);
 const mediaStarted=Date.now();
 await cacheRecordImages(result.record);
+logMythicScreenshotCache(result.record.games);
 console.log('图片缓存耗时（秒）：'+Math.round((Date.now()-mediaStarted)/1000));
 writeState(root+'/candidate.json',{...result,record:{...result.record,games:allScannedGames},
  lastFullCatalogAt:result.audit.fullRefresh?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);
