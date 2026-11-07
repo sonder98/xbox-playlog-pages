@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue,countVisibleUnknownGroups,refreshGroupingWarnings} from '../scripts/microsoft-library.ts';
+import {achievement,officialAchievementProgress,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue,countVisibleUnknownGroups,refreshGroupingWarnings} from '../scripts/microsoft-library.ts';
 import {officialGameVisible} from '../src/data.ts';
 import type {Achievement,Game,RecordData} from '../src/data.ts';
 const config={clientId:'11111111-1111-1111-1111-111111111111',refreshToken:'PRIVATE-REFRESH'};
@@ -22,6 +22,18 @@ test('rarity zero, legacy sentinel dates, native statlists, and ambiguous catalo
  const g=game();const catalog:any={catalogs:[{name:g.name,total:2,data:{achievements:[{...award('99',true),name:'Award 1'},{...award('100'),name:'Award 2'}],groups:[{id:'base',kind:'base',name:'本体',achievementIds:['99','100']}]}}]};
  assert.deepEqual(catalogGroups(catalog,g)?.[0].achievementIds,['1','2']);catalog.catalogs[0].data.achievements[1].name='Award 1';assert.equal(catalogGroups(catalog,g),undefined);
 });
+test('official progress uses player InProgress requirements, never a catalog default or unsupported compound rule',()=>{
+ const player={id:'7',name:'Jolly Cooperation',progressState:'InProgress',progression:{requirements:[{current:'80',target:'100'}]}};
+ assert.equal(officialAchievementProgress(player),80,'FH4 player response yields 80 percent');
+ assert.equal(achievement(player).progressPercent,80);
+ assert.equal(achievement({...player,progressState:'NotStarted',progression:{requirements:[{current:'0',target:'100'}]}}).progressPercent,undefined,'Catalog placeholder must not display zero');
+ assert.equal(achievement({...player,progressState:'Achieved'}).progressPercent,undefined,'Unlocked awards keep their unlock time instead');
+ assert.equal(officialAchievementProgress({...player,progression:{requirements:[{current:4,target:5},{current:2,target:3}]}}),null,'Compound goals cannot be reduced to a trustworthy percent');
+ assert.equal(officialAchievementProgress({...player,progression:{requirements:[{current:8,target:0}]}}),null);
+ assert.equal(officialAchievementProgress({...player,progression:{requirements:[{current:11,target:10}]}}),null);
+ assert.equal(officialAchievementProgress({...player,progression:{requirements:[{current:'N/A',target:100}]}}),null);
+ assert.equal(achievement({id:'7',progressState:'NotStarted'}).progressPercent,undefined);
+});
 test('full scan reads modern contract 6, legacy all+earned, explicit groups, time, and emits only counts in audit',async()=>{
  const calls:{url:URL;headers:any}[]=[];
  const request:typeof fetch=async(input,init)=>{
@@ -34,12 +46,19 @@ test('full scan reads modern contract 6, legacy all+earned, explicit groups, tim
   else if(url.hostname==='userstats.xboxlive.com')data={statlistscollection:[{stats:[{name:'MinutesPlayed',value:'0'}]}]};
   else if(url.pathname.endsWith('titleachievements'))data={achievements:[{id:1,name:'PRIVATE-ONE'},{id:2,name:'PRIVATE-TWO'}]};
   else if(url.searchParams.get('titleId')==='2')data={achievements:[{id:1,name:'PRIVATE-ONE',unlocked:true,timeUnlocked:'2026-10-30T00:00:00Z'}]};
-  else data={achievements:[{id:'1',name:'PRIVATE-ONE',progressState:'Achieved',progression:{timeUnlocked:'2026-10-30T00:00:00Z'},rarity:{currentPercentage:0},mediaAssets:[{url:'https://images.example/award'}],groupIds:['base']},{id:'2',name:'PRIVATE-TWO',rarity:{currentPercentage:50}}],completion:[{titleId:'1',groups:{base:{groupType:'BaseGame',achievementIds:['1'],unlockedAchievementIds:['1']}}}]};
+  else data={achievements:[{id:'1',name:'PRIVATE-ONE',progressState:'Achieved',progression:{timeUnlocked:'2026-10-30T00:00:00Z'},rarity:{currentPercentage:0},mediaAssets:[{url:'https://images.example/award'}],groupIds:['base']},{id:'2',name:'PRIVATE-TWO',rarity:{currentPercentage:50},
+    progressState:url.searchParams.get('possibleOnly')==='true'?'NotStarted':'InProgress',
+    progression:{requirements:[{current:url.searchParams.get('possibleOnly')==='true'?0:80,target:100}]}}
+   ],completion:[{titleId:'1',groups:{base:{groupType:'BaseGame',achievementIds:['1'],unlockedAchievementIds:['1']}}}]};
   return Response.json(data);
  };
  const {record:r,audit}=await scanMicrosoft(config,{request,pause:async()=>{},expectedOwner:'2530000000000000'});
  assert.equal(audit.processed,2);assert.equal(audit.complete,2);assert.equal(audit.legacy,1);assert.equal(audit.rarityAchievements,2);assert.equal(audit.officialBaseGroups,1);assert.equal(audit.officialAddonGroups,1);assert.equal(audit.failed,0);
- assert.equal(r.games[0].minutes,0);assert.equal(r.games[1].minutes,null);assert.equal(r.games[1].achievements?.filter(a=>a.unlocked).length,1);
+ assert.equal(r.games[0].minutes,0);assert.equal(r.games[1].minutes,null);
+ assert.equal(r.games[0].achievements?.find(a=>a.id==='2')?.progressPercent,80,
+  'User progress must take precedence over possibleOnly catalog default zero');
+ assert.equal(r.games[0].progressScanVersion,1);
+ assert.equal(r.games[1].progressScanVersion,1);assert.equal(r.games[1].achievements?.filter(a=>a.unlocked).length,1);
  assert.equal(calls.find(c=>c.url.hostname==='achievements.xboxlive.com'&&!c.url.pathname.includes('/history/'))?.headers['x-xbl-contract-version'],'6');
  for(const value of ['PRIVATE','2530000000000000','2026-10-30'])assert.ok(!JSON.stringify(audit).includes(value));
 });
