@@ -32,6 +32,10 @@ export async function cacheRecordImages(record:RecordData,options:Options={}){
     const url=imageSource(source);if(!url)return;
     const job=jobs.get(url)||{widths:new Set<number>(),apply:[]};widths.forEach(w=>job.widths.add(w));job.apply.push(apply);jobs.set(url,job);
   }
+  // The player avatar is public Xbox profile art; keep a 96px WebP
+  // beside thumbnails so a full-size Mythic card never hotlinks it.
+  delete record.profile.cachedAvatar;
+  add(record.profile.avatar,[96],urls=>{record.profile.cachedAvatar=urls.get(96);});
   for(const game of record.games){
     delete game.cachedImage;delete game.cachedImageLarge;delete game.cachedDetailImage;
     delete game.cachedPosterImage;delete game.cachedPosterScreenshots;delete game.cachedPosterScreenshotsSmall;
