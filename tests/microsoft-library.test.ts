@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue} from '../scripts/microsoft-library.ts';
+import {achievement,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue,countVisibleUnknownGroups,refreshGroupingWarnings} from '../scripts/microsoft-library.ts';
 import {officialGameVisible} from '../src/data.ts';
 import type {Achievement,Game,RecordData} from '../src/data.ts';
 const config={clientId:'11111111-1111-1111-1111-111111111111',refreshToken:'PRIVATE-REFRESH'};
@@ -42,6 +42,21 @@ test('full scan reads modern contract 6, legacy all+earned, explicit groups, tim
  assert.equal(r.games[0].minutes,0);assert.equal(r.games[1].minutes,null);assert.equal(r.games[1].achievements?.filter(a=>a.unlocked).length,1);
  assert.equal(calls.find(c=>c.url.hostname==='achievements.xboxlive.com'&&!c.url.pathname.includes('/history/'))?.headers['x-xbl-contract-version'],'6');
  for(const value of ['PRIVATE','2530000000000000','2026-10-30'])assert.ok(!JSON.stringify(audit).includes(value));
+});
+test('group warning does not mistake cached empty titles for ungrouped games or reuse stale counts',()=>{
+ const unknown={...game('1'),officialHidden:false,groupStatus:'unavailable' as const};
+ const empty={...game('2'),officialHidden:false,total:0,earned:0,score:0,maxScore:0,minutes:null,achievements:[],groupStatus:'unavailable' as const};
+ const hidden={...game('3'),officialHidden:true,groupStatus:'unavailable' as const};
+ const verified={...game('4'),officialHidden:false,groupStatus:'verified' as const,
+  groups:[{id:'base',kind:'base' as const,name:'本体',achievementIds:['1','2'],earned:1,total:2}]};
+ const input=record([unknown,...Array.from({length:33},(_,i)=>({...empty,id:String(100+i)})),hidden,verified]);
+ input.warnings=['35 个游戏分组未知。','1 个游戏的官方数据尚未完整核对。'];
+ assert.equal(countVisibleUnknownGroups(input.games),1);
+ const cleaned=refreshGroupingWarnings(input);
+ assert.deepEqual(cleaned.warnings,['1 个游戏的官方数据尚未完整核对。','1 个游戏分组未知。']);
+ assert.deepEqual(refreshGroupingWarnings(cleaned).warnings,cleaned.warnings,'quick snapshot reuse cannot duplicate warnings');
+ assert.deepEqual(refreshGroupingWarnings({...input,games:input.games.filter(g=>g.total===0)}).warnings,
+  ['1 个游戏的官方数据尚未完整核对。'],'empty titles alone are not a grouping problem');
 });
 test('permission failures preserve previous title records; 429 interrupts without a request storm',async()=>{
  let reads=0;const old=game();
@@ -365,11 +380,15 @@ test('encrypted empty-title cache suppresses repeated full reads but expires and
  assert.equal(first.record.games.filter(g=>g.total>0||g.minutes!==null).length,0,
   'Empty catalogs must not appear in the public snapshot');
  assert.equal(first.audit.emptySkipped,0);
+  assert.equal(first.audit.unknownGroups,0,'An empty catalog is not an unknown achievement grouping');
+  assert.deepEqual(first.record.warnings,[]);
  const initialReads=detailCalls; detailCalls=0;statsCalls=0;
  const reused=await scanMicrosoft(config,{request,pause:async()=>{},now:subsequent,previous:first.record,emptyTitles:first.emptyTitles});
  assert.equal(detailCalls,0,'An unchanged empty title does not trigger a complete achievement catalog');
  assert.equal(statsCalls,0,'An unchanged empty title does not request playtime repeatedly');
  assert.equal(reused.audit.emptySkipped,1);
+  assert.equal(reused.audit.unknownGroups,0);
+  assert.deepEqual(reused.record.warnings,[],'A cache hit must not alter the grouping warning');
  assert.equal(reused.audit.reuseReasons.emptyCache,1);
  assert.equal(reused.emptyTitles[0].checkedAt,initial,'Skipping must not extend the 24-hour expiry');
  assert.equal(reused.record.games[0].total,0);
