@@ -1,5 +1,5 @@
 import {useEffect,useId,useRef,useState,type ReactNode} from 'react';
-import {ArrowDownUp,Check,ListFilter} from 'lucide-react';
+import {ArrowDownUp,Check,ListFilter,Search,X} from 'lucide-react';
 import type {AchievementSort,AchievementUnlockFilter} from '../achievement-sort';
 import {gameLibrarySortChoices,type GameLibraryFilter,type GameLibrarySort} from '../game-library-sort';
 
@@ -81,5 +81,46 @@ export function GameLibrarySortControl({sort,filter,onChange}:{
   <AchievementDropdown title="排序" label="游戏排序" menuLabel="游戏排序方式"
    value={sort} onChange={onChange} options={gameLibrarySortChoices(filter)}
    icon={<ArrowDownUp size={17} aria-hidden="true"/>}/>
+ </div>;
+}
+
+/** An inline search that grows to the RIGHT of the search icon, in the same
+ * toolbar row as the sort button. Never overlays the sort control. */
+export function GameLibrarySearchControl({query,onChange}:{
+ query:string;onChange:(next:string)=>void;
+}){
+ const [open,setOpen]=useState(false);
+ const wrapper=useRef<HTMLDivElement>(null);
+ const trigger=useRef<HTMLButtonElement>(null);
+ const input=useRef<HTMLInputElement>(null);
+ const fieldId=useId();
+ useEffect(()=>{
+  if(!open)return;
+  input.current?.focus();
+  const outside=(event:PointerEvent)=>{
+   if(!wrapper.current?.contains(event.target as Node))setOpen(false);
+  };
+  document.addEventListener('pointerdown',outside);
+  return ()=>document.removeEventListener('pointerdown',outside);
+ },[open]);
+ return <div className={'game-library-search'+(open?' is-open':'')} ref={wrapper}>
+  <button type="button" ref={trigger}
+   className={'achievement-sort-toggle game-library-search-toggle'+(open?' is-open':'')+(query?' has-query':'')}
+   aria-label="搜索游戏" aria-expanded={open}
+   aria-controls={open?fieldId:undefined} title="搜索游戏"
+   onClick={()=>setOpen(v=>!v)}><Search size={17} aria-hidden="true"/></button>
+  {open&&<div className="game-library-search-field" id={fieldId} role="search" aria-label="搜索游戏库">
+   <input ref={input} type="search" aria-label="搜索游戏名称" placeholder="搜索游戏名称…"
+    value={query} onChange={event=>onChange(event.target.value)}
+    onKeyDown={event=>{
+     if(event.key==='Escape'||event.key==='Enter'){
+      event.preventDefault();
+      setOpen(false);
+      trigger.current?.focus();
+     }
+    }}/>
+   {query&&<button type="button" className="game-library-search-clear" aria-label="清空游戏搜索"
+    onClick={()=>{onChange('');input.current?.focus();}}><X size={16} aria-hidden="true"/></button>}
+  </div>}
  </div>;
 }
