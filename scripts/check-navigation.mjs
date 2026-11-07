@@ -804,9 +804,9 @@ try{
     await sheet.waitFor();
     await sheet.getByRole('button',{name:'查看当天全部成就'}).click();
     await page.locator('.ah-achievement-card').first().waitFor();
-    assert.equal(await page.locator('.ah-achievement-card').count(),12,'All day unlocks across games appear');
+    assert.equal(await page.locator('.ah-achievement-card').count(),11,'All remaining October day unlocks across games appear');
     assert.ok(page.url().endsWith('#achievements/day/2026-10-27'),'Day detail is deep-linkable');
-    assert.equal(await page.locator('.ah-achievement-card .ah-game-source').count(),12,'Each achievement identifies its original game');
+    assert.equal(await page.locator('.ah-achievement-card .ah-game-source').count(),11,'Each achievement identifies its original game');
     assert.equal(await page.locator('.ah-achievement-card time').first().innerText(),'20:24');
     await page.locator('.ah-achievement-art img').first().waitFor();
     await page.waitForFunction(()=>document.querySelector('.ah-achievement-art')?.classList.contains('ah-art-square'));
