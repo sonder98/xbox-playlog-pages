@@ -1,4 +1,4 @@
-import {safeImage,type RecordData} from '../src/data.ts';
+import {safeImage,distinctScreenshotIndices,type RecordData} from '../src/data.ts';
 import {completion} from '../src/completion.ts';
 /** Select only first-party Australian Store artwork. Never send Xbox auth headers to this endpoint. */
 export async function australianArtwork(record:RecordData,request:typeof fetch=fetch,previous?:RecordData){
@@ -14,7 +14,7 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
      !completion(game).mythic&&old.posterSelectionVersion===2)){
    game.name=old.name;game.image=old.image;game.detailImage=old.detailImage;game.detailImagePurpose=old.detailImagePurpose;
    game.posterImage=old.posterImage;game.posterImagePurpose=old.posterImagePurpose;game.posterSelectionVersion=old.posterSelectionVersion;
-   if(old.posterScreenshots)game.posterScreenshots=old.posterScreenshots;
+   if(old.posterScreenshots)game.posterScreenshots=distinctScreenshotIndices(old.posterScreenshots).map(i=>old.posterScreenshots![i]);
    if(old.posterRotationStartDay)game.posterRotationStartDay=old.posterRotationStartDay;
    resolved++;landscapes++;continue;
   }
@@ -65,7 +65,7 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
   // screenshot list only when they first reach Mythic status.
   game.posterSelectionVersion=3;
   if(completion(game).mythic){
-   game.posterScreenshots=selected.screenshots;
+   game.posterScreenshots=distinctScreenshotIndices(selected.screenshots).map(i=>selected.screenshots[i]);
    game.posterRotationStartDay=old?.posterRotationStartDay||beijingToday;
   }else{
    delete game.posterScreenshots;delete game.posterRotationStartDay;
