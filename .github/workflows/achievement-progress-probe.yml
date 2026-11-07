@@ -1,0 +1,39 @@
+name: One-time read-only Xbox achievement progress probe
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/achievement-progress-probe.yml'
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: playlog-live-publish
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Restore encrypted Microsoft authorization
+        uses: actions/cache/restore@v4
+        with:
+          path: .private/microsoft
+          key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-probe-start
+          restore-keys: microsoft-private-v1-main-
+      - name: Query Forza Horizon 4 achievement progress read-only
+        env:
+          MICROSOFT_STATE_KEY: ${{ secrets.MICROSOFT_STATE_KEY }}
+        run: node --experimental-strip-types scripts/achievement-progress-probe.ts
+      - name: Save rotated Microsoft authorization encrypted
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .private/microsoft
+          key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-probe-end
