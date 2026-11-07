@@ -81,7 +81,7 @@ try{
     page.on('request',req=>{
       if(req.url().startsWith('https://xct.live/'))externalMythicRequests.push(req.url());
     });
-    await page.route('**/status.json',route=>route.fulfill({json:{initialized:true,...(simulatedStatusAt?{latestAt:simulatedStatusAt}:{})}}));
+    await page.route('**/status.json*',route=>route.fulfill({json:{initialized:true,...(simulatedStatusAt?{latestAt:simulatedStatusAt}:{})}}));
     await page.route('**/vault.json*',route=>route.fulfill({json:activeEnvelope}));
     // Most visual regressions inject a fresh network fixture on each login.
     // Clear only the encrypted local snapshot before those fixture resets.
@@ -118,13 +118,13 @@ try{
     // On a new device, network failure is not evidence that the site awaits its first sync.
     const simulatedOutage=route=>route.abort('failed');
     await page.route('**/vault.json*',simulatedOutage);
-    await page.route('**/status.json',simulatedOutage);
+    await page.route('**/status.json*',simulatedOutage);
     await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/');
     await page.getByRole('heading',{name:'暂时无法连接游戏档案'}).waitFor();
     assert.equal(await page.getByText('等待首次同步').count(),0,
       'A failed network request never masquerades as a first synchronization');
     await page.unroute('**/vault.json*',simulatedOutage);
-    await page.unroute('**/status.json',simulatedOutage);
+    await page.unroute('**/status.json*',simulatedOutage);
     await page.getByRole('button',{name:'重新读取游戏档案'}).click();
     await page.getByRole('heading',{name:'欢迎回到 XBOX Playlog'}).waitFor();
     await unlock();
@@ -157,7 +157,7 @@ try{
       'Only the encrypted envelope, never decrypted records, is saved for offline use');
     // The app now opens historic records even when both cloud endpoints are unreachable.
     await page.route('**/vault.json*',simulatedOutage);
-    await page.route('**/status.json',simulatedOutage);
+    await page.route('**/status.json*',simulatedOutage);
     await page.reload();
     await page.getByRole('heading',{name:'欢迎回到 XBOX Playlog'}).waitFor();
     assert.equal(await page.locator('.entry-screen').getByText('等待首次同步').count(),0);
@@ -169,7 +169,7 @@ try{
     assert.equal(await page.locator('.stats').count(),1,
       'Historical game records remain readable while cloud refresh fails in the background');
     await page.unroute('**/vault.json*',simulatedOutage);
-    await page.unroute('**/status.json',simulatedOutage);
+    await page.unroute('**/status.json*',simulatedOutage);
     // A newer encrypted cloud snapshot replaces the local history without hiding the archive.
     const newerPayload=await decryptVault(envelope,password);
     newerPayload.records[0].at='2026-11-02T00:00:00.000Z';
