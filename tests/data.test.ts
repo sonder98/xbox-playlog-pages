@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeTitles,parseStats,validateRecord,compareRecords,officialGameVisible,type RecordData} from '../src/data.ts';
+import {normalizeTitles,parseStats,validateRecord,compareRecords,officialGameVisible,syncMechanismLabel,type RecordData} from '../src/data.ts';
 const game={id:'123',name:'测试',image:'',devices:[],lastPlayed:null,minutes:100,earned:2,total:10,score:20,maxScore:100};
 const record=(gs:any[]):RecordData=>({id:'a',at:'2026-10-30T00:00:00Z',profile:{xuid:'2530000000000000',gamertag:'Tester',avatar:''},games:gs,source:'OpenXBL',warnings:[]});
 test('first snapshot is baseline; new games do not inflate delta',()=>{assert.equal(compareRecords(record([game])).minutes,null);assert.equal(compareRecords(record([{...game,minutes:160},{...game,id:'456',minutes:5000}]),record([game])).minutes,60)});
@@ -50,4 +50,20 @@ test('rotating Mythic screenshot URLs survive record validation without index re
  assert.deepEqual(valid.cachedPosterScreenshotsSmall,g.cachedPosterScreenshotsSmall);
  assert.deepEqual(validateRecord(record([{...g,cachedPosterScreenshotsSmall:['javascript:invalid','']}])).games[0].cachedPosterScreenshotsSmall,['','']);
  assert.equal(validateRecord(record([{...g,posterRotationStartDay:'yesterday'}])).games[0].posterRotationStartDay,undefined);
+});
+
+test('snapshot sync trigger is validated; all three sources and code-change have honest labels',()=>{
+ for(const [trigger,label] of [
+  ['cloudflare','Cloudflare 自动同步'],
+  ['manual','手动同步'],
+  ['day-boundary','跨天触发同步'],
+  ['code-update','代码更新触发']
+ ] as const){
+  const valid=validateRecord({...record([game]),syncMechanism:trigger});
+  assert.equal(valid.syncMechanism,trigger);
+  assert.equal(syncMechanismLabel(valid.syncMechanism),label);
+ }
+ assert.equal(syncMechanismLabel(validateRecord(record([game])).syncMechanism),'来源未记录',
+  'Legacy encrypted history must not infer a trigger from the clock');
+ assert.equal(validateRecord({...record([game]),syncMechanism:'untrusted'}).syncMechanism,undefined);
 });
