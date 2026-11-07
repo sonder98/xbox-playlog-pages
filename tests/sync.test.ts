@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {decryptVault} from '../src/crypto.ts';
 import {readVault} from '../scripts/password.ts';
 import {publishSnapshot} from '../scripts/snapshot.ts';
-import type {RecordData} from '../src/data.ts';
+import {validateRecord,type RecordData} from '../src/data.ts';
 test('snapshot is ciphertext, retains history, wrong password fails before replacement, password rotation retains all records',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'playlog-sync-')),cwd=process.cwd();
  try{
@@ -21,9 +21,17 @@ test('snapshot is ciphertext, retains history, wrong password fails before repla
   assert.equal(readFileSync('public/vault.json','utf8'),before);
   const previous=(await readVault(JSON.parse(before),password,password)).records;
    assert.equal(previous[0].syncMechanism,'cloudflare','Provenance must be preserved by encrypted snapshot round trips');
-  await publishSnapshot({...record,id:'2'},previous,'new-password');
+  // Reuse is an explicitly attributed new automatic event, not a fabricated
+  // new Microsoft scan. The original manual record remains intact in history.
+  const reused={...record,id:'auto-tick',at:new Date(Date.parse(record.at)+120000).toISOString(),
+   source:'Xbox',syncMechanism:'cloudflare' as const,syncReusedFromAt:record.at};
+  await publishSnapshot(reused,previous,'new-password');
   const encrypted=JSON.parse(readFileSync('public/vault.json','utf8'));
-  assert.equal((await decryptVault(encrypted,'new-password')).records.length,2);
+  const decrypted=await decryptVault(encrypted,'new-password');
+  assert.equal(decrypted.records.length,2);
+  assert.equal(decrypted.records[0].syncReusedFromAt,record.at);
+  assert.equal(decrypted.records[1].syncMechanism,'cloudflare');
+  assert.equal(validateRecord(decrypted.records[0]).syncReusedFromAt,record.at);
   await assert.rejects(decryptVault(encrypted,password));
  }finally{process.chdir(cwd);rmSync(dir,{recursive:true,force:true});}
 });
