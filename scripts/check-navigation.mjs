@@ -1001,6 +1001,13 @@ try{
       'The first visible collectible is fully predecoded before it is tapped');
     assert.ok((await showcase.locator('.mythic-showcase-item[data-showcase-game="100"] .mythic-showcase-player img').getAttribute('src')).endsWith('avatar-cached.svg'),
       'Small Mythic card prefers the cached Xbox avatar over the remote URL');
+    const miniatureBrand=await showcase.locator('.mythic-showcase-item[data-showcase-game="100"] .mythic-showcase-signature').evaluate(el=>{
+      const mark=el.querySelector('svg.mythic-xbox-mark');
+      return {text:el.textContent?.trim(),icon:!!mark,viewBox:mark?.getAttribute('viewBox'),
+        color:mark?getComputedStyle(mark).fill:null,images:el.querySelectorAll('img').length};
+    });
+    assert.deepEqual(miniatureBrand,{text:'XBOX PLAYLOG',icon:true,viewBox:'0 0 24 24',color:'rgb(155, 240, 11)',images:0},
+      'Showcase signature uses the true inline Xbox sphere without a network-backed image');
     await showcase.getByRole('button',{name:'放大 Test Game 0 纪念卡'}).click();
     const posterWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
     await posterWall.waitFor();
@@ -1010,6 +1017,16 @@ try{
       'A cabinet thumbnail opens the full-size poster immediately, exactly like the game detail shortcut');
     assert.equal(await posterWall.locator('.mythic-poster.is-active').getAttribute('data-poster-game'),'100',
       'The selected collectible is the fully rendered initial poster on the first modal frame');
+    const posterBrand=await posterWall.locator('.mythic-poster.is-active .mythic-poster-brand').evaluate(el=>{
+      const mark=el.querySelector('svg.mythic-xbox-mark');
+      const rect=mark?.getBoundingClientRect();
+      return {text:el.textContent?.trim(),icon:!!mark,viewBox:mark?.getAttribute('viewBox'),
+        color:mark?getComputedStyle(mark).fill:null,images:el.querySelectorAll('img').length,
+        visible:!!rect&&rect.width>0&&rect.height>0};
+    });
+    assert.deepEqual(posterBrand,{text:'XBOX PLAYLOG',icon:true,viewBox:'0 0 24 24',
+      color:'rgb(155, 240, 11)',images:0,visible:true},
+      'Full Mythic poster shows bundled official Xbox mark immediately without any image fetch');
     assert.equal(await page.locator('.mythic-flight-ghost,.mythic-showcase-poster.is-flight-source').count(),0,
       'Opening does not run a thumbnail flight, clone any art or wait for a cross-card handoff');
     assert.equal(await showcase.locator('.mythic-showcase-poster.is-primed').count(),0,
