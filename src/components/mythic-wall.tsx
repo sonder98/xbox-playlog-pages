@@ -132,7 +132,6 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
   </div>
   <div className="mythic-poster-footer" role="note">
    <span className="mythic-poster-brand"><XboxBrandMark/><span>XBOX PLAYLOG</span></span>
-   <span>这份 Mythic，值得一张纪念卡</span>
   </div>
   <div className="mythic-poster-gamepad" aria-hidden="true">
    <span>A</span><span>B</span><span>X</span><span>Y</span>
