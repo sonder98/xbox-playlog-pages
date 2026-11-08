@@ -94,7 +94,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   // Preferences may take time to decrypt. Do not overwrite an already refreshed
   // cloud snapshot with the old record array captured before that await.
   const fresh=await api('/api/records');
-  setRecords(previous=>previous[0]?.at&&previous[0].at>fresh.records[0]?.at?previous:fresh.records);
+  setRecords(previous=>previous[0]&&fresh.records[0]&&previous[0].at>fresh.records[0].at?previous:fresh.records);
  }).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
  // The Manage tab and resumed PWA should show the latest *published* snapshot,
  // not only the records that were decrypted when this page opened.
