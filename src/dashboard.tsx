@@ -14,7 +14,7 @@ import {AchievementPreview,AchievementJourney,AchievementShowcases} from './comp
 import {completion} from './completion';
 import {achievementTimeSpan,compareAchievementTimeSpans} from './achievement-time-span';
 import {compareGameCompletionDates} from './game-completion-date';
-import {api,playtimeLedgerForBackup,pcMetascoresForDisplay,refreshCloudRecords} from './vault';
+import {api,playtimeLedgerForBackup,pcMetascoresForDisplay,refreshCloudRecords,needsFullCloudCheckOnOpen} from './vault';
 import {ManualSyncDialog} from './components/manual-sync';
 import {GameLibrarySortControl,GameLibrarySearchControl} from './components/achievement-sort-control';
 import {normalizeGameLibrarySort,type GameLibraryFilter,type GameLibrarySort} from './game-library-sort';
@@ -88,7 +88,14 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   window.clearTimeout(mobileNavHideTimer.current);
  },[tab,gameId,dayId,showcase,gapShowcase]);
  const current=records[0],games=current?.games||[],prev=records[1];const playtimeLedger=playtimeLedgerForBackup();const pcScores=pcMetascoresForDisplay();const dusty=useMemo(()=>rankDustyGames(games,pcScores,Date.now(),current?.source||''),[current,pcScores]);const dustyIds=new Set(dusty.map(item=>item.game.id));const selected=games.find(g=>g.id===gameId&&(tab==='achievements'||dustyIds.has(g.id)||(officialGameVisible(g,current?.source||'')&&!hiddenIds.includes(g.id))));const delta=current?compareRecords(current,prev):null;
- useEffect(()=>{api('/api/records').then(async d=>{try{const preferences=await api('/api/display-preferences');setHiddenIds(preferences.hiddenGameIds);}catch(e){setError((e as Error).message);}setRecords(d.records);}).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
+ useEffect(()=>{api('/api/records').then(async d=>{
+  try{const preferences=await api('/api/display-preferences');setHiddenIds(preferences.hiddenGameIds);}
+  catch(e){setError((e as Error).message);}
+  // Preferences may take time to decrypt. Do not overwrite an already refreshed
+  // cloud snapshot with the old record array captured before that await.
+  const fresh=await api('/api/records');
+  setRecords(previous=>previous[0]?.at&&previous[0].at>fresh.records[0]?.at?previous:fresh.records);
+ }).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
  // The Manage tab and resumed PWA should show the latest *published* snapshot,
  // not only the records that were decrypted when this page opened.
  // A shared promise prevents duplicate downloads from tab, focus and initial unlock.
@@ -113,7 +120,9 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   return task;
  },[]);
  useEffect(()=>{
-  if(refreshFromCache)void refreshLatest(true,0);
+  // Start from encrypted IndexedDB immediately. A stale cache is checked
+  // against the actual cloud vault even when Pages' tiny status is lagging.
+  if(refreshFromCache)void refreshLatest(true,0,needsFullCloudCheckOnOpen());
  },[refreshFromCache,refreshLatest]);
  useEffect(()=>{
   if(tab!=='manage')return;
