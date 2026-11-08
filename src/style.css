@@ -1844,11 +1844,6 @@ footer .dot {
   color:var(--text-muted);
 }
 .game-detail .achievement-sort-toggle:hover{color:var(--text-primary)}
-.game-detail .achievement-sort-toggle:focus-within{
-  outline:2px solid var(--accent);
-  outline-offset:3px;
-  border-radius:6px;
-}
 .game-detail .achievement-sort-toggle select{
   position:absolute;
   inset:0;
