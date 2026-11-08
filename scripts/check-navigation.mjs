@@ -91,6 +91,49 @@ try{
     await pollContext.close();
     console.log('Overview background-poll test: PASS one-minute marker check refreshes encrypted data');
   }
+  // Reproduce: a 15:53 launch reads a 13:18 IndexedDB vault while the
+  // status marker still says 13:18, although the actual vault has advanced.
+  // Verify recovery with no manual pull, navigation or version reload.
+  {
+    const cacheContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+    const cachePage=await cacheContext.newPage();
+    let cloudEnvelope=envelope;
+    await cachePage.route('**/status.json*',route=>route.fulfill({
+      json:{initialized:true,latestAt:'2026-10-30T00:00:00Z'}}));
+    await cachePage.route('**/vault.json*',route=>route.fulfill({json:cloudEnvelope}));
+    await cachePage.route('https://covers.example.test/**',route=>route.fulfill({
+      contentType:'image/svg+xml',
+      body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"></svg>'
+    }));
+    await cachePage.goto('http://127.0.0.1:4173/xbox-playlog-pages/');
+    await cachePage.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
+    await cachePage.locator('input[type="password"]').fill(password);
+    await cachePage.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    await cachePage.locator('.recent-game-card').first().waitFor();
+    const newer=await decryptVault(envelope,password);
+    newer.records[0].at='2026-11-08T07:20:00.000Z';
+    newer.records[0].games[0].name='Auto-updated at open without pull';
+    cloudEnvelope=await encryptVault(newer,password);
+    await cachePage.reload();
+    await cachePage.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
+    await cachePage.locator('input[type="password"]').fill(password);
+    await cachePage.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    await cachePage.getByText('已自动加载最新同步记录。').waitFor({timeout:18000});
+    assert.ok((await cachePage.locator('.recent-game-card').first().innerText()).includes('Auto-updated at open without pull'),
+      'Cold cached launch detects new cloud vault without manually pulling or opening Manage');
+    // Seen cloud data must remain accessible at the next offline launch.
+    await cachePage.route('**/vault.json*',route=>route.abort('failed'));
+    await cachePage.route('**/status.json*',route=>route.abort('failed'));
+    await cachePage.reload();
+    await cachePage.locator('input[type="password"]').fill(password);
+    await cachePage.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
+    await cachePage.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    await cachePage.locator('.recent-game-card').first().waitFor();
+    assert.ok((await cachePage.locator('.recent-game-card').first().innerText()).includes('Auto-updated at open without pull'),
+      'The last cloud snapshot is durably saved into encrypted IndexedDB for offline reopening');
+    await cacheContext.close();
+    console.log('Cached startup freshness test: PASS stale marker bypass, automatic update and durable offline reopening');
+  }
   for(const mobile of [true,false]){
     const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1000},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:2});
     const page=await context.newPage();

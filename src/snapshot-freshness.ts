@@ -7,3 +7,11 @@ export function publishedSnapshotNewer(status:unknown,currentAt:string):boolean|
  const remote=Date.parse(latestAt),local=Date.parse(currentAt);
  return Number.isFinite(remote)&&Number.isFinite(local)?remote>local:null;
 }
+
+/** A cached startup older than an hourly Xbox sync must verify the encrypted
+ * vault itself once. A stale status.json must never hide hours of new data.
+ * Recent cached startups still use the cheap 58-byte status marker. */
+export function cachedSnapshotNeedsFullCheck(latestAt:string,now=Date.now()):boolean{
+ const at=Date.parse(latestAt);
+ return !Number.isFinite(at)||now-at>=70*60_000;
+}
