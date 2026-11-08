@@ -3290,7 +3290,7 @@ footer .dot {
 }
 .mythic-poster-portrait img.is-loaded{opacity:1}
 .mythic-poster-portrait .mythic-poster-image-placeholder{position:absolute;max-width:55%;max-height:55%}
-.mythic-poster-emblem{display:flex;align-items:center;justify-content:center;color:#b3ffa2;background:#12311e;
+.mythic-poster-emblem{display:flex;align-items:center;justify-content:center;color:#b3ffa2;background:transparent;
  border:2px solid #bca267;box-shadow:0 0 0 3px #243721,0 0 28px #c5dc9a6b;
  border-radius:50%;width:22cqw;height:22cqw;min-width:0;min-height:0;aspect-ratio:1/1;
  position:absolute;top:24.5%;left:50%;transform:translateX(-50%);z-index:3;}
@@ -3563,14 +3563,15 @@ footer .dot {
  }
 }
 
-/* Same-origin-looking immediate fallback graphic remains on screen until the
-   official external Mythic badge has fully loaded; a failing CDN never blanks it. */
+/* Mythic medal artwork stays local; the annulus around its green crest must be
+   see-through so each game's backdrop shows instead of the old cyan/blue fill.
+   Keep the immediate Gem fallback and the separate gold outer border intact. */
 .mythic-badge-art{
  display:grid;place-items:center;position:relative;width:100%;height:100%;
  aspect-ratio:1/1;min-width:0;min-height:0;
  flex:0 0 auto;overflow:hidden;border-radius:50%;
- color:#effff1;background:radial-gradient(circle at 38% 28%,#cceeff,#4b9fdc 42%,#19466f 72%,#112f43 100%);
- box-shadow:inset 0 0 0 1px #f4d49c8c,inset 0 -5px 11px #0d183a70;
+ color:#effff1;background:transparent;
+ box-shadow:none;
 }
 .mythic-badge-art .mythic-badge-placeholder{position:relative;z-index:0;filter:drop-shadow(0 1px 3px #123b5a)}
 .mythic-badge-art img{
@@ -3725,7 +3726,7 @@ footer .dot {
 .mythic-showcase-portrait img{width:100%;height:100%;object-fit:cover;display:block}
 .mythic-showcase-emblem{position:absolute;top:25.1%;left:50%;transform:translateX(-50%);z-index:5;
  width:21%;aspect-ratio:1;display:grid;place-items:center;overflow:hidden;border-radius:50%;
- border:max(1px,.5cqw) solid #b49c6a;background:#133323;
+ border:max(1px,.5cqw) solid #b49c6a;background:transparent;
  box-shadow:0 0 0 1cqw #263b2d,0 0 5cqw #cde39b87}
 .mythic-showcase-emblem img{display:block;width:100%;height:100%;object-fit:contain}
 .mythic-showcase-greeting{position:absolute;top:39.0%;left:8%;right:8%;z-index:4;white-space:nowrap;

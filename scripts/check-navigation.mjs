@@ -995,6 +995,13 @@ try{
       'The cabinet uses native lazy-loading for cinematic preview images');
     assert.ok((await showcase.locator('.mythic-showcase-backdrop').first().getAttribute('src')).endsWith('preview.svg'),
       'The wall uses the cached 480px screenshot rather than fetching the 1600px original for each thumbnail');
+    const miniatureRing=await showcase.locator('.mythic-showcase-emblem').first().evaluate(el=>({
+      background:getComputedStyle(el).backgroundColor,
+      border:parseFloat(getComputedStyle(el).borderTopWidth)
+    }));
+    assert.equal(miniatureRing.background,'rgba(0, 0, 0, 0)',
+      'Mythic showcase miniature also reveals its own scene through the medal ring');
+    assert.ok(miniatureRing.border>=1,'Miniature keeps the original gold border');
     await page.waitForFunction(()=>document.querySelector(
       '.mythic-showcase-item[data-showcase-game="100"]')?.getAttribute('data-poster-prepared')==='true');
     assert.equal(await showcase.locator('[data-showcase-game="100"]').getAttribute('data-poster-prepared'),'true',
@@ -1111,6 +1118,29 @@ try{
       'The medal loads from the same-origin project asset, never XCT');
     assert.equal(badgeSource.width,360,'Use original 360px square badge artwork');
     assert.equal(badgeSource.height,360,'Original badge has square intrinsic dimensions');
+    const ringStyle=await posterWall.locator('.mythic-poster.is-active').evaluate(card=>{
+      const outer=getComputedStyle(card.querySelector('.mythic-poster-emblem'));
+      const backing=getComputedStyle(card.querySelector('.mythic-badge-art'));
+      return {outer:outer.backgroundColor,inner:backing.backgroundColor,
+        gradient:backing.backgroundImage,shadow:backing.boxShadow,
+        gold:outer.borderTopColor,goldWidth:parseFloat(outer.borderTopWidth)};
+    });
+    assert.equal(ringStyle.outer,'rgba(0, 0, 0, 0)','Outer medal backing must reveal the game backdrop');
+    assert.equal(ringStyle.inner,'rgba(0, 0, 0, 0)','Blue gradient ring must be truly transparent');
+    assert.equal(ringStyle.gradient,'none','No leftover blue background image');
+    assert.equal(ringStyle.shadow,'none','No blue inset shadow after removing the gradient');
+    assert.ok(ringStyle.goldWidth>0&&ringStyle.gold!=='rgba(0, 0, 0, 0)',
+      'The original metallic gold trim stays visible');
+    const artSamples=await posterWall.locator('.mythic-poster.is-active .mythic-badge-art img').evaluate(img=>{
+      const canvas=document.createElement('canvas');canvas.width=360;canvas.height=360;
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});
+      ctx.drawImage(img,0,0);
+      return [[180,12],[180,35],[180,75],[45,180],[180,180],[315,180],[180,345]]
+        .map(([x,y])=>({x,y,rgba:[...ctx.getImageData(x,y,1,1).data]}));
+    });
+    assert.equal(artSamples[0].rgba[3],0,'Top of the existing PNG has real alpha so backdrop can show through');
+    assert.equal(artSamples[6].rgba[3],0,'Bottom of the existing PNG has real alpha so backdrop can show through');
+    assert.equal(artSamples[4].rgba[3],255,'Green center of the original medal remains fully opaque');
     assert.equal(externalMythicRequests.length,0,'No third-party Mythic image requests occur');
     // Replace only an already mounted cover with a deliberately delayed asset.
     // The entire postcard must keep exactly the same geometry during the gap.
