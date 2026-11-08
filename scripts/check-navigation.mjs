@@ -1002,6 +1002,20 @@ try{
     assert.equal(miniatureRing.background,'rgba(0, 0, 0, 0)',
       'Mythic showcase miniature also reveals its own scene through the medal ring');
     assert.ok(miniatureRing.border>=1,'Miniature keeps the original gold border');
+    const showcaseContact=await showcase.locator('.mythic-showcase-item[data-showcase-game="100"]').evaluate(item=>{
+      const cover=item.querySelector('.mythic-showcase-portrait');
+      const medal=item.querySelector('.mythic-showcase-emblem');
+      const poster=item.querySelector('.mythic-showcase-poster');
+      const c=cover.getBoundingClientRect(),m=medal.getBoundingClientRect(),p=poster.getBoundingClientRect();
+      return {mask:getComputedStyle(cover).webkitMaskImage,
+        centerDelta:Math.abs((c.top+p.width*.3668)-(m.top+m.height/2)),
+        centersAligned:Math.abs((c.left+c.right-m.left-m.right)/2)};
+    });
+    assert.ok(showcaseContact.mask.includes('radial-gradient')&&showcaseContact.mask.includes('transparent')||
+      showcaseContact.mask.includes('radial-gradient')&&showcaseContact.mask.includes('rgba(0, 0, 0, 0)'),
+      'Miniature cover has a precisely circular medal cutout, not a premature straight crop');
+    assert.ok(showcaseContact.centerDelta<1.5&&showcaseContact.centersAligned<1.5,
+      'Miniature rim cutout is aligned to the true foreground medal center: '+JSON.stringify(showcaseContact));
     await page.waitForFunction(()=>document.querySelector(
       '.mythic-showcase-item[data-showcase-game="100"]')?.getAttribute('data-poster-prepared')==='true');
     assert.equal(await showcase.locator('[data-showcase-game="100"]').getAttribute('data-poster-prepared'),'true',
@@ -1077,6 +1091,27 @@ try{
     assert.ok(Math.abs(posterFrame.emblem.width-posterFrame.emblem.height)<1,
       'The main Mythic medal has an actual square frame, not a flattened percentage-height oval: '+
       JSON.stringify(posterFrame.emblem));
+    const connectedRims=await posterWall.locator('.mythic-poster.is-active').evaluate(card=>{
+      const c=card.querySelector('.mythic-poster-portrait').getBoundingClientRect();
+      const m=card.querySelector('.mythic-poster-emblem').getBoundingClientRect();
+      const poster=card.getBoundingClientRect();
+      const coverR=c.width/2,medalR=m.width/2,centerGap=(m.top+medalR)-(c.top+coverR);
+      const intersectionFromCover=(coverR*coverR-medalR*medalR+centerGap*centerGap)/(2*centerGap);
+      return {mask:getComputedStyle(card.querySelector('.mythic-poster-portrait')).webkitMaskImage,
+        coverR,medalR,centerGap,intersectionFromCover,
+        centerDelta:Math.abs(c.top+poster.width*.39495-(m.top+medalR)),
+        centersAligned:Math.abs((c.left+c.right-m.left-m.right)/2)};
+    });
+    assert.ok(connectedRims.mask.includes('radial-gradient'),
+      'Full poster subtracts the overlapping medal circle from the upper gold portrait rim');
+    assert.ok(connectedRims.centerGap<connectedRims.coverR+connectedRims.medalR&&
+      connectedRims.centerGap>Math.abs(connectedRims.coverR-connectedRims.medalR),
+      'Both circles intersect in two physical junctions');
+    assert.ok(connectedRims.intersectionFromCover<connectedRims.coverR&&
+      connectedRims.intersectionFromCover>connectedRims.coverR-connectedRims.medalR,
+      'Gold cover rim continues downward into the meeting points instead of fading early');
+    assert.ok(connectedRims.centerDelta<1.5&&connectedRims.centersAligned<1.5,
+      'Radial mask exactly matches the front medal center on any screen width: '+JSON.stringify(connectedRims));
     assert.ok(Math.abs(posterFrame.badge.width-posterFrame.badge.height)<1&&posterFrame.badgeFit==='contain',
       'Original Mythic badge preserves its own aspect ratio inside the square frame');
     assert.ok(Math.abs(posterFrame.avatar.width-posterFrame.avatar.height)<1,
