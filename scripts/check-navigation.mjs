@@ -1631,6 +1631,16 @@ try{
     assert.deepEqual(await filterMenu.getByRole('menuitemradio').allTextContents(),['全部','已解锁','未解锁']);
     assert.equal(await filterMenu.getByRole('menuitemradio',{checked:true}).innerText(),'全部');
     await filterMenu.getByRole('menuitemradio',{name:'已解锁'}).click();
+    // The menu restores focus to its trigger. This must not leave the old
+    // global accent :focus-within outline stuck on a touched iOS filter button.
+    const filterFocus=await filterToggle.evaluate(el=>({
+      focused:el.matches(':focus-within'),
+      outline:getComputedStyle(el).outlineStyle,
+      expanded:el.getAttribute('aria-expanded')
+    }));
+    assert.equal(filterFocus.focused,true,'Menu returns focus to its accessible trigger');
+    assert.equal(filterFocus.expanded,'false','Selecting a filter closes the popup');
+    assert.equal(filterFocus.outline,'none','Closed filter has no persistent green focus outline');
     assert.deepEqual(await achievementIds(),['2','1'],'Unlocked filter preserves the chosen date order');
     assert.equal(await page.locator('.achievement-filter-count').innerText(),'2/4','Status filter does not alter overall completion count');
     await filterToggle.click();
@@ -1645,6 +1655,8 @@ try{
     assert.equal(await lockedSortMenu.getByRole('menuitemradio',{checked:true}).innerText(),'稀有度：低 → 高',
       'Switching from date sort automatically picks rarity ascending');
     await lockedSortMenu.getByRole('menuitemradio',{name:'稀有度：高 → 低'}).click();
+    assert.equal(await page.getByRole('button',{name:'成就排序',exact:true}).evaluate(el=>getComputedStyle(el).outlineStyle),'none',
+      'Sorting also leaves no persistent accent outline after its menu closes');
     assert.deepEqual(await achievementIds(),['3','4'],'Unknown rarity stays at end in locked-only mode');
     await tabs.getByRole('tab',{name:'本体成就'}).click();
     assert.equal(await page.locator('.achievement').count(),0,'Locked-only base category has no achievements in fixture');
