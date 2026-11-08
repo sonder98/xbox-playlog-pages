@@ -4,7 +4,7 @@ import {readDisplayPreferences,saveDisplayPreferences,normalizeDisplayPreference
 import {validateRecord,type RecordData} from './data';
 import type {DailyPlaytimeLedger} from './playtime-ledger';
 import {validatedPcMetascores,type PcMetascores} from './metascores';
-import {publishedSnapshotNewer} from './snapshot-freshness';
+import {publishedSnapshotNewer,cachedSnapshotNeedsFullCheck} from './snapshot-freshness';
 export const repo='https://github.com/sonder98/xbox-playlog-pages';
 export const workflow=repo+'/actions/workflows/sync.yml';
 /** EdgeOne serves the same encrypted envelope through a Blob-backed Function; Pages keeps its static snapshot URL. */
@@ -14,7 +14,10 @@ let dailyPlaytime:DailyPlaytimeLedger|null=null;
 let pcMetascores:PcMetascores={};
 let designPreferences:DisplayPreferences|null=null;
 const localKey='playlog-pages-encrypted-imports-v1';
-export async function unlock(secret:string,envelope:unknown,{fromCache=false}:{fromCache?:boolean}={}){const payload=await decryptVault(envelope,secret);if(!Array.isArray(payload.records))throw Error('记录内容无效。');const cloud=payload.records.map((r:any)=>{const valid=validateRecord(r);if(typeof r.id!=='string'||!Number.isFinite(Date.parse(r.at)))throw Error('记录时间无效。');return {...valid,id:r.id,at:r.at};});const local=localStorage.getItem(localKey);let extra:RecordData[]=[];if(local){try{extra=(await decryptVault(JSON.parse(local),secret)).records||[]}catch{throw Error('本机加密导入记录与当前密码不匹配，请先导出或清除本机记录。');}}password=secret;cloudLatestAt=cloud[0]?.at||'';dailyPlaytime=payload.playtimeLedger||null;pcMetascores=validatedPcMetascores(payload.metacriticScores);records=[...new Map([...extra,...cloud].map(r=>[r.id,r])).values()].sort((a,b)=>b.at.localeCompare(a.at));if(!fromCache)void saveEncryptedHistory(envelope);}
+export async function unlock(secret:string,envelope:unknown,{fromCache=false}:{fromCache?:boolean}={}){const payload=await decryptVault(envelope,secret);if(!Array.isArray(payload.records))throw Error('记录内容无效。');const cloud=payload.records.map((r:any)=>{const valid=validateRecord(r);if(typeof r.id!=='string'||!Number.isFinite(Date.parse(r.at)))throw Error('记录时间无效。');return {...valid,id:r.id,at:r.at};});const local=localStorage.getItem(localKey);let extra:RecordData[]=[];if(local){try{extra=(await decryptVault(JSON.parse(local),secret)).records||[]}catch{throw Error('本机加密导入记录与当前密码不匹配，请先导出或清除本机记录。');}}password=secret;cloudLatestAt=cloud[0]?.at||'';dailyPlaytime=payload.playtimeLedger||null;pcMetascores=validatedPcMetascores(payload.metacriticScores);records=[...new Map([...extra,...cloud].map(r=>[r.id,r])).values()].sort((a,b)=>b.at.localeCompare(a.at));if(!fromCache)await saveEncryptedHistory(envelope);}
+/** A cached archive can open immediately, but an hour-old copy must verify
+ * the real encrypted vault rather than trusting a potentially stale marker. */
+export function needsFullCloudCheckOnOpen(){return cachedSnapshotNeedsFullCheck(cloudLatestAt);}
 export function lock(){records=[];password='';cloudLatestAt='';dailyPlaytime=null;pcMetascores={};}
 export function pcMetascoresForDisplay(){return pcMetascores;}
 export function playtimeLedgerForBackup(){return dailyPlaytime;}
