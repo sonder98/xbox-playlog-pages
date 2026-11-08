@@ -3,6 +3,7 @@ import {ArrowLeft,ArrowUpRight,CircleUserRound,Diamond,Sparkles} from 'lucide-re
 import type {Profile} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {MYTHIC_BADGE_URL,posterLocalDate} from '../mythic-posters';
+import {XboxBrandMark} from './xbox-brand-mark';
 import {mythicAvatar,mythicBackdropPreview,mythicCover,prepareMythicPoster,useMythicRotationDay,warmMythicFonts} from '../mythic-assets';
 
 function CollectionPreview({entry,profile,index,total,rotationDay,onOpen,onPrefetch}:{
@@ -59,7 +60,7 @@ function CollectionPreview({entry,profile,index,total,rotationDay,onOpen,onPrefe
      <span><b>{daysToMythic===null?'—':daysToMythic}</b><small>天</small></span>
      <span><b>{baseTotal}</b><small>成就</small></span>
     </div>
-    <div className="mythic-showcase-signature">✳ XBOX PLAYLOG</div>
+    <div className="mythic-showcase-signature"><XboxBrandMark/><span>XBOX PLAYLOG</span></div>
    </div>
    <span className="mythic-showcase-seat-light" aria-hidden="true"/>
   </div>

@@ -4,6 +4,7 @@ import type {Profile,Achievement} from '../data';
 import type {MythicPoster} from '../mythic-posters';
 import {posterLocalDate} from '../mythic-posters';
 import {MythicBadgeArt} from './mythic-badge';
+import {XboxBrandMark} from './xbox-brand-mark';
 import {mythicAvatar,mythicBackdrop,mythicBackdropPreview,mythicCover,mythicImageAlreadyDecoded,useMythicRotationDay,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
 import {MythicOpeningFireworks} from './mythic-fireworks';
 
@@ -130,7 +131,7 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
    <div><strong>{baseTotal}</strong><small>个</small><span>本体成就数</span></div>
   </div>
   <div className="mythic-poster-footer" role="note">
-   <span className="mythic-poster-brand">✳ XBOX PLAYLOG</span>
+   <span className="mythic-poster-brand"><XboxBrandMark/><span>XBOX PLAYLOG</span></span>
    <span>这份 Mythic，值得一张纪念卡</span>
   </div>
   <div className="mythic-poster-gamepad" aria-hidden="true">
