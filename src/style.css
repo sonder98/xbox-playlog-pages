@@ -3284,6 +3284,17 @@ footer .dot {
 .mythic-poster-portrait{position:absolute;top:8.5%;left:50%;transform:translateX(-50%);width:34.5%;aspect-ratio:1;
  border-radius:50%;overflow:hidden;display:grid;place-items:center;border:4px solid #dfc587;
  box-shadow:0 0 0 4px #2a2b21,0 0 0 6px #c39a52,0 0 24px #e7c7796b;background:#172320;z-index:2;}
+/* Remove the upper gold portrait circle ONLY where the foreground Mythic
+   medal covers it. Exact circle subtraction keeps the rim visible up to the
+   two real intersection points: no early fade, no stray rim in the clear ring.
+   Poster aspect ratio 420:748, top offsets 8.5% / 24.5%, medal radius 11cqw
+   give a medal center 39.495cqw below the portrait top. */
+.mythic-poster-portrait{
+ -webkit-mask-image:radial-gradient(circle at 50% 39.495cqw,
+  transparent 10.95cqw,#000 11.05cqw);
+ mask-image:radial-gradient(circle at 50% 39.495cqw,
+  transparent 10.95cqw,#000 11.05cqw);
+}
 .mythic-poster-portrait img{
  position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;
  opacity:0;transition:opacity .22s ease-out;
@@ -3723,6 +3734,14 @@ footer .dot {
  display:grid;place-items:center;border-radius:50%;overflow:hidden;
  border:max(1px, .8cqw) solid #e1c986;box-shadow:0 0 0 .85cqw #213027,0 0 0 1.2cqw #c49d54,0 0 4cqw #ddbe69a0;
  z-index:4;background:#21392f}
+/* Miniature has different top offsets (10.4% / 25.1%), medal radius
+   10.5cqw. Keep the portrait arc up to its exact medal junction here too. */
+.mythic-showcase-portrait{
+ -webkit-mask-image:radial-gradient(circle at 50% 36.68cqw,
+  transparent 10.45cqw,#000 10.55cqw);
+ mask-image:radial-gradient(circle at 50% 36.68cqw,
+  transparent 10.45cqw,#000 10.55cqw);
+}
 .mythic-showcase-portrait img{width:100%;height:100%;object-fit:cover;display:block}
 .mythic-showcase-emblem{position:absolute;top:25.1%;left:50%;transform:translateX(-50%);z-index:5;
  width:21%;aspect-ratio:1;display:grid;place-items:center;overflow:hidden;border-radius:50%;
