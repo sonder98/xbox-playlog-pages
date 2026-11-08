@@ -1138,7 +1138,9 @@ try{
       return [[180,12],[180,35],[180,75],[45,180],[180,180],[315,180],[180,345]]
         .map(([x,y])=>({x,y,rgba:[...ctx.getImageData(x,y,1,1).data]}));
     });
-    console.log('Mythic artwork alpha samples: '+JSON.stringify(artSamples));
+    assert.equal(artSamples[0].rgba[3],0,'Top of the existing PNG has real alpha so backdrop can show through');
+    assert.equal(artSamples[6].rgba[3],0,'Bottom of the existing PNG has real alpha so backdrop can show through');
+    assert.equal(artSamples[4].rgba[3],255,'Green center of the original medal remains fully opaque');
     assert.equal(externalMythicRequests.length,0,'No third-party Mythic image requests occur');
     // Replace only an already mounted cover with a deliberately delayed asset.
     // The entire postcard must keep exactly the same geometry during the gap.
