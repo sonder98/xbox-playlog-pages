@@ -44,7 +44,8 @@ test('missing playtime remains unknown and no unlocks yields gradient fallback',
  assert.equal(recap.totalMinutes,null);
  assert.equal(recap.games[0].minutes,null);
  assert.deepEqual(dayRecapBackdropCandidates(g),[]);
- const noUnlocks=dailyAchievementRecap('2026-11-08',undefined,[g],ledger({'1':44}));
+ const nextDayLedger=ledger({});nextDayLedger.days['2026-11-08']={'1':44};
+ const noUnlocks=dailyAchievementRecap('2026-11-08',undefined,[g],nextDayLedger);
  assert.equal(noUnlocks.heroGame,null,'no achievement leader means plain gradient even if game time exists');
  assert.equal(noUnlocks.achievementCount,0);
  assert.equal(noUnlocks.totalMinutes,44);
