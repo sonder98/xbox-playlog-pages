@@ -8,6 +8,7 @@ import {encryptVault,decryptVault} from '../src/crypto.ts';
 const password='navigation-test-only';
 const games=Array.from({length:12},(_,i)=>({id:String(100+i),name:'Test Game '+i,image:'https://covers.example.test/square.svg',image2x:'https://covers.example.test/medium.svg',image3x:'https://covers.example.test/original.svg',devices:['Xbox'],lastPlayed:'2026-10-30T00:00:00Z',minutes:60,earned:1,total:10,score:10,maxScore:100}));
 games[0].posterImage='https://covers.example.test/landscape.svg';
+games[1].cachedDetailImage='https://covers.example.test/landscape.svg';
 games[0].posterImagePurpose='Screenshot';
 // Fake a screenshot pair already archived in GitHub Pages media: 480 + 1600.
 games[0].posterScreenshots=['https://covers.example.test/landscape.svg'];
@@ -554,18 +555,37 @@ try{
     await overviewSheet.waitFor();
     const placement=await overviewSheet.evaluate(el=>{
       const games=el.querySelector('.ah-sheet-games').getBoundingClientRect();
-      const summary=el.querySelector('.ah-sheet-total').getBoundingClientRect();
-      const icon=el.querySelector('.ah-sheet-game .ah-mini-art').getBoundingClientRect();
-      return {gamesBottom:games.bottom,summaryTop:summary.top,iconWidth:icon.width};
+      const summary=el.querySelector('.ah-day-recap').getBoundingClientRect();
+      const art=el.querySelector('.ah-sheet-game-cover').getBoundingClientRect();
+      const shell=el.getBoundingClientRect();
+      return {summaryBottom:summary.bottom,gamesTop:games.top,artWidth:art.width,
+       overflows:el.scrollWidth>el.clientWidth+1,viewHeight:shell.height,
+       summaryMetrics:el.querySelectorAll('.ah-day-recap-stat').length};
     });
-    assert.ok(placement.gamesBottom<placement.summaryTop,'Per-game summary is above overall totals');
-    assert.ok(placement.iconWidth>=50,'Game artwork is visibly larger in day sheet');
+    assert.ok(placement.summaryBottom<placement.gamesTop,'Photo activity recap precedes the game rows');
+    assert.ok(placement.artWidth>=49,'Game cover artwork has a prominent square thumbnail');
+    assert.equal(placement.summaryMetrics,3,'Daily summary has achievements, hours, and games');
+    assert.equal(placement.overflows,false,'Redesigned day sheet does not overflow narrow screens');
     assert.equal(await overviewSheet.locator('.ah-sheet-game-count').count(),3,
-      'Only the date half-sheet shows per-game completion followed by hours');
-    assert.equal((await overviewSheet.locator('.ah-sheet-game-count').first().innerText()).replace(/\s+/g,' ').trim(),'1 个 · — 小时',
-      'Pre-November day cannot invent game-play hours, but shows an explicit unknown slot');
+      'Game list keeps the first three compact tappable cards');
+    assert.ok((await overviewSheet.locator('.ah-sheet-game-count').first().innerText()).includes('— 小时'),
+      'An old day must show unknown time, not invent 0 hours');
+    assert.equal(await overviewSheet.locator('.ah-day-recap-stat').nth(1).locator('strong').innerText(),'—',
+      'No trustworthy playtime samples means no fictitious daily total');
+    assert.equal(await overviewSheet.locator('.ah-day-recap').getAttribute('data-hero-game-id'),'101',
+      'Largest daily achievement count selects the first stable game on a tie');
+    const hero=await overviewSheet.locator('.ah-day-recap').evaluate(el=>{
+      const img=el.querySelector('.ah-day-recap-backdrop img');
+      const styles=img&&getComputedStyle(img);
+      return {src:img?.getAttribute('src'),brightness:styles?.filter,
+        overflow:getComputedStyle(el).overflow};
+    });
+    assert.ok(hero.src?.endsWith('/landscape.svg'),'Day recap uses the same cached detail hero art');
+    assert.ok(hero.brightness?.includes('brightness')&&hero.brightness.includes('blur'),
+      'Backdrop is visibly darkened and softened beneath metric text');
+    assert.equal(hero.overflow,'hidden','Background image stays inside the rounded recap card');
     assert.equal(await page.locator('.ah-day-detail .ah-sheet-game-hours').count(),0,
-      'Full day details never add the new hour label');
+      'Full achievement detail does not inherit summary sheet metrics');
     const headerGeometry=await overviewSheet.evaluate(el=>{
       const header=el.querySelector('.ah-sheet-heading'),date=header.querySelector('strong');
       const arrows=[...header.querySelectorAll('.ah-sheet-date-arrow')];
@@ -580,7 +600,7 @@ try{
     assert.ok(Math.abs(headerGeometry.arrows[0].y-headerGeometry.arrows[1].y)<2&&Math.abs(headerGeometry.date.y-headerGeometry.arrows[0].y)<14,'Date and arrows share one horizontal row');
     if(mobile){
       const rect=await overviewSheet.boundingBox();
-      assert.ok(rect&&rect.y>250&&rect.y<650,'Home preview opens a lower-half mobile sheet');
+      assert.ok(rect&&rect.y>70&&rect.y<650,'Home preview remains a bottom-anchored mobile sheet despite richer content');
     }
     await overviewSheet.getByRole('button',{name:/前一天 2026 年 10 月 26 日/}).click();
     await page.getByRole('dialog',{name:'2026 年 10 月 26 日 成就摘要'}).waitFor();
