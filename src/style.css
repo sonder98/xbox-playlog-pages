@@ -3870,20 +3870,23 @@ footer .dot {
  width:100%;height:100%;
  object-fit:cover;
  object-position:center 40%;
- transform:scale(1.08);
- filter:brightness(.42) saturate(.58) blur(5px);
+ transform:scale(1.035);
+ /* Keep the winning game's artwork recognizable; contrast comes from a light
+    bottom-weighted veil and text shadow, not crushing the picture twice. */
+ filter:brightness(.92) saturate(.9) blur(1.25px);
 }
 .ah-day-recap::before {
  content:"";
  position:absolute;inset:0;z-index:-1;pointer-events:none;
- background:linear-gradient(90deg,rgba(8,17,12,.82) 0%,rgba(9,19,12,.68) 53%,rgba(7,13,10,.83) 100%);
+ background:linear-gradient(180deg,rgba(5,11,8,.3) 0%,rgba(5,12,8,.3) 42%,rgba(5,11,8,.48) 100%);
 }
 .ah-day-recap::after {
  content:"";
  position:absolute;inset:0;z-index:-1;pointer-events:none;
- background:radial-gradient(ellipse at 91% 9%,rgba(132,211,28,.2),transparent 56%);
+ background:radial-gradient(ellipse at 91% 9%,rgba(132,211,28,.1),transparent 56%);
 }
-.ah-day-recap-content {position:relative;padding:17px 16px 16px;}
+.ah-day-recap-content {position:relative;padding:17px 16px 16px;
+ text-shadow:0 2px 7px rgba(0,0,0,.9),0 1px 2px rgba(0,0,0,.8);}
 .ah-day-recap-title {
  display:flex;align-items:center;gap:8px;
  font-size:13px;letter-spacing:.015em;font-weight:600;color:#edf5ed;
