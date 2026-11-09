@@ -6,7 +6,10 @@ test('PWA installs as a standalone app at both GitHub subpath and hosting root',
  const manifest=JSON.parse(readFileSync('public/manifest.webmanifest','utf8'));
  assert.equal(manifest.name,'XBOX Playlog');
  assert.equal(manifest.short_name,'XBOX Playlog');
- assert.deepEqual(manifest.icons.map((icon:any)=>icon.src),['pwa-192-v2.png','pwa-512-v2.png']);
+ assert.deepEqual(manifest.icons.map((icon:any)=>icon.src),[
+  'pwa-192-v3.png','pwa-512-v3.png','pwa-maskable-192-v3.png','pwa-maskable-512-v3.png'
+ ]);
+ assert.deepEqual(manifest.icons.map((icon:any)=>icon.purpose),['any','any','maskable','maskable']);
  assert.equal(manifest.display,'standalone');
  assert.equal(manifest.start_url,'./');
  assert.equal(manifest.scope,'./');
@@ -14,7 +17,7 @@ test('PWA installs as a standalone app at both GitHub subpath and hosting root',
  assert.ok(manifest.icons.some((icon:any)=>icon.sizes==='512x512'));
  const html=readFileSync('index.html','utf8');
  assert.ok(html.includes('%BASE_URL%manifest.webmanifest'));
- assert.ok(html.includes('%BASE_URL%apple-touch-icon-v2.png'));
+ assert.ok(html.includes('%BASE_URL%apple-touch-icon-v3.png'));
  assert.ok(html.includes('apple-mobile-web-app-title" content="XBOX Playlog"'));
  assert.ok(html.includes('<title>XBOX Playlog</title>'));
  const vite=readFileSync('vite.config.ts','utf8');
@@ -26,6 +29,7 @@ test('PWA never caches encrypted private snapshots or authorization state',()=>{
  assert.ok(worker.includes("if (!withinApp(url) || isRecord(url)"));
  assert.ok(!worker.includes("cache.addAll(['vault.json'"));
  assert.ok(worker.includes('request.mode === \'navigate\''));
+ assert.ok(worker.includes("const IMAGES = 'playlog-pwa-v1-art'"));
  const entry=readFileSync('src/main.tsx','utf8');
  assert.ok(entry.includes("navigator.serviceWorker.register(import.meta.env.BASE_URL+'sw.js'"));
 });
@@ -33,5 +37,12 @@ test('PWA icons are generated from local SVG via existing Sharp dependency',()=>
  const build=JSON.parse(readFileSync('package.json','utf8')).scripts.build;
  assert.ok(build.startsWith('node --experimental-strip-types scripts/generate-pwa-icons.ts'));
  const generator=readFileSync('scripts/generate-pwa-icons.ts','utf8');
- for(const file of ['pwa-192-v2.png','pwa-512-v2.png','apple-touch-icon-v2.png','apple-touch-icon.png'])assert.ok(generator.includes(file));
+ for(const file of ['pwa-192-v3.png','pwa-512-v3.png','apple-touch-icon-v3.png',
+  'pwa-maskable-192-v3.png','pwa-maskable-512-v3.png','pwa-192-v2.png','apple-touch-icon.png'])
+  assert.ok(generator.includes(file),file);
+ assert.ok(generator.includes("import {XBOX_SPHERE_PATH} from '../src/xbox-brand-path.ts'"));
+ const brandMark=readFileSync('src/components/xbox-brand-mark.tsx','utf8');
+ assert.ok(brandMark.includes('d={XBOX_SPHERE_PATH}'));
+ const sphere=readFileSync('src/xbox-brand-path.ts','utf8');
+ assert.ok(sphere.includes("export const XBOX_SPHERE_PATH="));
 });

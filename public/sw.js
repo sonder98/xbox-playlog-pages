@@ -1,7 +1,9 @@
 // Cache only public app-shell assets. Xbox records are encrypted but must always be fetched fresh.
-const VERSION = 'playlog-pwa-v1';
+// Refresh old cache-first manifests/icons without evicting the potentially
+// large public screenshot cache; encrypted Xbox snapshots remain uncached.
+const VERSION = 'playlog-pwa-v3';
 const SHELL = VERSION + '-shell';
-const IMAGES = VERSION + '-art';
+const IMAGES = 'playlog-pwa-v1-art';
 const APP = new URL(self.registration.scope);
 const withinApp = url => url.origin === APP.origin && url.pathname.startsWith(APP.pathname);
 const isRecord = url => /\/(?:vault|status)\.json$/.test(url.pathname);

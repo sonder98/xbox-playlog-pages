@@ -14,7 +14,12 @@ let dailyPlaytime:DailyPlaytimeLedger|null=null;
 let pcMetascores:PcMetascores={};
 let designPreferences:DisplayPreferences|null=null;
 const localKey='playlog-pages-encrypted-imports-v1';
-export async function unlock(secret:string,envelope:unknown,{fromCache=false}:{fromCache?:boolean}={}){const payload=await decryptVault(envelope,secret);if(!Array.isArray(payload.records))throw Error('记录内容无效。');const cloud=payload.records.map((r:any)=>{const valid=validateRecord(r);if(typeof r.id!=='string'||!Number.isFinite(Date.parse(r.at)))throw Error('记录时间无效。');return {...valid,id:r.id,at:r.at};});const local=localStorage.getItem(localKey);let extra:RecordData[]=[];if(local){try{extra=(await decryptVault(JSON.parse(local),secret)).records||[]}catch{throw Error('本机加密导入记录与当前密码不匹配，请先导出或清除本机记录。');}}password=secret;cloudLatestAt=cloud[0]?.at||'';dailyPlaytime=payload.playtimeLedger||null;pcMetascores=validatedPcMetascores(payload.metacriticScores);records=[...new Map([...extra,...cloud].map(r=>[r.id,r])).values()].sort((a,b)=>b.at.localeCompare(a.at));if(!fromCache)await saveEncryptedHistory(envelope);}
+/** Install an already-decrypted archive. Refresh must never run expensive
+ * PBKDF2 + AES-GCM + JSON expansion twice for the same cloud envelope. */
+async function applyDecryptedVault(secret:string,envelope:unknown,payload:any,fromCache=false){if(!Array.isArray(payload.records))throw Error('记录内容无效。');const cloud=payload.records.map((r:any)=>{const valid=validateRecord(r);if(typeof r.id!=='string'||!Number.isFinite(Date.parse(r.at)))throw Error('记录时间无效。');return {...valid,id:r.id,at:r.at};});const local=localStorage.getItem(localKey);let extra:RecordData[]=[];if(local){try{extra=(await decryptVault(JSON.parse(local),secret)).records||[]}catch{throw Error('本机加密导入记录与当前密码不匹配，请先导出或清除本机记录。');}}password=secret;cloudLatestAt=cloud[0]?.at||'';dailyPlaytime=payload.playtimeLedger||null;pcMetascores=validatedPcMetascores(payload.metacriticScores);records=[...new Map([...extra,...cloud].map(r=>[r.id,r])).values()].sort((a,b)=>b.at.localeCompare(a.at));if(!fromCache)await saveEncryptedHistory(envelope);}
+export async function unlock(secret:string,envelope:unknown,{fromCache=false}:{fromCache?:boolean}={}){
+ await applyDecryptedVault(secret,envelope,await decryptVault(envelope,secret),fromCache);
+}
 /** A cached archive can open immediately, but an hour-old copy must verify
  * the real encrypted vault rather than trusting a potentially stale marker. */
 export function needsFullCloudCheckOnOpen(){return cachedSnapshotNeedsFullCheck(cloudLatestAt);}
@@ -61,7 +66,7 @@ export async function refreshCloudRecords({force=false}:{force?:boolean}={}):Pro
  if(!Array.isArray(payload.records)||typeof payload.records[0]?.at!=='string')throw Error('新快照格式无效。');
  const nextTime=Date.parse(payload.records[0].at),oldTime=Date.parse(cloudLatestAt||'');
  if(!Number.isFinite(nextTime)||nextTime<=oldTime)return null;
- await unlock(password,envelope);
+ await applyDecryptedVault(password,envelope,payload);
  return records;
 }
 

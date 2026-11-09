@@ -398,9 +398,10 @@ try{
     assert.equal(await page.title(),'XBOX Playlog','Website title matches installed brand');
     assert.ok((await page.locator('aside .brand').innerText()).includes('XBOX Playlog'),'Sidebar uses the new brand');
     const iconHref=await page.locator('link[rel="apple-touch-icon"]').getAttribute('href');
-    assert.ok(iconHref?.endsWith('/xbox-playlog-pages/apple-touch-icon-v2.png'),
+    assert.ok(iconHref?.endsWith('/xbox-playlog-pages/apple-touch-icon-v3.png'),
       'iOS home screen icon uses the explicit updated subpath URL');
-    for(const [file,size] of [['pwa-192-v2.png',192],['pwa-512-v2.png',512],['apple-touch-icon-v2.png',180]]){
+    for(const [file,size] of [['pwa-192-v3.png',192],['pwa-512-v3.png',512],['apple-touch-icon-v3.png',180],
+      ['pwa-maskable-192-v3.png',192],['pwa-maskable-512-v3.png',512]]){
       const image=await page.request.get('http://127.0.0.1:4173/xbox-playlog-pages/'+file);
       assert.ok(image.ok(),file+' must be available after deployment');
       assert.ok(image.headers()['content-type']?.includes('image/png'),file+' must return a real PNG');
