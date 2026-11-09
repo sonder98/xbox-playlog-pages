@@ -574,16 +574,16 @@ try{
       'No trustworthy playtime samples means no fictitious daily total');
     assert.equal(await overviewSheet.locator('.ah-day-recap').getAttribute('data-hero-game-id'),'101',
       'Largest daily achievement count selects the first stable game on a tie');
-    const hero=await overviewSheet.locator('.ah-day-recap').evaluate(el=>{
+    const recapHero=await overviewSheet.locator('.ah-day-recap').evaluate(el=>{
       const img=el.querySelector('.ah-day-recap-backdrop img');
       const styles=img&&getComputedStyle(img);
       return {src:img?.getAttribute('src'),brightness:styles?.filter,
         overflow:getComputedStyle(el).overflow};
     });
-    assert.ok(hero.src?.endsWith('/landscape.svg'),'Day recap uses the same cached detail hero art');
-    assert.ok(hero.brightness?.includes('brightness')&&hero.brightness.includes('blur'),
+    assert.ok(recapHero.src?.endsWith('/landscape.svg'),'Day recap uses the same cached detail hero art');
+    assert.ok(recapHero.brightness?.includes('brightness')&&recapHero.brightness.includes('blur'),
       'Backdrop is visibly darkened and softened beneath metric text');
-    assert.equal(hero.overflow,'hidden','Background image stays inside the rounded recap card');
+    assert.equal(recapHero.overflow,'hidden','Background image stays inside the rounded recap card');
     assert.equal(await page.locator('.ah-day-detail .ah-sheet-game-hours').count(),0,
       'Full achievement detail does not inherit summary sheet metrics');
     const headerGeometry=await overviewSheet.evaluate(el=>{
