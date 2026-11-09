@@ -577,12 +577,19 @@ try{
     const recapHero=await overviewSheet.locator('.ah-day-recap').evaluate(el=>{
       const img=el.querySelector('.ah-day-recap-backdrop img');
       const styles=img&&getComputedStyle(img);
+      const veil=getComputedStyle(el,'::before').backgroundImage;
+      const veilAlphas=(veil.match(/rgba?\([^)]+\)/g)||[]).map(value=>Number(value.replace(')','').split(',').at(-1)));
       return {src:img?.getAttribute('src'),brightness:styles?.filter,
+        veilAlphas,shadow:getComputedStyle(el.querySelector('.ah-day-recap-content')).textShadow,
         overflow:getComputedStyle(el).overflow};
     });
     assert.ok(recapHero.src?.endsWith('/landscape.svg'),'Day recap uses the same cached detail hero art');
-    assert.ok(recapHero.brightness?.includes('brightness')&&recapHero.brightness.includes('blur'),
-      'Backdrop is visibly darkened and softened beneath metric text');
+    assert.ok(recapHero.brightness?.includes('brightness(0.92)')&&recapHero.brightness.includes('blur(1.25px)'),
+      "Winning game cover stays legible at 92% brightness with only slight blur");
+    assert.ok(recapHero.veilAlphas.length>=2&&Math.max(...recapHero.veilAlphas)<=.5,
+      'Atmospheric overlay stays <=50% opacity, not the previous nearly opaque 68-83%');
+    assert.ok(recapHero.shadow&&recapHero.shadow!=='none',
+      'Metric labels stay readable with a dark text shadow over brighter art');
     assert.equal(recapHero.overflow,'hidden','Background image stays inside the rounded recap card');
     assert.equal(await page.locator('.ah-day-detail .ah-sheet-game-hours').count(),0,
       'Full achievement detail does not inherit summary sheet metrics');
