@@ -585,7 +585,7 @@ try{
     });
     assert.ok(recapHero.src?.endsWith('/landscape.svg'),'Day recap uses the same cached detail hero art');
     assert.ok(recapHero.brightness?.includes('brightness(0.92)')&&recapHero.brightness.includes('blur(1.25px)'),
-      'Winning game's cover is legible: at least 92% brightness with only slight blur');
+      "Winning game cover stays legible at 92% brightness with only slight blur");
     assert.ok(recapHero.veilAlphas.length>=2&&Math.max(...recapHero.veilAlphas)<=.5,
       'Atmospheric overlay stays <=50% opacity, not the previous nearly opaque 68-83%');
     assert.ok(recapHero.shadow&&recapHero.shadow!=='none',
