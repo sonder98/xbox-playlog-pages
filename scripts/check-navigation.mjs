@@ -528,7 +528,7 @@ try{
       assert.ok(refresh.dx<1&&refresh.dy<1,'Mobile refresh icon is centered both ways');
     }
     const statsBeforeHiding=await page.locator('.stats').innerText();
-    assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['heatmap','recent','showcases','dusty','stats']);
+    assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['recent','heatmap','showcases','dusty','stats']);
     assert.equal(await page.locator('.dusty-preview').count(),1,'Dusty preview belongs after achievements-gap showcase');
     assert.equal(await page.locator('.dusty-preview .dust-card').count(),0,'Non-Xbox fixtures must not invent official missing-visibility games');
     assert.equal(await page.locator('.ah-preview-grid .ah-preview-cell').count(),30,'Overview shows only 30 days');
@@ -619,8 +619,8 @@ try{
     await overviewSheet.waitFor({state:'hidden'});
     // Both TOP100 galleries and the dusty games preview sit between Recent Games and summary statistics.
     const overviewOrder=await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection));
-    assert.deepEqual(overviewOrder,['heatmap','recent','showcases','dusty','stats'],
-      'Overview order skips the deleted most-played carousel');
+    assert.deepEqual(overviewOrder,['recent','heatmap','showcases','dusty','stats'],
+      'Overview starts with recent games, followed by heatmap, galleries and statistics');
     assert.equal(await page.locator('.ah-home-showcases > .ah-showcase').count(),2,
       'Overview contains exactly two achievement cabinets');
     assert.equal(await page.locator('[data-achievement-showcase="preview"] .ah-showcase-tile').count(),24,'Showcase previews each eligible earned achievement in one horizontal rail');
