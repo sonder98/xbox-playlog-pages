@@ -1465,6 +1465,39 @@ try{
     await page.getByRole('button',{name:'返回上一页',exact:true}).click();
     await page.getByRole('heading',{name:'我的游戏档案',exact:true}).waitFor();
     await page.getByRole('button',{name:'全部游戏',exact:true}).click();
+    const libraryCard=page.locator('.library-games-panel .game-card').first();
+    await libraryCard.waitFor();
+    // iPad landscape/portrait must use spare space for the progress track while
+    // the existing mobile layout remains pixel-identical at the 700px breakpoint.
+    const measureLibraryCard=()=>libraryCard.evaluate(el=>{
+      const box=(selector)=>el.querySelector(selector).getBoundingClientRect();
+      const card=el.getBoundingClientRect();
+      return {card,cover:box('.game-art'),copy:box('.game-copy'),progress:box('.game-progress'),
+        columns:getComputedStyle(el).gridTemplateColumns.split(/\\s+/).length};
+    });
+    if(mobile){
+      const measured=await measureLibraryCard();
+      assert.equal(measured.columns,2,'Phone keeps its original two-column game library layout');
+      assert.ok(Math.abs(measured.cover.width-112)<2,'Phone keeps its 112px game cover');
+      assert.ok(measured.progress.left>=measured.cover.right-2,
+        'Phone progress remains in the right information column, not stretched across the card');
+    }else{
+      for(const width of [1024,1408]){
+        await page.setViewportSize({width,height:1000});
+        const measured=await measureLibraryCard();
+        assert.equal(measured.columns,3,'Tablet retains cover, details and progress columns');
+        assert.ok(measured.progress.width>=(width===1024?210:330),
+          'Tablet achievement progress expands into previously unused center space');
+        assert.ok(measured.copy.right+12<=measured.progress.left,
+          'Tablet progress and game title must not collide');
+        assert.ok(measured.progress.right<=measured.card.right+2,
+          'Tablet progress stays inside the game card');
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,
+          'Tablet game library has no horizontal overflow');
+      }
+      await page.setViewportSize({width:1440,height:1000});
+    }
+    console.log((mobile?'Mobile':'Tablet')+': PASS game library progress geometry and protected phone layout');
     const gameSort=page.getByRole('button',{name:'游戏排序',exact:true});
     const gameSearch=page.getByRole('button',{name:'搜索游戏',exact:true});
     assert.equal(await page.getByRole('searchbox',{name:'搜索游戏名称'}).count(),0,

@@ -2962,6 +2962,20 @@ footer .dot {
 }
 
 
+/* Tablet/desktop game library: use the available width for achievement progress,
+   rather than leaving a 210px fixed-width track at the far right of a wide row.
+   Keep the existing <=700px two-column phone design completely untouched. */
+@media (min-width: 701px) {
+  .library-games-panel .game-card {
+    grid-template-columns: 136px minmax(0, 1fr) clamp(210px, 36%, 420px);
+  }
+}
+@media (min-width: 701px) and (max-width: 1150px) {
+  .library-games-panel .game-card {
+    grid-template-columns: 120px minmax(0, 1fr) clamp(170px, 36%, 320px);
+  }
+}
+
 /* Compact, same-row library search: sort is always to the LEFT; search grows
    only into the remaining horizontal space to the RIGHT of its icon. */
 .games-panel>.toolbar>.filters {width:100%;display:flex;align-items:center;flex-wrap:wrap;gap:12px;}
