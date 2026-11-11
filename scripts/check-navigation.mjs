@@ -1470,9 +1470,12 @@ try{
     // iPad landscape/portrait must use spare space for the progress track while
     // the existing mobile layout remains pixel-identical at the 700px breakpoint.
     const measureLibraryCard=()=>libraryCard.evaluate(el=>{
-      const box=(selector)=>el.querySelector(selector).getBoundingClientRect();
-      const card=el.getBoundingClientRect();
-      return {card,cover:box('.game-art'),copy:box('.game-copy'),progress:box('.game-progress'),
+      const box=element=>{
+        const r=element.getBoundingClientRect();
+        return {left:r.left,right:r.right,width:r.width};
+      };
+      return {card:box(el),cover:box(el.querySelector('.game-art')),
+        copy:box(el.querySelector('.game-copy')),progress:box(el.querySelector('.game-progress')),
         columns:getComputedStyle(el).gridTemplateColumns.split(/\s+/).length};
     });
     if(mobile){
