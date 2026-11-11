@@ -1473,7 +1473,7 @@ try{
       const box=(selector)=>el.querySelector(selector).getBoundingClientRect();
       const card=el.getBoundingClientRect();
       return {card,cover:box('.game-art'),copy:box('.game-copy'),progress:box('.game-progress'),
-        columns:getComputedStyle(el).gridTemplateColumns.split(/\\s+/).length};
+        columns:getComputedStyle(el).gridTemplateColumns.split(/\s+/).length};
     });
     if(mobile){
       const measured=await measureLibraryCard();
