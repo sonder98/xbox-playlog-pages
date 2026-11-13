@@ -16,8 +16,7 @@ export function DustyPreview({items,onOpen,onGame}:{items:DustyGame[];onOpen:()=
   <div className="ah-showcase-heading">
    <div className="ah-showcase-title-group">
     <span className="ah-showcase-trophy dusty-section-icon"><Clock3 size={21} aria-hidden="true"/></span>
-    <div><h2>吃灰游戏 <span className="ah-showcase-top-label">TOP 5</span></h2>
-     <p>按距离上次游玩或解锁成就的天数排序 · M 站 PC 评分</p></div>
+    <div><h2>吃灰游戏 <span className="ah-showcase-top-label">TOP 5</span></h2></div>
    </div>
    <button className="ah-showcase-open" type="button" onClick={onOpen} disabled={!items.length} aria-label="查看全部吃灰游戏">
     <ChevronRight size={22}/></button>
