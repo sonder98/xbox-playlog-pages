@@ -336,6 +336,8 @@ try{
     const dustyRing=dustyDetailRow.locator('.dust-achievement-ring');
     assert.equal(await dustyRing.getAttribute('aria-valuenow'),'50','Dusty list progress is earned achievements divided by total achievements');
     assert.equal((await dustyRing.locator('text').textContent())?.trim(),'50%','The ring percentage is shown in its center');
+    assert.equal(await dustyRing.locator('.dust-achievement-ring-progress').evaluate(el=>getComputedStyle(el).stroke),
+      'rgb(166, 243, 200)','Circular achievement progress matches Mythic mint');
     assert.equal(await dustyDetailRow.evaluate(el=>el.lastElementChild?.classList.contains('dust-achievement-ring')),true,
       'The achievement ring is placed at the far right of each row');
     await dustyDetailRow.click();
@@ -493,6 +495,8 @@ try{
     assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-progress strong').innerText(),'50%',
       'Combined base + DLC progress displays 2 / 4 = 50%, not base-only Mythic 100%');
     assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-progress-track').getAttribute('aria-valuenow'),'50');
+    assert.equal(await recent.locator('.recent-game-progress-track>span').first().evaluate(el=>getComputedStyle(el).backgroundColor),
+      'rgb(166, 243, 200)','Overview recent-game progress uses Mythic mint');
     assert.equal((await recent.locator('.recent-game-card').first().locator('.recent-game-hours').innerText()).trim(),'累计游玩 1 h',
       'Lifetime hours appear on their own line beneath the title');
     assert.equal(await recent.locator('.recent-game-card .recent-game-hours').count(),10,
@@ -1501,45 +1505,43 @@ try{
       await page.setViewportSize({width:1440,height:1000});
     }
     console.log((mobile?'Mobile':'Tablet')+': PASS game library progress geometry and protected phone layout');
-    // Mythic colors follow the *existing* mint frame, not the global lime.
-    // Verify both desktop and phone without altering card layout or typography.
-    const mythicPalette=await libraryCard.evaluate(card=>{
-      const cover=card.querySelector('.game-cover.completion-frame');
+    // Revert every game name to white, while ALL progress bars (not just Mythic)
+    // use the original Mythic frame's mint. Verify this in the phone and
+    // tablet/desktop layouts without changing geometry or type styles.
+    const progressPalette=await libraryCard.evaluate(card=>{
       const title=card.querySelector('.game-title');
-      const track=card.querySelector('.game-progress .progress.complete>span');
-      const style=getComputedStyle(title);
-      const rect=title.getBoundingClientRect();
-      const measure=()=>({
-        color:getComputedStyle(title).color,
-        bar:getComputedStyle(track).backgroundColor,
+      const cover=card.querySelector('.game-cover.completion-frame');
+      const track=card.querySelector('.game-progress .progress');
+      const fill=track?.querySelector(':scope>span');
+      const original={
+        title:getComputedStyle(title).color,
+        frame:getComputedStyle(cover).borderTopColor,
+        bar:getComputedStyle(fill).backgroundColor,
         fontSize:getComputedStyle(title).fontSize,
         fontWeight:getComputedStyle(title).fontWeight,
-        width:title.getBoundingClientRect().width,
-        height:title.getBoundingClientRect().height
-      });
-      const actual=measure();
-      const frameColor=getComputedStyle(cover).borderTopColor;
-      card.classList.remove('is-mythic');
-      const plain=measure();
-      card.classList.add('is-mythic');
-      return {mythic:card.classList.contains('is-mythic'),frameColor,actual,plain};
+        titleWidth:title.getBoundingClientRect().width,
+        titleHeight:title.getBoundingClientRect().height
+      };
+      track.classList.remove('complete');
+      const incomplete=getComputedStyle(fill).backgroundColor;
+      track.classList.add('complete');
+      const restored=getComputedStyle(fill).backgroundColor;
+      return {original,incomplete,restored,unusedMythicClass:card.classList.contains('is-mythic')};
     });
-    assert.ok(mythicPalette.mythic,'Base-game completion is assigned a Mythic card state');
-    assert.equal(mythicPalette.frameColor,'rgb(166, 243, 200)',
-      'Existing Mythic frame source color remains unchanged');
-    assert.equal(mythicPalette.actual.color,mythicPalette.frameColor,
-      'Mythic game names use the exact badge mint color');
-    assert.equal(mythicPalette.actual.bar,mythicPalette.frameColor,
-      'Mythic achievement progress fills use the same mint as the badge');
-    assert.equal(mythicPalette.plain.color,'rgb(255, 255, 255)',
-      'Non-Mythic game titles retain their original white');
-    assert.equal(mythicPalette.plain.bar,'rgb(199, 255, 46)',
-      'Removing Mythic state reveals the existing completion accent');
-    for(const field of ['fontSize','fontWeight','width','height'])
-      assert.equal(mythicPalette.actual[field],mythicPalette.plain[field],
-        'Mythic status does not affect game title '+field);
-    console.log((mobile?'Mobile':'Desktop')+': PASS Mythic name/progress tint without typography/layout changes');
-
+    assert.equal(progressPalette.original.frame,'rgb(166, 243, 200)',
+      'Original Mythic badge frame color stays unchanged');
+    assert.equal(progressPalette.original.title,'rgb(255, 255, 255)',
+      'Mythic and Full game titles revert to the existing white');
+    for(const color of [progressPalette.original.bar,progressPalette.incomplete,progressPalette.restored])
+      assert.equal(color,progressPalette.original.frame,
+        'Complete and incomplete game progress share the same Mythic mint');
+    assert.equal(progressPalette.unusedMythicClass,false,
+      'No longer need a Mythic-only styling override on game cards');
+    assert.ok(progressPalette.original.fontSize&&progressPalette.original.fontWeight&&
+      progressPalette.original.titleWidth>0&&progressPalette.original.titleHeight>0,
+      'Game name typography and geometry stay intact');
+    console.log((mobile?'Mobile':'Desktop')+': PASS white game titles and global mint progress');
+    
     // Full and Mythic share the same cover/badge geometry. The Full shimmer
     // must be clipped to the existing 2px rounded border, not a floating SVG
     // that can drift at different mobile/tablet/desktop cover sizes.
@@ -1907,7 +1909,12 @@ try{
     });
     assert.equal(grayscale.label,grayscale.locked,'Percentage matches the muted unlocked-status gray');
     assert.ok(grayscale.fillWidth>0&&Math.abs(grayscale.fillWidth/grayscale.trackWidth-.8)<.02,'Track fills 80%');
-    assert.ok(grayscale.fill!==grayscale.track,'Light-gray fill contrasts with dark-gray track');
+    assert.equal(grayscale.fill,'rgb(166, 243, 200)',
+      'Official locked-achievement completion bar uses the same mint');
+    assert.ok(grayscale.fill!==grayscale.track,'Mint fill contrasts with original dark-gray track');
+    const detailCompletionFill=page.locator('.game-detail .detail-achievement-section>.progress>span');
+    assert.equal(await detailCompletionFill.evaluate(el=>getComputedStyle(el).backgroundColor),
+      'rgb(166, 243, 200)','Game detail completion summary uses the global mint');
     assert.equal(await page.locator('.game-detail .achievement[data-achievement-id="4"] .achievement-progress-track').count(),0,
       'Locked awards without official progress have no placeholder zero bar');
     assert.equal(await page.locator('.game-detail .achievement:not(.locked) .achievement-progress-track').count(),0,
