@@ -337,7 +337,7 @@ try{
     assert.equal(await dustyRing.getAttribute('aria-valuenow'),'50','Dusty list progress is earned achievements divided by total achievements');
     assert.equal((await dustyRing.locator('text').textContent())?.trim(),'50%','The ring percentage is shown in its center');
     assert.equal(await dustyRing.locator('.dust-achievement-ring-progress').evaluate(el=>getComputedStyle(el).stroke),
-      'rgb(166, 243, 200)','Circular achievement progress matches Mythic mint');
+      'rgb(199, 255, 46)','Circular achievement progress matches original theme');
     assert.equal(await dustyDetailRow.evaluate(el=>el.lastElementChild?.classList.contains('dust-achievement-ring')),true,
       'The achievement ring is placed at the far right of each row');
     await dustyDetailRow.click();
@@ -444,9 +444,8 @@ try{
         'Bottom nav hides again and stops intercepting touches once the grace period expires');
       await switchMainTab('概览');
       await page.locator('[data-overview-section="recent"]').waitFor();
-    // The entire product shares one mint UI theme, not a collection of old
-    // yellow-green overrides. Separate semantics (Xbox trademark, danger,
-    // rarity metalwork, gold collector art) retain their established colors.
+    // Restore the site's original bright Xbox-inspired green for buttons,
+    // heatmap and completion progress. The Mythic collector frame is mint only.
     const siteTheme=await page.evaluate(()=>{
       const root=getComputedStyle(document.documentElement);
       const draw=(cls)=>{
@@ -463,15 +462,15 @@ try{
         progress:root.getPropertyValue('--progress-mint').trim().toUpperCase(),
         primary:draw('primary'),selected,level};
     });
-    assert.equal(siteTheme.accent,'#A6F3C8','The global Xbox Playlog theme is Mythic mint');
-    assert.equal(siteTheme.progress,'#A6F3C8','All progress bars resolve the global mint theme');
-    assert.equal(siteTheme.primary.background,'rgb(166, 243, 200)','Primary CTAs use mint');
-    assert.equal(siteTheme.primary.color,'rgb(15, 15, 15)','Mint CTA text stays dark and readable');
-    assert.equal(siteTheme.selected,'rgb(166, 243, 200)','Active filter pills use mint');
-    assert.deepEqual(siteTheme.level,['rgb(48, 48, 48)','rgb(43, 73, 59)',
-      'rgb(76, 129, 105)','rgb(112, 188, 152)','rgb(166, 243, 200)'],
-      'Achievement heatmap uses a coordinated mint intensity scale');
-    console.log((mobile?'Mobile':'Desktop')+': PASS unified mint buttons, filters, navigation palette and heatmap');
+    assert.equal(siteTheme.accent,'#C7FF2E','The site returns to its original green');
+    assert.equal(siteTheme.progress,'VAR(--ACCENT)','All progress bars inherit the restored global theme');
+    assert.equal(siteTheme.primary.background,'rgb(199, 255, 46)','Primary CTAs use the original green');
+    assert.equal(siteTheme.primary.color,'rgb(15, 15, 15)','CTA text stays dark and readable');
+    assert.equal(siteTheme.selected,'rgb(199, 255, 46)','Active filter pills use the original green');
+    assert.deepEqual(siteTheme.level,['rgb(48, 48, 48)','rgb(48, 69, 30)',
+      'rgb(86, 126, 48)','rgb(141, 189, 67)','rgb(199, 255, 46)'],
+      'Achievement heatmap returns to the original green intensity scale');
+    console.log((mobile?'Mobile':'Desktop')+': PASS original green theme and heatmap');
 
       assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
         'Tab switching back to overview also preserves navigation for 1.5 seconds');
@@ -525,7 +524,7 @@ try{
       'Combined base + DLC progress displays 2 / 4 = 50%, not base-only Mythic 100%');
     assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-progress-track').getAttribute('aria-valuenow'),'50');
     assert.equal(await recent.locator('.recent-game-progress-track>span').first().evaluate(el=>getComputedStyle(el).backgroundColor),
-      'rgb(166, 243, 200)','Overview recent-game progress uses Mythic mint');
+      'rgb(199, 255, 46)','Overview recent-game progress matches original theme');
     assert.equal((await recent.locator('.recent-game-card').first().locator('.recent-game-hours').innerText()).trim(),'累计游玩 1 h',
       'Lifetime hours appear on their own line beneath the title');
     assert.equal(await recent.locator('.recent-game-card .recent-game-hours').count(),10,
@@ -1564,9 +1563,8 @@ try{
       await page.setViewportSize({width:1440,height:1000});
     }
     console.log((mobile?'Mobile':'Tablet')+': PASS game library progress geometry and protected phone layout');
-    // Revert every game name to white, while ALL progress bars (not just Mythic)
-    // use the original Mythic frame's mint. Verify this in the phone and
-    // tablet/desktop layouts without changing geometry or type styles.
+    // All game names stay white; completion bars return to site green.
+    // The collectible Mythic frame remains mint in every viewport.
     const progressPalette=await libraryCard.evaluate(card=>{
       const title=card.querySelector('.game-title');
       const cover=card.querySelector('.game-cover.completion-frame');
@@ -1592,14 +1590,14 @@ try{
     assert.equal(progressPalette.original.title,'rgb(255, 255, 255)',
       'Mythic and Full game titles revert to the existing white');
     for(const color of [progressPalette.original.bar,progressPalette.incomplete,progressPalette.restored])
-      assert.equal(color,progressPalette.original.frame,
-        'Complete and incomplete game progress share the same Mythic mint');
+      assert.equal(color,'rgb(199, 255, 46)',
+        'Complete and incomplete game progress use the restored site green');
     assert.equal(progressPalette.unusedMythicClass,false,
       'No longer need a Mythic-only styling override on game cards');
     assert.ok(progressPalette.original.fontSize&&progressPalette.original.fontWeight&&
       progressPalette.original.titleWidth>0&&progressPalette.original.titleHeight>0,
       'Game name typography and geometry stay intact');
-    console.log((mobile?'Mobile':'Desktop')+': PASS white game titles and global mint progress');
+    console.log((mobile?'Mobile':'Desktop')+': PASS white titles, mint Mythic frames and original green progress');
     
     // Full and Mythic share the same cover/badge geometry. The Full shimmer
     // must be clipped to the existing 2px rounded border, not a floating SVG
@@ -1982,12 +1980,12 @@ try{
     });
     assert.equal(grayscale.label,grayscale.locked,'Percentage matches the muted unlocked-status gray');
     assert.ok(grayscale.fillWidth>0&&Math.abs(grayscale.fillWidth/grayscale.trackWidth-.8)<.02,'Track fills 80%');
-    assert.equal(grayscale.fill,'rgb(166, 243, 200)',
-      'Official locked-achievement completion bar uses the same mint');
-    assert.ok(grayscale.fill!==grayscale.track,'Mint fill contrasts with original dark-gray track');
+    assert.equal(grayscale.fill,'rgb(199, 255, 46)',
+      'Official locked-achievement completion bar uses the restored green');
+    assert.ok(grayscale.fill!==grayscale.track,'Green fill contrasts with original dark-gray track');
     const detailCompletionFill=page.locator('.game-detail .detail-achievement-section>.progress>span');
     assert.equal(await detailCompletionFill.evaluate(el=>getComputedStyle(el).backgroundColor),
-      'rgb(166, 243, 200)','Game detail completion summary uses the global mint');
+      'rgb(199, 255, 46)','Game detail completion summary uses the original green');
     assert.equal(await page.locator('.game-detail .achievement[data-achievement-id="4"] .achievement-progress-track').count(),0,
       'Locked awards without official progress have no placeholder zero bar');
     assert.equal(await page.locator('.game-detail .achievement:not(.locked) .achievement-progress-track').count(),0,
