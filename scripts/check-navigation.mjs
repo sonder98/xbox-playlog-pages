@@ -1501,6 +1501,45 @@ try{
       await page.setViewportSize({width:1440,height:1000});
     }
     console.log((mobile?'Mobile':'Tablet')+': PASS game library progress geometry and protected phone layout');
+    // Mythic colors follow the *existing* mint frame, not the global lime.
+    // Verify both desktop and phone without altering card layout or typography.
+    const mythicPalette=await libraryCard.evaluate(card=>{
+      const cover=card.querySelector('.game-cover.completion-frame');
+      const title=card.querySelector('.game-title');
+      const track=card.querySelector('.game-progress .progress.complete>span');
+      const style=getComputedStyle(title);
+      const rect=title.getBoundingClientRect();
+      const measure=()=>({
+        color:getComputedStyle(title).color,
+        bar:getComputedStyle(track).backgroundColor,
+        fontSize:getComputedStyle(title).fontSize,
+        fontWeight:getComputedStyle(title).fontWeight,
+        width:title.getBoundingClientRect().width,
+        height:title.getBoundingClientRect().height
+      });
+      const actual=measure();
+      const frameColor=getComputedStyle(cover).borderTopColor;
+      card.classList.remove('is-mythic');
+      const plain=measure();
+      card.classList.add('is-mythic');
+      return {mythic:card.classList.contains('is-mythic'),frameColor,actual,plain};
+    });
+    assert.ok(mythicPalette.mythic,'Base-game completion is assigned a Mythic card state');
+    assert.equal(mythicPalette.frameColor,'rgb(166, 243, 200)',
+      'Existing Mythic frame source color remains unchanged');
+    assert.equal(mythicPalette.actual.color,mythicPalette.frameColor,
+      'Mythic game names use the exact badge mint color');
+    assert.equal(mythicPalette.actual.bar,mythicPalette.frameColor,
+      'Mythic achievement progress fills use the same mint as the badge');
+    assert.equal(mythicPalette.plain.color,'rgb(255, 255, 255)',
+      'Non-Mythic game titles retain their original white');
+    assert.equal(mythicPalette.plain.bar,'rgb(199, 255, 46)',
+      'Removing Mythic state reveals the existing completion accent');
+    for(const field of ['fontSize','fontWeight','width','height'])
+      assert.equal(mythicPalette.actual[field],mythicPalette.plain[field],
+        'Mythic status does not affect game title '+field);
+    console.log((mobile?'Mobile':'Desktop')+': PASS Mythic name/progress tint without typography/layout changes');
+
     // Full and Mythic share the same cover/badge geometry. The Full shimmer
     // must be clipped to the existing 2px rounded border, not a floating SVG
     // that can drift at different mobile/tablet/desktop cover sizes.
