@@ -1,6 +1,6 @@
 'use client';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Search,Clock3,Trophy,ShieldCheck,X,ArrowRight,ChevronRight,SlidersHorizontal,EyeOff,Medal,Sun,Moon} from 'lucide-react';
+import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Search,Clock3,Trophy,X,ArrowRight,ChevronRight,SlidersHorizontal,EyeOff,Medal,Sun,Moon} from 'lucide-react';
 import {compareRecords,officialGameVisible,syncMechanismLabel,type Game,type RecordData} from './data';
 import {GameCard,GameCover,GameDetail,Modal} from './components/game';
 import {MythicPosterWall} from './components/mythic-wall';
