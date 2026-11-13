@@ -271,7 +271,7 @@ export function AchievementJourney({games,records=[],playtimeLedger,dayId,showca
   return <section className="ah-page ah-showcase-detail" data-achievement-showcase="detail">
    <button type="button" className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回概览</button>
    <div className="ah-intro-block"><span className="eyebrow">RARE ACHIEVEMENTS</span><h1>稀有成就展柜</h1>
-    <p className="ah-intro">跨游戏 · 按全球玩家解锁率由低到高排列</p></div>
+    <p className="ah-intro">按稀有度排序</p></div>
    <div className="ah-showcase-detail-count"><span>已解锁成就</span><strong>TOP {rare.length}</strong></div>
    {rare.length?<div className="ah-achievement-list">{rare.map((item,i)=><DayCard key={item.key} event={item} rank={i+1} showFullDate onGame={onOpenGame}/>)}</div>:
     <p className="ah-empty-day">尚无可用的稀有成就数据。Xbox 同步稀有度后自动展示。</p>}
@@ -289,7 +289,7 @@ export function AchievementJourney({games,records=[],playtimeLedger,dayId,showca
    <div className="ah-day-title"><h1>{dayLabel(dayId)}</h1><div className="ah-date-arrows">
     <button type="button" aria-label={'前一天 '+dayLabel(prev)} title="前一天" disabled={prev<'2022-01-01'} onClick={()=>onChangeDay(prev)}><ChevronLeft size={22}/></button>
     <button type="button" aria-label={'后一天 '+dayLabel(next)} title="后一天" disabled={next>activity.today} onClick={()=>onChangeDay(next)}><ChevronRight size={22}/></button>
-   </div></div><p className="ah-intro">解锁 {bucket?.events.length||0} 个成就 · 涉及 {bucket?.games.length||0} 款游戏</p>
+   </div></div>
    <div className="ah-day-toolbar"><span>{events.length} 个成就</span><AchievementSortControl order={order} onChange={setOrder}/></div>
    {events.length?<div className="ah-achievement-list">{events.map(e=><DayCard key={e.key} event={e} onGame={onOpenGame}/>)}</div>:<p className="ah-empty-day">这一天没有可查询的已解锁成就。</p>}
   </section>;
@@ -304,7 +304,7 @@ export function AchievementJourney({games,records=[],playtimeLedger,dayId,showca
    <Calendar activity={activity} year={year} month={month} selected={selected} played={played} onSelect={selectDay} onOpenGame={onOpenGame}/>
   </div>)}</div>
   {!activity.total&&<p className="ah-empty-day">尚无带有效解锁时间的成就。完成 Xbox 同步后会自动显示。</p>}
-  <p className="ah-footnote">统计来自所有已同步游戏（含 Xbox 官方隐藏或可见状态未知的游戏）中带解锁时间的成就；未取得解锁时间的记录无法归入具体日期。时间采用北京时间。</p>
+  
   {sheetDay&&<Sheet day={sheetDay} activity={activity} allGames={games} playtimeLedger={playtimeLedger} onChangeDay={day=>{setSelected(day);setSheetDay(day);}} onClose={closeSheet} onOpenGame={onOpenGame} onDetail={()=>{setSheetDay(null);onOpenDay(sheetDay);}}/>}
  </section>;
 }
