@@ -2410,6 +2410,29 @@ footer .dot {
 .game-detail .achievement-rarity.rare {color:#f3cc77;}
 
 
+/* Game-detail unlock state: artwork carries the distinction, without
+   overlays, corner labels or colored stripes. The rare/ultra frame still
+   indicates rarity, independently of whether the award is unlocked. */
+.game-detail .achievement.locked .achievement-image {
+  opacity:1;
+}
+.game-detail .achievement.locked .achievement-image img {
+  filter:grayscale(1) brightness(.70);
+}
+.game-detail .achievement.locked .achievement-image > svg {
+  opacity:.7;
+}
+.game-detail .achievement.locked .achievement-title-row h4 {
+  color:var(--text-secondary);
+}
+.game-detail .achievement.locked .achievement-image.ah-rarity-gold {
+  box-shadow:0 0 0 1px rgba(201,150,55,.10),0 2px 7px rgba(0,0,0,.20);
+}
+.game-detail .achievement.locked .achievement-image.ah-rarity-gold::after {
+  animation:none;
+  opacity:0;
+}
+
 /* Longest interval showcase: readable overlapped pairs, without cropping Xbox artwork. */
 .ah-gap-showcase {background:linear-gradient(155deg,rgba(148,161,179,.045),transparent 44%),var(--surface);}
 .ah-gap-icon {background:rgba(166,192,224,.10);color:#c4d4e7;}

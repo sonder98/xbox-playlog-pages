@@ -92,7 +92,7 @@ function AchievementItem({achievement:a}:{achievement:Achievement}){
       <div className="achievement-title-row"><h4>{a.name}</h4>{(a.points??0)>0&&<span className="achievement-points" aria-label={`${a.points} 玩家积分`}><GamerscoreIcon size={14}/><span>{a.points}</span></span>}</div>
       <div className="achievement-description-row">
         {a.description&&<p className="achievement-description">{a.description}</p>}
-        {a.rarity!==null?<span className={'achievement-rarity'+(rare?' rare':'')} data-rarity-tier={rare?'rare':'common'} aria-label={`${rare?'稀有成就，':''}稀有度 ${a.rarity}%`}>{rare?<Gem size={16} aria-hidden="true"/>:<Trophy size={15} aria-hidden="true"/>}{a.rarity}%</span>:<span className="achievement-rarity unknown">稀有度暂缺</span>}
+        {a.rarity!==null?<span className={'achievement-rarity'+(rare?' rare':'')} data-rarity-tier={rare?'rare':'common'} aria-label={`${rare?'稀有成就，':''}稀有度 ${a.rarity}%`}>{rare?<Gem size={16} aria-hidden="true"/>:<Trophy size={15} aria-hidden="true"/>}{a.rarity}%</span>:<span className="achievement-rarity unknown" aria-label="稀有度暂缺"><Trophy size={15} aria-hidden="true"/>—</span>}
       </div>
       <div className="achievement-status-row">
         <small className={'achievement-unlock'+(a.unlocked?' unlocked':'')}>
