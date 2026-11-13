@@ -463,7 +463,7 @@ try{
         primary:draw('primary'),selected,level};
     });
     assert.equal(siteTheme.accent,'#C7FF2E','The site returns to its original green');
-    assert.equal(siteTheme.progress,'VAR(--ACCENT)','All progress bars inherit the restored global theme');
+    assert.equal(siteTheme.progress,'#C7FF2E','All progress bars resolve to the restored global theme');
     assert.equal(siteTheme.primary.background,'rgb(199, 255, 46)','Primary CTAs use the original green');
     assert.equal(siteTheme.primary.color,'rgb(15, 15, 15)','CTA text stays dark and readable');
     assert.equal(siteTheme.selected,'rgb(199, 255, 46)','Active filter pills use the original green');
