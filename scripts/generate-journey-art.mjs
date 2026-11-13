@@ -109,7 +109,7 @@ const rare=common('rare',`
   <path d="M405 64H754L677 265H483Z" fill="#e4ffac"/>
   <path d="M754 64L944 265H677Z" fill="#8ace93"/>
   <path d="M209 265L483 265 576 648Z" fill="#498d81"/>
-  <path d="M483 265L677 265 576 648Z" fill="#a6fa79"/>
+  <path d="M483 265L677 265 576 648Z" fill="#A6F3C8"/>
   <path d="M677 265L944 265 576 648Z" fill="#2c9a83"/>
   <path d="M483 265L405 64 754 64 677 265Z" fill="none" stroke="#fbffd5" stroke-width="9" opacity=".8"/>
   <path d="M209 265H944L576 648Z" fill="none" stroke="#dcffb1" stroke-width="8" opacity=".45"/>
@@ -126,20 +126,20 @@ const rare=common('rare',`
 
 const full=common('full',`
  <!-- Victory arch, finish line and a physically legible 100% completion medal. -->
- <path d="M800 945L1070 755H1800L1920 945Z" fill="#12372b" stroke="#80b95b" stroke-width="7"/>
- <path d="M970 985L1260 785M1210 1040L1410 790M1570 1040L1550 790" stroke="#b3f873" stroke-width="7" opacity=".5"/>
+ <path d="M800 945L1070 755H1800L1920 945Z" fill="#12372b" stroke="#68B58F" stroke-width="7"/>
+ <path d="M970 985L1260 785M1210 1040L1410 790M1570 1040L1550 790" stroke="#A6F3C8" stroke-width="7" opacity=".5"/>
  <path d="M1100 840V265Q1440-175 1780 265V840" fill="none" stroke="#273f37" stroke-width="108" stroke-linejoin="round"/>
- <path d="M1100 840V265Q1440-175 1780 265V840" fill="none" stroke="#a2ff55" stroke-width="18" stroke-linejoin="round"/>
+ <path d="M1100 840V265Q1440-175 1780 265V840" fill="none" stroke="#A6F3C8" stroke-width="18" stroke-linejoin="round"/>
  <path d="M1110 820V265Q1440-160 1770 265V820" fill="none" stroke="#93e4ac" stroke-opacity=".65" stroke-width="6"/>
  <g transform="translate(1440 458)">
-  <circle r="262" fill="#081c19" stroke="#8bcb58" stroke-width="24"/>
+  <circle r="262" fill="#081c19" stroke="#70BC98" stroke-width="24"/>
   <circle r="236" fill="none" stroke="#ddff94" stroke-width="8" stroke-dasharray="1250 230" transform="rotate(-90)"/>
   <path d="M-112 0L-32 80 135-96" fill="none" stroke="url(#neon)" stroke-width="35" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="0" y="171" font-family="sans-serif" font-size="88" font-weight="900" text-anchor="middle" fill="#e6ffb5">100%</text>
  </g>
  <path d="M971 762L1870 762" stroke="#d5ff8e" stroke-width="15"/>
  <rect x="970" y="776" width="905" height="100" fill="url(#checker)" opacity=".85"/>
- <path d="M970 895L1875 895" stroke="#87be61" stroke-width="9"/>
+ <path d="M970 895L1875 895" stroke="#70BC98" stroke-width="9"/>
  <path d="M825 323l10 40 40 10-40 10-10 40-10-40-40-10 40-10zM1790 170l12 47 47 12-47 12-12 47-12-47-47-12 47-12z" fill="#e8ffad"/>
 `);
 const art={night,burst,rare,full};
