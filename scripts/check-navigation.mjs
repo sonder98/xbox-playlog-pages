@@ -1743,6 +1743,40 @@ try{
       return {imageWidth:rect.width,imageRatio:rect.width/rect.height,fit:getComputedStyle(image.querySelector('img')).objectFit,titleSize:parseFloat(getComputedStyle(title).fontSize),descriptionSize:parseFloat(getComputedStyle(description).fontSize),sameRow:Math.abs(description.getBoundingClientRect().top-rarity.getBoundingClientRect().top)<1,tier:rarity.getAttribute('data-rarity-tier'),icon:rarity.querySelector('svg')?.getAttribute('class'),fits:row.scrollWidth<=row.clientWidth+1};
     }));
     assert.deepEqual(achievementLayout.map(a=>a.tier),['rare','rare','common',null]);
+    // Award rarity remains icon + number only. Unlock state uses the art itself,
+    // without adding labels to the artwork or green/gray stripes to card edges.
+    const unlockLooks=await page.locator('.game-detail .achievement').evaluateAll(rows=>rows.map(row=>{
+      const image=row.querySelector('.achievement-image');
+      const artwork=image?.querySelector('img');
+      const rarity=row.querySelector('.achievement-rarity');
+      return {
+        locked:row.classList.contains('locked'),
+        filter:artwork?getComputedStyle(artwork).filter:null,
+        frameOpacity:getComputedStyle(image).opacity,
+        rarityText:rarity?.textContent?.trim(),
+        rarityIcon:!!rarity?.querySelector('svg'),
+        imageStatusLabels:image?.querySelectorAll('.achievement-unlock,.achievement-status-badge').length
+      };
+    }));
+    assert.deepEqual(unlockLooks.map(x=>x.locked),[false,false,true,true]);
+    assert.ok(unlockLooks.filter(x=>!x.locked).every(x=>x.filter==='none'),
+      'Unlocked achievement artwork stays fully colored');
+    assert.ok(unlockLooks.filter(x=>x.locked).every(x=>x.filter.includes('grayscale(1)')&&x.filter.includes('brightness(0.7)')&&x.frameOpacity==='1'),
+      'Locked art alone becomes grayscale/dimmer; frame and rarity information remain visible');
+    assert.ok(unlockLooks.every(x=>x.rarityIcon&&/^(?:\d+(?:\.\d+)?%|—)$/.test(x.rarityText)),
+      'Rarity keeps its icon plus value, without adding a visible rarity label');
+    assert.ok(unlockLooks.every(x=>x.imageStatusLabels===0),
+      'Artwork stays free of lock/unlock badges and corner overlays');
+    const goldLocked=await page.locator('.game-detail .achievement[data-achievement-id="2"]').evaluate(row=>{
+      row.classList.add('locked');
+      const frame=row.querySelector('.achievement-image');
+      const result={border:getComputedStyle(frame).borderTopWidth,shine:getComputedStyle(frame,'::after').animationName};
+      row.classList.remove('locked');
+      return result;
+    });
+    assert.equal(goldLocked.border,'2px','Locked rare artwork retains its existing gold border');
+    assert.equal(goldLocked.shine,'none','Locked rare artwork no longer animates its foil glow');
+
     assert.deepEqual(await page.locator('.game-detail .achievement').evaluateAll(rows=>rows.map(el=>el.dataset.frameTier)),
       ['rare','ultra','common','common'],'Game achievements use strict 1% / 10% frame tiers');
     const frameResult=await page.locator('.game-detail .achievement-image.ah-rarity-gold').first().evaluate(el=>({
