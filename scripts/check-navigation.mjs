@@ -557,6 +557,74 @@ try{
       'The Mythic collector frame retains its exact mint, independent of theme');
     assert.equal(lightAppearance.status,'#F4F6F3');
     assert.equal(lightAppearance.stored,'light');
+    // Regression: the game's details must not sit inside a black modal scrim
+    // and the light-mode collectible has its own ivory/gold background.
+    await page.locator('.recent-game-card').first().click();
+    const lightGameDialog=page.getByRole('dialog',{name:'Test Game 0 · 游戏详情'});
+    await lightGameDialog.waitFor();
+    const dialogColors=await lightGameDialog.evaluate(el=>{
+      const read=sel=>getComputedStyle(sel).backgroundColor;
+      return {dialog:read(el),
+        backdrop:read(el.closest('.modal-backdrop')),
+        toolbar:read(el.querySelector('.dialog-toolbar')),
+        achievement:read(el.querySelector('.achievement')),
+        text:getComputedStyle(el).color};
+    });
+    assert.deepEqual(dialogColors,{
+      dialog:'rgb(255, 255, 255)',backdrop:'rgba(29, 48, 33, 0.24)',
+      toolbar:'rgb(255, 255, 255)',achievement:'rgb(251, 252, 250)',
+      text:'rgb(25, 39, 29)'
+    },'Game detail modal, background and achievement rows all use the light scheme');
+    await lightGameDialog.getByRole('button',{name:'关闭详情'}).click();
+    await page.locator('[data-overview-section="recent"]').waitFor();
+    await switchMainTab('游戏库');
+    await page.getByRole('button',{name:'打开Mythic纪念墙'}).click();
+    const lightGallery=page.getByRole('region',{name:'Mythic纪念墙展示柜'});
+    await lightGallery.waitFor();
+    const galleryColors=await lightGallery.evaluate(el=>{
+      const css=sel=>getComputedStyle(el.querySelector(sel));
+      return {backdrop:getComputedStyle(el).backgroundImage,
+        surface:css('.mythic-showcase-seat').backgroundImage,
+        poster:css('.mythic-showcase-poster').backgroundImage,
+        label:css('.mythic-showcase-meta-title').color,
+        name:css('.mythic-showcase-game-name').color,
+        badge:css('.mythic-showcase-emblem').backgroundColor};
+    });
+    assert.ok(galleryColors.backdrop.includes('rgb(250, 248, 242)') &&
+      galleryColors.surface.includes('rgba(255, 255, 255, 0.88)') &&
+      galleryColors.poster.includes('rgb(218, 214, 190)'),
+      'Light Mythic gallery has ivory backdrop and warm collectible seats');
+    assert.equal(galleryColors.label,'rgb(48, 47, 37)',
+      'Gallery labels use readable dark ink rather than the dark theme white');
+    assert.equal(galleryColors.name,'rgb(59, 49, 35)',
+      'The miniature itself has dark text on a light parchment background');
+    assert.equal(galleryColors.badge,'rgba(0, 0, 0, 0)',
+      'Mythic medallion still reveals the game artwork through its center');
+    await lightGallery.getByRole('button',{name:'放大 Test Game 0 纪念卡'}).click();
+    const lightWall=page.getByRole('dialog',{name:'Mythic纪念墙'});
+    await lightWall.waitFor();
+    const posterColors=await lightWall.evaluate(el=>{
+      const card=el.querySelector('.mythic-poster.is-active');
+      return {wall:getComputedStyle(el).backgroundImage,
+        paper:getComputedStyle(card).backgroundImage,
+        frame:!!card.querySelector('.mythic-poster-ornament'),
+        badge:getComputedStyle(card.querySelector('.mythic-poster-emblem')).backgroundColor,
+        heading:getComputedStyle(card.querySelector('.mythic-poster-title')).color,
+        shade:getComputedStyle(card.querySelector('.mythic-poster-backdrop-shade')).backgroundImage};
+    });
+    assert.ok(posterColors.wall.includes('rgb(255, 253, 247)') &&
+      posterColors.paper.includes('rgb(218, 210, 183)') &&
+      posterColors.shade.includes('rgb(244, 235, 217)'),
+      'Full-size Mythic poster uses the light parchment artwork treatment');
+    assert.equal(posterColors.heading,'rgb(52, 44, 33)');
+    assert.equal(posterColors.badge,'rgba(0, 0, 0, 0)');
+    assert.equal(posterColors.frame,true,
+      'Existing original frame and Mythic badge decoration remain intact');
+    await lightWall.getByRole('button',{name:'返回展示柜'}).click();
+    await lightGallery.getByRole('button',{name:'返回游戏库'}).click();
+    await switchMainTab('概览');
+    await page.getByRole('button',{name:'切换至深色模式'}).waitFor();
+
     const moon=page.getByRole('button',{name:'切换至深色模式'});
     assert.equal(await moon.locator('svg.lucide-moon').count(),1,
       'Light mode displays a moon icon to switch back');
