@@ -576,6 +576,7 @@ try{
       'Persisted light theme applies before unlocking on a subsequent launch');
     assert.equal(await page.locator('meta[name="theme-color"]').getAttribute('content'),'#F4F6F3');
     if(await page.locator('input[type="password"]').count()){
+      await page.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
       await page.locator('input[type="password"]').fill(password);
       await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
     }
