@@ -133,18 +133,8 @@ img {
   height:44px;
   border-radius:16px
 }
-.brand small {
-  display:block;
-  color:var(--text-muted);
-  font-size:9px;
-  letter-spacing:1.5px;
-  font-weight:500
-}
-.nav-caption {
-  margin:48px 12px 12px;
-  color:var(--text-muted);
-  font-size:12px
-}
+
+
 .sidebar nav {
   display:grid;
   gap:8px
@@ -173,20 +163,8 @@ img {
   background:var(--accent);
   border-radius:50%
 }
-.side-bottom {
-  display:flex;
-  gap:12px;
-  align-items:center;
-  margin-top:auto;
-  padding:24px 4px 0;
-  color:var(--text-secondary);
-  font-size:12px
-}
-.side-bottom small {
-  display:block;
-  color:var(--text-muted);
-  font-size:12px
-}
+
+
 main {
   margin-left:224px;
   width:calc(100% - 224px);
@@ -3804,9 +3782,8 @@ footer .dot {
  font:400 clamp(12px,1.35vw,16px)/1.35 Marcellus,"Noto Serif SC",Georgia,serif;color:#e7ece2}
 .mythic-showcase-meta-date{display:block;margin-top:5px;font-size:11px;color:#95a899}
 .mythic-showcase-open-icon{position:absolute;top:14px;right:6px;color:#ceb37d}
-.mythic-showcase-bottom{padding:46px 0 10px;text-align:center;letter-spacing:.12em;
- font-size:11px;color:#839286}
-.mythic-showcase-bottom span{margin:0 12px}
+
+
 @media(max-width:980px){
  .mythic-showcase-inner{padding-left:26px;padding-right:26px}
  .mythic-showcase-seat{padding:7px 7px 10px}
@@ -3836,7 +3813,7 @@ footer .dot {
  .mythic-showcase-meta-title{font-size:12px}
  .mythic-showcase-meta-date{font-size:10px;margin-top:4px}
  .mythic-showcase-open-icon{display:none}
- .mythic-showcase-bottom{padding:32px 0 0;font-size:10px}
+ 
 }
 @media(max-width:360px){
  .mythic-showcase-inner{padding-left:11px;padding-right:11px}
