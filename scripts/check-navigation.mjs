@@ -588,7 +588,7 @@ try{
         row:get('.ah-sheet-game','backgroundColor'),
         name:get('.ah-sheet-game-name','color'),
         sub:get('.ah-sheet-game-sub','color'),
-        hours:get('.ah-sheet .ah-sheet-game-hours','color'),
+        hours:get('.ah-sheet-game-hours','color'),
         numbers:get('.ah-sheet-game-achievements b','color')};
     });
     assert.deepEqual(lightSheetColors,{
