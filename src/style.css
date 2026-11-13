@@ -4050,3 +4050,41 @@ footer .dot {
  .ah-sheet-game-name {font-size:12px;}
  .ah-sheet .ah-sheet-game-hours b {font-size:11px;}
 }
+
+/* Full: a single warm-gold highlight travels EXACTLY on the existing green
+   Mythic frame. No rotating element, extra outline or separately scaled SVG.
+   The masked 2px layer has the same outer edge and border radius as the cover,
+   so it stays registered at every size (including landscape detail covers). */
+@property --full-border-angle {
+  syntax:"<angle>";
+  inherits:false;
+  initial-value:0deg;
+}
+.game-cover.completion-frame.full-completion::before {
+  content:"";
+  position:absolute;
+  z-index:4;
+  inset:-2px;
+  box-sizing:border-box;
+  padding:2px;
+  border-radius:inherit;
+  pointer-events:none;
+  transform:none;
+  background:conic-gradient(from var(--full-border-angle),
+    transparent 0deg 258deg,
+    rgba(237,178,77,.08) 273deg,
+    rgba(244,200,101,.65) 292deg,
+    #fff7cb 312deg,
+    rgba(252,223,144,.98) 324deg,
+    transparent 347deg 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask-composite:exclude;
+  filter:drop-shadow(0 0 3px #ffedaf) drop-shadow(0 0 4px #dbac53);
+  animation:full-border-flow 3.5s linear infinite;
+}
+@keyframes full-border-flow {to{--full-border-angle:360deg}}
+@media(prefers-reduced-motion:reduce){
+  .game-cover.completion-frame.full-completion::before {animation:none;opacity:0;}
+}
