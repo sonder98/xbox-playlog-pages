@@ -104,7 +104,7 @@ function ShowcaseRail({items,onOpen}:{items:RareAchievement[];onOpen:()=>void}){
   <div className="ah-showcase-heading">
    <div className="ah-showcase-title-group">
     <span className="ah-showcase-trophy"><Trophy size={21} aria-hidden="true"/></span>
-    <div><h2>稀有成就展柜 <span className="ah-showcase-top-label">TOP 100</span></h2><p>跨游戏 · 全球解锁率最低的 {items.length} 个已解锁成就</p></div>
+    <div><h2>稀有成就展柜 <span className="ah-showcase-top-label">TOP 100</span></h2></div>
    </div>
    <button type="button" className="ah-showcase-open" onClick={onOpen} disabled={!items.length} title="查看稀有成就展柜" aria-label="查看稀有成就展柜详情"><ChevronRight size={22}/></button>
   </div>
@@ -296,7 +296,7 @@ export function AchievementJourney({games,records=[],playtimeLedger,dayId,showca
  }
  return <section className="ah-page ah-full-history">
   <button className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回概览</button>
-  <div className="ah-intro-block"><h1>成就热力图</h1><p className="ah-intro">从 2022 年起，每次解锁都有迹可循</p></div>
+  <div className="ah-intro-block"><h1>成就热力图</h1></div>
   <nav className="ah-year-jump" aria-label="按年份定位热力图">{years.map(y=><button type="button" key={y}
    className={activeYear===y?'is-active':''} aria-current={activeYear===y?'location':undefined} aria-controls={'ah-year-'+y}
    onClick={()=>{setActiveYear(y);document.getElementById('ah-year-'+y)?.scrollIntoView({behavior:'smooth',block:'start'});}}>{y}</button>)}</nav>
