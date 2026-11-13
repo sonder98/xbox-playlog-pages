@@ -337,7 +337,7 @@ try{
     assert.equal(await dustyRing.getAttribute('aria-valuenow'),'50','Dusty list progress is earned achievements divided by total achievements');
     assert.equal((await dustyRing.locator('text').textContent())?.trim(),'50%','The ring percentage is shown in its center');
     assert.equal(await dustyRing.locator('.dust-achievement-ring-progress').evaluate(el=>getComputedStyle(el).stroke),
-      'rgb(199, 255, 46)','Circular achievement progress matches original theme');
+      'rgb(16, 124, 16)','Circular achievement progress matches official Xbox green');
     assert.equal(await dustyDetailRow.evaluate(el=>el.lastElementChild?.classList.contains('dust-achievement-ring')),true,
       'The achievement ring is placed at the far right of each row');
     await dustyDetailRow.click();
@@ -444,8 +444,8 @@ try{
         'Bottom nav hides again and stops intercepting touches once the grace period expires');
       await switchMainTab('概览');
       await page.locator('[data-overview-section="recent"]').waitFor();
-    // Restore the site's original bright Xbox-inspired green for buttons,
-    // heatmap and completion progress. The Mythic collector frame is mint only.
+    // Official Xbox App #107C10 drives the site theme and progress.
+    // Mythic collector frames remain independently minted #A6F3C8.
     const siteTheme=await page.evaluate(()=>{
       const root=getComputedStyle(document.documentElement);
       const draw=(cls)=>{
@@ -462,15 +462,19 @@ try{
         progress:root.getPropertyValue('--progress-mint').trim().toUpperCase(),
         primary:draw('primary'),selected,level};
     });
-    assert.equal(siteTheme.accent,'#C7FF2E','The site returns to its original green');
-    assert.equal(siteTheme.progress,'#C7FF2E','All progress bars resolve to the restored global theme');
-    assert.equal(siteTheme.primary.background,'rgb(199, 255, 46)','Primary CTAs use the original green');
-    assert.equal(siteTheme.primary.color,'rgb(15, 15, 15)','CTA text stays dark and readable');
-    assert.equal(siteTheme.selected,'rgb(199, 255, 46)','Active filter pills use the original green');
-    assert.deepEqual(siteTheme.level,['rgb(48, 48, 48)','rgb(48, 69, 30)',
-      'rgb(86, 126, 48)','rgb(141, 189, 67)','rgb(199, 255, 46)'],
-      'Achievement heatmap returns to the original green intensity scale');
-    console.log((mobile?'Mobile':'Desktop')+': PASS original green theme and heatmap');
+    assert.equal(siteTheme.accent,'#107C10','The site uses the exact Xbox app icon green');
+    assert.equal(siteTheme.progress,'#107C10','Progress matches the sampled official Xbox green');
+    assert.equal(siteTheme.primary.background,'rgb(16, 124, 16)','Primary CTAs use Xbox official green');
+    assert.equal(siteTheme.primary.color,'rgb(255, 255, 255)','CTA text is white for 5.37:1 contrast on official green');
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent-text').trim().toUpperCase()),
+      '#62D56B','Small labels use a readable green derived from the official hue');
+    assert.equal(await page.locator('.stat:last-child .stat-value').evaluate(el=>getComputedStyle(el).color),
+      'rgb(98, 213, 107)','Mythic count stays legible as an inline statistic');
+    assert.equal(siteTheme.selected,'rgb(16, 124, 16)','Active filters use Xbox official green');
+    assert.deepEqual(siteTheme.level,['rgb(48, 48, 48)','rgb(28, 58, 30)',
+      'rgb(28, 87, 31)','rgb(34, 109, 44)','rgb(16, 124, 16)'],
+      'Achievement heatmap uses the darker Xbox green intensity scale');
+    console.log((mobile?'Mobile':'Desktop')+': PASS official Xbox App green theme and heatmap');
 
       assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
         'Tab switching back to overview also preserves navigation for 1.5 seconds');
@@ -524,7 +528,7 @@ try{
       'Combined base + DLC progress displays 2 / 4 = 50%, not base-only Mythic 100%');
     assert.equal(await recent.locator('.recent-game-card').first().locator('.recent-game-progress-track').getAttribute('aria-valuenow'),'50');
     assert.equal(await recent.locator('.recent-game-progress-track>span').first().evaluate(el=>getComputedStyle(el).backgroundColor),
-      'rgb(199, 255, 46)','Overview recent-game progress matches original theme');
+      'rgb(16, 124, 16)','Overview recent-game progress matches official Xbox green');
     assert.equal((await recent.locator('.recent-game-card').first().locator('.recent-game-hours').innerText()).trim(),'累计游玩 1 h',
       'Lifetime hours appear on their own line beneath the title');
     assert.equal(await recent.locator('.recent-game-card .recent-game-hours').count(),10,
@@ -1564,7 +1568,7 @@ try{
     }
     console.log((mobile?'Mobile':'Tablet')+': PASS game library progress geometry and protected phone layout');
     // All game names stay white; completion bars return to site green.
-    // The collectible Mythic frame remains mint in every viewport.
+    // The collectible Mythic frame keeps its original independent mint color.
     const progressPalette=await libraryCard.evaluate(card=>{
       const title=card.querySelector('.game-title');
       const cover=card.querySelector('.game-cover.completion-frame');
@@ -1590,8 +1594,8 @@ try{
     assert.equal(progressPalette.original.title,'rgb(255, 255, 255)',
       'Mythic and Full game titles revert to the existing white');
     for(const color of [progressPalette.original.bar,progressPalette.incomplete,progressPalette.restored])
-      assert.equal(color,'rgb(199, 255, 46)',
-        'Complete and incomplete game progress use the restored site green');
+      assert.equal(color,'rgb(16, 124, 16)',
+        'Complete and incomplete progress use Xbox official green');
     assert.equal(progressPalette.unusedMythicClass,false,
       'No longer need a Mythic-only styling override on game cards');
     assert.ok(progressPalette.original.fontSize&&progressPalette.original.fontWeight&&
@@ -1980,12 +1984,12 @@ try{
     });
     assert.equal(grayscale.label,grayscale.locked,'Percentage matches the muted unlocked-status gray');
     assert.ok(grayscale.fillWidth>0&&Math.abs(grayscale.fillWidth/grayscale.trackWidth-.8)<.02,'Track fills 80%');
-    assert.equal(grayscale.fill,'rgb(199, 255, 46)',
-      'Official locked-achievement completion bar uses the restored green');
+    assert.equal(grayscale.fill,'rgb(16, 124, 16)',
+      'Official locked-achievement completion bar uses Xbox official green');
     assert.ok(grayscale.fill!==grayscale.track,'Green fill contrasts with original dark-gray track');
     const detailCompletionFill=page.locator('.game-detail .detail-achievement-section>.progress>span');
     assert.equal(await detailCompletionFill.evaluate(el=>getComputedStyle(el).backgroundColor),
-      'rgb(199, 255, 46)','Game detail completion summary uses the original green');
+      'rgb(16, 124, 16)','Game detail completion summary uses Xbox official green');
     assert.equal(await page.locator('.game-detail .achievement[data-achievement-id="4"] .achievement-progress-track').count(),0,
       'Locked awards without official progress have no placeholder zero bar');
     assert.equal(await page.locator('.game-detail .achievement:not(.locked) .achievement-progress-track').count(),0,
