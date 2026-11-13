@@ -561,6 +561,16 @@ try{
       assert.ok(refresh.dx<1&&refresh.dy<1,'Mobile refresh icon is centered both ways');
     }
     const statsBeforeHiding=await page.locator('.stats').innerText();
+    assert.equal(await page.locator('.stats .stat').count(),4,
+      'Overview keeps all four summary figures');
+    assert.equal(await page.locator('.stats .stat-note').count(),0,
+      'Metric cards no longer display bottom helper notes');
+    assert.equal(await page.locator('.overview-moment').count(),0,
+      'Entire since-last-sync playtime panel has been removed');
+    assert.equal(await page.locator('.title-row p').count(),0,
+      'Overview page title has no explanatory paragraph');
+    assert.equal(await page.locator('.ah-showcase-heading p').count(),0,
+      'Rare, longest-gap and dusty preview headings show no helper subtitles');
     assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['recent','heatmap','showcases','dusty','stats']);
     assert.equal(await page.locator('.dusty-preview').count(),1,'Dusty preview belongs after achievements-gap showcase');
     assert.equal(await page.locator('.dusty-preview .dust-card').count(),0,'Non-Xbox fixtures must not invent official missing-visibility games');
@@ -914,6 +924,8 @@ try{
     assert.equal(monthDot.radius,'50%','Month heatmap points are circular');
     assert.ok(monthDot.relative<.69&&monthDot.relative>.6,'Monthly circles are slightly inset');
     assert.equal(await page.locator('.ah-legend').count(),0,'Full heatmap no longer contains a color legend');
+    assert.equal(await page.locator('.ah-full-history .ah-intro-block .ah-intro').count(),0,
+      'Full heatmap has no introductory explanatory subtitle');
     assert.equal(await page.locator('.ah-overview-stats').count(),0,'Old four stat blocks are removed');
     assert.equal(await page.locator('[data-achievement-showcase="preview"],[data-achievement-gap="preview"]').count(),0,
       'Full heatmap only contains monthly calendars, not the two overview galleries');
@@ -1500,6 +1512,24 @@ try{
     await page.getByRole('button',{name:'全部游戏',exact:true}).click();
     const libraryCard=page.locator('.library-games-panel .game-card').first();
     await libraryCard.waitFor();
+    assert.equal(await page.locator('.title-row p').count(),0,
+      'Game library no longer repeats counts below its page title');
+    const liveLibraryCount=page.locator('.library-game-count');
+    assert.equal((await liveLibraryCount.innerText()).trim(),'游戏数：12',
+      'The sort/search row initially shows all 12 visible games');
+    const countLayout=await page.locator('.library-toolbar-actions').evaluate(el=>{
+      const row=el.getBoundingClientRect(),count=el.querySelector('.library-game-count').getBoundingClientRect();
+      const sort=el.querySelector('.game-library-sort').getBoundingClientRect();
+      const search=el.querySelector('.game-library-search').getBoundingClientRect();
+      return {rowRight:row.right,countRight:count.right,countTop:count.top,
+        sortTop:sort.top,searchRight:search.right,countLeft:count.left};
+    });
+    assert.ok(Math.abs(countLayout.countRight-countLayout.rowRight)<3,
+      'Live game count pins to the far right of the sort/search row');
+    assert.ok(Math.abs(countLayout.countTop-countLayout.sortTop)<13,
+      'Live count shares a single row with sort and search');
+    assert.ok(countLayout.searchRight<=countLayout.countLeft,
+      'Count never overlaps the search control');
     // iPad landscape/portrait must use spare space for the progress track while
     // the existing mobile layout remains pixel-identical at the 700px breakpoint.
     const measureLibraryCard=()=>libraryCard.evaluate(el=>{
@@ -1632,17 +1662,25 @@ try{
       const sort=el.querySelector('.game-library-sort')?.getBoundingClientRect();
       const button=el.querySelector('.game-library-search-toggle')?.getBoundingClientRect();
       const field=el.querySelector('.game-library-search-field')?.getBoundingClientRect();
-      return {top:row.top,height:row.height,right:row.right,sortRight:sort?.right,sortTop:sort?.top,buttonLeft:button?.left,buttonTop:button?.top,fieldLeft:field?.left,fieldRight:field?.right,fieldTop:field?.top};
+      const count=el.querySelector('.library-game-count')?.getBoundingClientRect();
+      return {top:row.top,height:row.height,right:row.right,sortRight:sort?.right,
+        sortTop:sort?.top,buttonLeft:button?.left,buttonTop:button?.top,
+        fieldLeft:field?.left,fieldRight:field?.right,fieldTop:field?.top,
+        countLeft:count?.left,countRight:count?.right};
     });
     assert.ok(Math.abs(searchRowAfter.height-searchRowBefore.height)<2&&
       Math.abs(searchRowAfter.buttonTop-searchRowAfter.sortTop)<6,
       'Expanding search does not create a dropdown or an extra toolbar row');
     assert.ok(Math.abs(searchRowAfter.buttonLeft-searchRowBefore.buttonLeft)<2&&
       searchRowAfter.fieldLeft>=searchRowAfter.sortRight&&
-      Math.abs(searchRowAfter.fieldRight-searchRowAfter.right)<3,
-      'Search field expands only to the right, fills the remaining row, and never covers sorting');
+      searchRowAfter.fieldRight<=searchRowAfter.countLeft+1&&
+      Math.abs(searchRowAfter.countRight-searchRowAfter.right)<3,
+      'Search expands only up to the live count, without covering sorting');
     assert.equal(await gameSearch.getAttribute('aria-expanded'),'true');
     await gameSearchInput.fill('Test Game 0');
+    await page.waitForFunction(()=>document.querySelector('.library-game-count')?.textContent==='游戏数：1');
+    assert.equal(await page.locator('.library-games-panel .game-card').count(),1,
+      'Search dynamically reduces the displayed game count');
     await gameSearchInput.press('Enter');
     await gameSearchInput.waitFor({state:'hidden'});
     assert.equal(await gameSearch.getAttribute('aria-expanded'),'false');
@@ -1681,6 +1719,8 @@ try{
     await gameSortMenu.getByRole('menuitemradio',{name:'游玩时长'}).click();
 
     await page.locator('.filter-pills').getByRole('button',{name:'Mythic',exact:true}).click();
+    assert.equal((await liveLibraryCount.innerText()).trim(),'游戏数：1',
+      'Mythic count reflects current group and search');
     await gameSort.click();
     gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
     assert.deepEqual(await gameSortMenu.getByRole('menuitemradio').allTextContents(),mythicGameSorts,
@@ -1690,6 +1730,8 @@ try{
     await gameSortMenu.getByRole('menuitemradio',{name:'Mythic 日期：晚 → 早'}).click();
 
     await page.locator('.filter-pills').getByRole('button',{name:'Full',exact:true}).click();
+    assert.equal((await liveLibraryCount.innerText()).trim(),'游戏数：0',
+      'Full count is zero when no games qualify');
     await gameSort.click();
     gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
     assert.deepEqual(await gameSortMenu.getByRole('menuitemradio').allTextContents(),fullGameSorts,
@@ -1699,6 +1741,8 @@ try{
     await gameSortMenu.getByRole('menuitemradio',{name:'全成就日期：早 → 晚'}).click();
 
     await page.locator('.filter-pills').getByRole('button',{name:'全部',exact:true}).click();
+    assert.equal((await liveLibraryCount.innerText()).trim(),'游戏数：1',
+      'Returning to All restores the search result count');
     await gameSort.click();
     gameSortMenu=page.getByRole('menu',{name:'游戏排序方式'});
     assert.deepEqual(await gameSortMenu.getByRole('menuitemradio').allTextContents(),sharedGameSorts,

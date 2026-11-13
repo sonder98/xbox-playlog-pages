@@ -32,8 +32,7 @@ export function AchievementGapRail({items,onOpen}:{items:AchievementGap[];onOpen
   <div className="ah-showcase-heading">
    <div className="ah-showcase-title-group">
     <span className="ah-showcase-trophy ah-gap-icon"><Clock3 size={21} aria-hidden="true"/></span>
-    <div><h2>间隔最久成就 <span className="ah-showcase-top-label">TOP 100</span></h2>
-     <p>同一游戏中，相邻两次成就解锁的最长间隔</p></div>
+    <div><h2>间隔最久成就 <span className="ah-showcase-top-label">TOP 100</span></h2></div>
    </div>
    <button type="button" className="ah-showcase-open" aria-label="查看间隔最久成就详情"
     disabled={!items.length} onClick={onOpen}><ChevronRight size={22}/></button>
