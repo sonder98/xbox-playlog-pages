@@ -557,6 +557,55 @@ try{
       'The Mythic collector frame retains its exact mint, independent of theme');
     assert.equal(lightAppearance.status,'#F4F6F3');
     assert.equal(lightAppearance.stored,'light');
+    // Dark-image badges must be recast for light chrome; even with no Dusty
+    // fixtures, a mounted sample verifies the real selector and cascade.
+    const lightBadgeStyles=await page.evaluate(()=>{
+      const wrap=document.createElement('div');
+      wrap.innerHTML='<div class="dust-card"><span class="dust-rank">#01</span></div>'+
+        '<div class="ah-showcase-ranked-art"><span class="ah-showcase-rank">#02</span></div>';
+      wrap.style.cssText='position:absolute;left:-9999px;top:0';
+      document.body.append(wrap);
+      const rank=getComputedStyle(wrap.querySelector('.dust-rank'));
+      const rare=getComputedStyle(wrap.querySelector('.ah-showcase-rank'));
+      const result={dustBackground:rank.backgroundColor,dustText:rank.color,
+        rareBackground:rare.backgroundColor,rareText:rare.color};
+      wrap.remove();
+      return result;
+    });
+    assert.deepEqual(lightBadgeStyles,{
+      dustBackground:'rgba(250, 253, 248, 0.94)',dustText:'rgb(24, 56, 36)',
+      rareBackground:'rgb(247, 250, 245)',rareText:'rgb(36, 67, 46)'
+    },'Dusty and rarity ranking chips use readable light-mode labels');
+    // Unlike image-backed daily hero art, the summary's game rows are normal
+    // content and must not retain the old charcoal + white copy treatment.
+    await page.locator('.ah-preview-cell[data-day="2026-10-27"]').click();
+    const lightDaySheet=page.getByRole('dialog',{name:'2026 年 10 月 27 日 成就摘要'});
+    await lightDaySheet.waitFor();
+    const lightSheetColors=await lightDaySheet.evaluate(el=>{
+      const get=(selector,property)=>getComputedStyle(el.querySelector(selector))[property];
+      return {sheet:getComputedStyle(el).backgroundColor,
+        backdrop:getComputedStyle(el.parentElement).backgroundColor,
+        row:get('.ah-sheet-game','backgroundColor'),
+        name:get('.ah-sheet-game-name','color'),
+        sub:get('.ah-sheet-game-sub','color'),
+        hours:get('.ah-sheet .ah-sheet-game-hours','color'),
+        numbers:get('.ah-sheet-game-achievements b','color')};
+    });
+    assert.deepEqual(lightSheetColors,{
+      sheet:'rgb(255, 255, 255)',backdrop:'rgba(27, 42, 30, 0.27)',
+      row:'rgb(247, 250, 246)',name:'rgb(25, 39, 29)',
+      sub:'rgb(89, 105, 94)',hours:'rgb(89, 105, 94)',numbers:'rgb(25, 39, 29)'
+    },'Daily heatmap summary rows and text render in light mode');
+    await page.keyboard.press('Escape');
+    await lightDaySheet.waitFor({state:'hidden'});
+    await switchMainTab('成就');
+    const lightYearNav=await page.locator('.ah-year-jump').evaluate(el=>({
+      color:getComputedStyle(el).backgroundColor,border:getComputedStyle(el).borderTopColor
+    }));
+    assert.equal(lightYearNav.color,'rgba(248, 250, 247, 0.94)',
+      'Sticky heatmap year toolbar must not stay dark over the light calendar');
+    await switchMainTab('概览');
+
     // Regression: the game's details must not sit inside a black modal scrim
     // and the light-mode collectible has its own ivory/gold background.
     await page.locator('.recent-game-card').first().click();
