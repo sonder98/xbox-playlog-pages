@@ -42,8 +42,8 @@ export function GameCover({game,wide=false,priority=false}:{game:Game;wide?:bool
   const candidates=[...new Set([...landscapes,...squares])];
   const [attempt,setAttempt]=useState(0);
   useEffect(()=>setAttempt(0),[game.id,game.cachedImage,game.cachedImageLarge,game.cachedDetailImage,game.detailImage,game.image3x,game.image]);
-  const source=candidates[attempt],landscape=wide&&landscapes.includes(source),completed=completion(game).mythic;
-  return <span className={'game-cover'+(wide?' detail-cover':'')+(landscape?' has-landscape':'')+(completed?' completion-frame':'')}>
+  const source=candidates[attempt],landscape=wide&&landscapes.includes(source),state=completion(game),completed=state.mythic;
+  return <span className={'game-cover'+(wide?' detail-cover':'')+(landscape?' has-landscape':'')+(completed?' completion-frame':'')+(state.full?' full-completion':'')}>
     {wide&&source&&!landscape&&<img className="detail-backdrop" src={source} alt="" aria-hidden="true" decoding="async"/>}
     {source?<img className="cover-artwork" src={source} alt="" loading={wide||priority?'eager':'lazy'} fetchPriority={wide||priority?'high':'auto'} decoding="async" width={landscape?1600:1080} height={landscape?900:1080} onError={()=>setAttempt(a=>a+1)}/>:<span className="cover-fallback" role="img" aria-label="游戏封面暂不可用"><Gamepad2 size={28}/></span>}
     {completed&&<CompletionOrnament/>}

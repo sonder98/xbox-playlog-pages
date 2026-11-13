@@ -1501,6 +1501,47 @@ try{
       await page.setViewportSize({width:1440,height:1000});
     }
     console.log((mobile?'Mobile':'Tablet')+': PASS game library progress geometry and protected phone layout');
+    // Full and Mythic share the same cover/badge geometry. The Full shimmer
+    // must be clipped to the existing 2px rounded border, not a floating SVG
+    // that can drift at different mobile/tablet/desktop cover sizes.
+    const mythicFrame=page.locator('.game-card .game-cover.completion-frame').first();
+    await mythicFrame.waitFor();
+    await mythicFrame.evaluate(el=>el.classList.add('full-completion'));
+    const frameStyle=()=>mythicFrame.evaluate(el=>{
+      const original=getComputedStyle(el),shine=getComputedStyle(el,'::before');
+      return {
+        parentBorder:original.borderTopWidth,
+        parentRadius:original.borderTopLeftRadius,
+        glowInset:shine.top,
+        glowPadding:shine.paddingTop,
+        glowRadius:shine.borderTopLeftRadius,
+        glowTransform:shine.transform,
+        mask:shine.maskComposite,
+        animation:shine.animationName,
+        angle:parseFloat(shine.getPropertyValue('--full-border-angle')),
+        coverBox:(()=>{const r=el.getBoundingClientRect();return {width:r.width,height:r.height}})()
+      };
+    });
+    const fullBefore=await frameStyle();
+    assert.equal(fullBefore.parentBorder,'2px','Full retains the original Mythic border thickness');
+    assert.equal(fullBefore.glowInset,'-2px','The shine outer edge aligns to the real outer border');
+    assert.equal(fullBefore.glowPadding,'2px','Gold light occupies exactly the same 2px border width');
+    assert.equal(fullBefore.glowRadius,fullBefore.parentRadius,
+      'The traveling highlight follows the existing rounded corners');
+    assert.equal(fullBefore.glowTransform,'none','The gold layer never rotates or shifts off the rounded frame');
+    assert.ok(fullBefore.mask.includes('exclude'),'Only the original border ring may receive gold light');
+    assert.equal(fullBefore.animation,'full-border-flow','Full border has an active moving highlight');
+    await page.waitForTimeout(210);
+    const fullAfter=await frameStyle();
+    assert.ok(Number.isFinite(fullBefore.angle)&&Number.isFinite(fullAfter.angle)&&
+      Math.abs(fullAfter.angle-fullBefore.angle)>6,
+      'The gold highlight visibly advances along the frame rather than staying fixed');
+    assert.ok(Math.abs(fullBefore.coverBox.width-fullBefore.coverBox.height)<2,
+      'Compact game artwork keeps its original square geometry');
+    await mythicFrame.evaluate(el=>el.classList.remove('full-completion'));
+    assert.equal(await mythicFrame.evaluate(el=>getComputedStyle(el,'::before').content),'none',
+      'Mythic-only covers have no new shine overlay');
+    console.log((mobile?'Mobile':'Desktop')+': PASS Full glow path tracks Mythic border precisely');
     const gameSort=page.getByRole('button',{name:'游戏排序',exact:true});
     const gameSearch=page.getByRole('button',{name:'搜索游戏',exact:true});
     assert.equal(await page.getByRole('searchbox',{name:'搜索游戏名称'}).count(),0,
