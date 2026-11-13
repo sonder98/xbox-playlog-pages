@@ -4205,3 +4205,169 @@ footer .dot {
 }
 :root[data-theme="light"] .pull-refresh-install {color:var(--on-accent);}
 
+
+/* Light-theme surfaces that were missed by the first pass.
+   The game detail is a modal, not a dark full-screen destination: keep the
+   surrounding page visible through a gentle shadow instead of a black scrim. */
+:root[data-theme="light"] .modal-backdrop,
+:root[data-theme="light"] .overlay {
+  background:rgba(29,48,33,.24);
+}
+:root[data-theme="light"] .dialog.game-detail {
+  background:var(--surface);
+  color:var(--text-primary);
+  box-shadow:0 20px 70px rgba(26,48,31,.21);
+}
+:root[data-theme="light"] .dialog.game-detail .dialog-toolbar {
+  background:var(--surface);
+  border-color:var(--border);
+}
+:root[data-theme="light"] .game-detail .achievement {
+  background:#FBFCFA;
+  border-color:var(--border);
+}
+:root[data-theme="light"] .game-detail .achievement-sort-menu {
+  background:var(--surface);
+  border-color:var(--border);
+  box-shadow:0 12px 32px rgba(27,46,31,.13);
+}
+/* The daily summary sheet was also explicitly hardcoded dark. */
+:root[data-theme="light"] .ah-sheet {
+  background:var(--surface);
+  border-color:var(--border);
+  color:var(--text-primary);
+  box-shadow:0 15px 55px rgba(26,47,30,.18);
+}
+
+/* Mythic in light mode: a warm collectible cabinet and ivory/gold edition
+   of the SAME card. Frame geometry, portrait-to-medal junction, screenshot
+   loading, badge art, fonts and animation timelines are untouched. */
+:root[data-theme="light"] .mythic-showcase-screen {
+  background:radial-gradient(ellipse at 64% -17%,rgba(207,190,139,.19),transparent 51%),
+    linear-gradient(180deg,#FAF8F2 0%,#F2F2EC 55%,#EAEEE8 100%);
+  color:#382F23;
+  scrollbar-color:#C7B995 #F2F2EC;
+}
+:root[data-theme="light"] .mythic-showcase-toolbar {
+  border-bottom-color:rgba(112,93,53,.18);
+}
+:root[data-theme="light"] .mythic-showcase-back,
+:root[data-theme="light"] .mythic-showcase-hero p,
+:root[data-theme="light"] .mythic-showcase-counter small,
+:root[data-theme="light"] .mythic-showcase-section-heading>span,
+:root[data-theme="light"] .mythic-showcase-meta-date,
+:root[data-theme="light"] .mythic-showcase-bottom {
+  color:#766B56;
+}
+:root[data-theme="light"] .mythic-showcase-back:hover {color:#8F652D;}
+:root[data-theme="light"] .mythic-showcase-hero h1,
+:root[data-theme="light"] .mythic-showcase-section-heading strong span,
+:root[data-theme="light"] .mythic-showcase-meta-title {
+  color:#302F25;
+}
+:root[data-theme="light"] .mythic-showcase-eyebrow,
+:root[data-theme="light"] .mythic-showcase-counter,
+:root[data-theme="light"] .mythic-showcase-section-heading strong,
+:root[data-theme="light"] .mythic-showcase-open-icon {
+  color:#8D6B30;
+}
+:root[data-theme="light"] .mythic-showcase-label {
+  color:#846C44;
+  border-color:rgba(130,105,54,.38);
+}
+:root[data-theme="light"] .mythic-showcase-seat {
+  background:linear-gradient(156deg,rgba(255,255,255,.88),rgba(241,236,225,.65));
+  border-color:rgba(171,140,83,.39);
+  box-shadow:0 5px 18px rgba(70,69,47,.065);
+}
+:root[data-theme="light"] .mythic-showcase-item:hover .mythic-showcase-seat,
+:root[data-theme="light"] .mythic-showcase-item:focus-visible .mythic-showcase-seat {
+  border-color:#B8955B;
+  box-shadow:0 8px 30px rgba(136,103,47,.14);
+}
+:root[data-theme="light"] .mythic-showcase-poster {
+  background:radial-gradient(ellipse at 50% 23%,#DAD6BE,#F4EAD7 52%,#F2E9D8 100%);
+  color:#332E22;
+  box-shadow:inset 0 0 0 1px #F7E8CB,0 7px 22px rgba(62,54,34,.19);
+}
+:root[data-theme="light"] .mythic-showcase-shade {
+  background:linear-gradient(180deg,
+    rgba(10,16,12,.25) 0%,rgba(13,18,14,.08) 22%,
+    rgba(248,239,216,.48) 35%,rgba(246,236,217,.97) 45%,
+    #F3EAD8 58%,#F3EAD8 100%);
+}
+:root[data-theme="light"] .mythic-showcase-greeting,
+:root[data-theme="light"] .mythic-showcase-game-name,
+:root[data-theme="light"] .mythic-showcase-stats b {
+  color:#3B3123;
+  text-shadow:none;
+}
+:root[data-theme="light"] .mythic-showcase-greeting span,
+:root[data-theme="light"] .mythic-showcase-moment-separator {color:#9A7842;}
+:root[data-theme="light"] .mythic-showcase-player,
+:root[data-theme="light"] .mythic-showcase-achievements {
+  background:rgba(255,255,255,.66);
+  color:#423829;
+  border-color:rgba(153,123,70,.4);
+}
+:root[data-theme="light"] .mythic-showcase-moment small,
+:root[data-theme="light"] .mythic-showcase-stats small {color:#817153;}
+:root[data-theme="light"] .mythic-showcase-signature {color:#89682F;}
+
+:root[data-theme="light"] .mythic-wall-overlay {
+  background:radial-gradient(ellipse at 50% 21%,#FFFDF7 0%,#F3F0E6 49%,#E7E9E1 100%);
+  color:#413729;
+}
+:root[data-theme="light"] .mythic-wall-header strong {color:#7B5B2E;}
+:root[data-theme="light"] .mythic-wall-eyebrow,
+:root[data-theme="light"] .mythic-wall-counter {color:#887454;}
+:root[data-theme="light"] .mythic-wall-close {
+  border-color:rgba(129,105,65,.35);
+  background:rgba(255,255,255,.84);
+  color:#644D2B;
+}
+:root[data-theme="light"] .mythic-wall-close:hover {
+  border-color:#AF8B52;background:#FFF9EB;
+}
+:root[data-theme="light"] .mythic-wall-controls button {
+  border-color:rgba(134,108,66,.42);
+  background:#FFFDF6;color:#82643B;
+}
+:root[data-theme="light"] .mythic-wall-controls button:hover:not(:disabled) {
+  border-color:#AC864D;background:#FFF5DC;
+}
+:root[data-theme="light"] .mythic-wall-controls>span {color:#86765C;}
+:root[data-theme="light"] .mythic-poster {
+  background:radial-gradient(ellipse at 55% 20%,#DAD2B7 0%,#F8EDDA 52%,#F1E7D5 100%);
+  color:#392F22;
+  box-shadow:0 0 0 1px #A98753,0 0 0 3px #E9DEC9,
+    0 18px 65px rgba(54,47,30,.23),0 0 25px rgba(173,133,69,.15);
+}
+:root[data-theme="light"] .mythic-poster-backdrop-shade {
+  background:linear-gradient(180deg,
+    rgba(6,12,9,.26) 0%,rgba(6,13,9,.04) 15%,
+    rgba(235,227,208,.23) 27%,rgba(246,236,214,.78) 37%,
+    #F4EBD9 47%,#F4EBD9 100%);
+}
+:root[data-theme="light"] .mythic-poster-congratulations {
+  color:#8F6B30;text-shadow:none;
+}
+:root[data-theme="light"] .mythic-poster-title {
+  color:#342C21;text-shadow:none;
+}
+:root[data-theme="light"] .mythic-poster-gold-line:before {background:#A68A55A8;}
+:root[data-theme="light"] .mythic-poster-player,
+:root[data-theme="light"] .mythic-poster-achievement-pair {
+  background:rgba(255,255,255,.62);
+  color:#423526;
+  border-color:rgba(147,118,66,.45);
+}
+:root[data-theme="light"] .mythic-poster-achievement small,
+:root[data-theme="light"] .mythic-poster-achievement>span:last-child,
+:root[data-theme="light"] .mythic-poster-stats small,
+:root[data-theme="light"] .mythic-poster-stats span {color:#756950;}
+:root[data-theme="light"] .mythic-poster-achievement:nth-child(3) small,
+:root[data-theme="light"] .mythic-poster-bridge,
+:root[data-theme="light"] .mythic-poster-footer {color:#90723B;}
+:root[data-theme="light"] .mythic-poster-stats>div+div:before {background:rgba(146,121,75,.33);}
+:root[data-theme="light"] .mythic-poster-brand {border-color:#B79A66;}
