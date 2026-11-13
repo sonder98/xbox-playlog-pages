@@ -1910,7 +1910,7 @@ try{
     assert.equal(grayscale.label,grayscale.locked,'Percentage matches the muted unlocked-status gray');
     assert.ok(grayscale.fillWidth>0&&Math.abs(grayscale.fillWidth/grayscale.trackWidth-.8)<.02,'Track fills 80%');
     assert.equal(grayscale.fill,'rgb(166, 243, 200)',
-      'Locked achievement's official completion bar uses the same mint');
+      'Official locked-achievement completion bar uses the same mint');
     assert.ok(grayscale.fill!==grayscale.track,'Mint fill contrasts with original dark-gray track');
     const detailCompletionFill=page.locator('.game-detail .detail-achievement-section>.progress>span');
     assert.equal(await detailCompletionFill.evaluate(el=>getComputedStyle(el).backgroundColor),
