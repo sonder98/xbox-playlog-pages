@@ -520,6 +520,77 @@ try{
     await switchMainTab('概览');
     await page.locator('[data-overview-section="recent"]').waitFor();
     console.log((mobile?'Mobile':'Desktop')+': PASS direct achievement tab, merged management hierarchy, legacy bookmarks and four-tab navigation');
+    // Light/dark is an icon-only Overview heading control. Keep the selected
+    // visual mode across normal PWA reopening; it never changes Xbox data.
+    const themeSwitcher=page.getByRole('button',{name:'切换至浅色模式'});
+    await themeSwitcher.waitFor();
+    assert.equal(await themeSwitcher.locator('svg.lucide-sun').count(),1,
+      'Dark mode displays a sun icon for switching to light');
+    const getThemeAppearance=()=>page.evaluate(()=>{
+      const bg=(selector)=>getComputedStyle(document.querySelector(selector)).backgroundColor;
+      const root=getComputedStyle(document.documentElement);
+      const symbol=document.querySelector('.game-cover.completion-frame');
+      const heat=document.createElement('span');heat.className='ah-level-2';
+      document.body.append(heat);const level=getComputedStyle(heat).backgroundColor;heat.remove();
+      return {mode:document.documentElement.dataset.theme,
+        page:root.backgroundColor,panel:bg('[data-overview-section="recent"]'),
+        title:root.color,progress:bg('.recent-game-progress-track>span'),
+        heat:level,collector:symbol?getComputedStyle(symbol).borderTopColor:null,
+        status:document.querySelector('meta[name="theme-color"]')?.getAttribute('content'),
+        stored:localStorage.getItem('xbox-playlog-theme')};
+    });
+    const darkAppearance=await getThemeAppearance();
+    assert.equal(darkAppearance.mode,'dark','Existing users start in dark mode');
+    assert.equal(darkAppearance.page,'rgb(15, 15, 15)');
+    assert.equal(darkAppearance.panel,'rgb(24, 24, 24)');
+    assert.equal(darkAppearance.status,'#0F0F0F');
+    await themeSwitcher.click();
+    const lightAppearance=await getThemeAppearance();
+    assert.equal(lightAppearance.mode,'light','Sun icon selects light mode');
+    assert.equal(lightAppearance.page,'rgb(244, 246, 243)');
+    assert.equal(lightAppearance.panel,'rgb(255, 255, 255)');
+    assert.equal(lightAppearance.title,'rgb(25, 39, 29)');
+    assert.equal(lightAppearance.progress,'rgb(16, 124, 16)',
+      'Original Xbox green remains the same in light mode');
+    assert.equal(lightAppearance.heat,'rgb(158, 212, 166)');
+    assert.equal(lightAppearance.collector,'rgb(166, 243, 200)',
+      'The Mythic collector frame retains its exact mint, independent of theme');
+    assert.equal(lightAppearance.status,'#F4F6F3');
+    assert.equal(lightAppearance.stored,'light');
+    const moon=page.getByRole('button',{name:'切换至深色模式'});
+    assert.equal(await moon.locator('svg.lucide-moon').count(),1,
+      'Light mode displays a moon icon to switch back');
+    const toggleBounds=await page.locator('.title-row').evaluate(row=>{
+      const head=row.querySelector('.overview-heading-actions h1').getBoundingClientRect();
+      const icon=row.querySelector('.theme-toggle').getBoundingClientRect();
+      const sync=row.querySelector('.overview-refresh').getBoundingClientRect();
+      return {headingRight:head.right,iconLeft:icon.left,iconRight:icon.right,syncLeft:sync.left};
+    });
+    assert.ok(toggleBounds.iconLeft>=toggleBounds.headingRight,
+      'Theme icon is immediately after the Overview title');
+    assert.ok(toggleBounds.iconRight+5<=toggleBounds.syncLeft,
+      'Theme icon and Sync action never overlap');
+    // The first browser paint also respects localStorage before React starts.
+    await page.reload();
+    assert.equal(await page.locator('html').getAttribute('data-theme'),'light',
+      'Persisted light theme applies before unlocking on a subsequent launch');
+    assert.equal(await page.locator('meta[name="theme-color"]').getAttribute('content'),'#F4F6F3');
+    if(await page.locator('input[type="password"]').count()){
+      await page.getByRole('checkbox',{name:'在此设备记住我（30天）',exact:true}).uncheck();
+      await page.locator('input[type="password"]').fill(password);
+      await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    }
+    await page.getByRole('button',{name:'切换至深色模式'}).waitFor();
+    await page.getByRole('button',{name:'切换至深色模式'}).click();
+    const backToDark=await getThemeAppearance();
+    assert.equal(backToDark.mode,'dark');
+    assert.equal(backToDark.page,darkAppearance.page);
+    assert.equal(backToDark.panel,darkAppearance.panel);
+    assert.equal(backToDark.progress,darkAppearance.progress);
+    assert.equal(backToDark.collector,darkAppearance.collector);
+    assert.equal(backToDark.stored,'dark');
+    assert.equal(await page.locator('.theme-toggle svg.lucide-sun').count(),1);
+    console.log((mobile?'Mobile':'Desktop')+': PASS light/dark toggle beside Overview title, persisted launch and preserved Mythic art');
     const recent=page.locator('[data-overview-section="recent"]');
     assert.equal(await recent.locator('.recent-game-card').count(),10,'Overview renders ten latest games in one horizontal rail');
     assert.equal(await recent.locator('.game-card').count(),0,'Recent games are not the old multi-line list');

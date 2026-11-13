@@ -1,6 +1,6 @@
 'use client';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Search,Clock3,Trophy,ShieldCheck,X,ArrowRight,ChevronRight,SlidersHorizontal,EyeOff,Medal} from 'lucide-react';
+import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Search,Clock3,Trophy,ShieldCheck,X,ArrowRight,ChevronRight,SlidersHorizontal,EyeOff,Medal,Sun,Moon} from 'lucide-react';
 import {compareRecords,officialGameVisible,syncMechanismLabel,type Game,type RecordData} from './data';
 import {GameCard,GameCover,GameDetail,Modal} from './components/game';
 import {MythicPosterWall} from './components/mythic-wall';
@@ -20,11 +20,15 @@ import {GameLibrarySortControl,GameLibrarySearchControl} from './components/achi
 import {normalizeGameLibrarySort,type GameLibraryFilter,type GameLibrarySort} from './game-library-sort';
 import {usePageNavigation} from './navigation';
 import {PullToRefresh} from './pull-to-refresh';
+import {applyTheme,readThemePreference,saveThemePreference,type PlaylogTheme} from './theme';
 const fmt=(m:number|null)=>m===null?'暂无数据':(m/60).toLocaleString('zh-CN',{maximumFractionDigits:1})+' 小时';
 const dt=(s:string|null)=>s?new Date(s).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'尚未同步';
 export default function Dashboard({onLock,locking=false,refreshFromCache=false}:{onLock:()=>void;locking?:boolean;refreshFromCache?:boolean}){
  const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState<GameLibrarySort>('recent'),[filter,setFilter]=useState<GameLibraryFilter>('all');
  const [manualPhase,setManualPhase]=useState<'idle'|'queued'|'running'|'deploying'|'ready'|'error'>('idle');
+ const [theme,setTheme]=useState<PlaylogTheme>(()=>readThemePreference());
+ useEffect(()=>{applyTheme(theme);},[theme]);
+ const toggleTheme=()=>{const next=theme==='dark'?'light':'dark';saveThemePreference(next);applyTheme(next);setTheme(next);};
  const [mythicWallStart,setMythicWallStart]=useState<{gameId:string|null}|null>(null);
  const [showcaseOpen,setShowcaseOpen]=useState(false);
   const [hiddenIds,setHiddenIds]=useState<string[]>([]),[manageDisplay,setManageDisplay]=useState(false),[draftHidden,setDraftHidden]=useState<string[]>([]),[displayQuery,setDisplayQuery]=useState(''),[onlyHidden,setOnlyHidden]=useState(false),[savingDisplay,setSavingDisplay]=useState(false),[displayError,setDisplayError]=useState('');
@@ -202,7 +206,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   disabled={!mythicPosters.length} aria-label="打开Mythic纪念墙">
   <Medal size={17}/><span>Mythic纪念墙</span>
  </button>
- </div>:<h1>{tab==='overview'?'我的游戏档案':'管理中心'}</h1>}{tab==='manage'&&<p>管理游戏展示，并查看每次同步记录。</p>}</div><button className="primary overview-refresh" aria-label={['queued','running','deploying'].includes(manualPhase)?'查看同步进度':'立即同步'} disabled={loading} onClick={sync}><RefreshCw size={18} aria-hidden="true" className={['queued','running','deploying'].includes(manualPhase)?'spin':''}/><span className="refresh-label">{['queued','running','deploying'].includes(manualPhase)?'同步中…':'立即同步'}</span></button></div>}
+ </div>:tab==='overview'?<div className="overview-heading-actions"><h1>我的游戏档案</h1><button className="theme-toggle" type="button" aria-label={theme==='dark'?'切换至浅色模式':'切换至深色模式'} title={theme==='dark'?'切换至浅色模式':'切换至深色模式'} onClick={toggleTheme}>{theme==='dark'?<Sun size={19} aria-hidden="true"/>:<Moon size={19} aria-hidden="true"/>}</button></div>:<h1>管理中心</h1>}{tab==='manage'&&<p>管理游戏展示，并查看每次同步记录。</p>}</div><button className="primary overview-refresh" aria-label={['queued','running','deploying'].includes(manualPhase)?'查看同步进度':'立即同步'} disabled={loading} onClick={sync}><RefreshCw size={18} aria-hidden="true" className={['queued','running','deploying'].includes(manualPhase)?'spin':''}/><span className="refresh-label">{['queued','running','deploying'].includes(manualPhase)?'同步中…':'立即同步'}</span></button></div>}
  {error&&<div className="alert error" role="alert">{error}{error.includes('登录')&&<a href={import.meta.env.BASE_URL} target="_top">前往登录</a>}<button aria-label="关闭错误" onClick={()=>setError('')}><X size={16}/></button></div>}{notice&&<div className="alert success" role="status">{notice}<button aria-label="关闭提示" onClick={()=>setNotice('')}><X size={16}/></button></div>}
  {tab==='overview'&&<>
  <section className="panel games-panel" data-overview-section="recent"><div className="section-title"><h2>最近游玩 <span className="count">{recent.length}</span></h2><button className="text-button" onClick={()=>setTab('library')}>全部游戏 <ArrowUpRight size={16}/></button></div><RecentGamesRail games={recent} onGame={openGame}/></section>
