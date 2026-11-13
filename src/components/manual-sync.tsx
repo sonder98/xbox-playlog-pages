@@ -122,7 +122,7 @@ export function ManualSyncDialog({onClose,onUpdated,onPhase,lastAt}:{
  return <Modal title="手动同步 Xbox 游戏记录" onClose={onClose} className="manual-sync-dialog">
   <span className="eyebrow">XBOX LIVE SYNC</span>
   <h2>立即同步 Xbox 数据</h2>
-  <p className="muted">通过官方 Microsoft Xbox 接口读取游戏、时长及成就，随后自动发布并在网页上更新。最近一次记录：{lastAt?new Date(lastAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}):'暂无'}。</p>
+  <p className="muted">最近记录：{lastAt?new Date(lastAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}):'暂无'}。</p>
   {job&&<div className={'manual-sync-progress'+(job.phase==='error'?' is-error':'')} role="status"><span className="dot green"/><div>
    <strong>{phaseLabel(job.phase)}</strong>
    <p>{job.detail||({queued:'GitHub 已接受手动请求，正在等待任务启动。',running:'后台正在查询 Xbox 数据，网页可继续使用。',deploying:'Xbox 同步成功，等待加密快照部署完成。',ready:'最新记录已载入。',error:'请根据 GitHub Actions 日志排查。',idle:''})[job.phase]}</p>

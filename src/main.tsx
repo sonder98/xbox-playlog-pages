@@ -139,7 +139,7 @@ function App(){
     <button className="primary full" disabled={busy}>{busy?'正在解密…':'解锁我的游戏档案'}</button>
     <p className="note">记住后可自动解锁，限当前浏览器使用；公共设备请取消勾选。点击“锁定档案”可清除记住状态。</p>
    </form>:
-   waitingFirstSync?<><p>计划每两小时从微软 Xbox 记录同步，另有每日跨天时长结算采样，实际运行可能因排队延迟。若微软授权失效，记录不会更新；可在下方查看任务结果。首次同步成功后，刷新此页并输入 APP_PASSWORD 查看。</p>
+   waitingFirstSync?<><p>系统每小时触发一次 Xbox 同步，并进行跨天时长采样。实际运行可能因排队延迟。若微软授权失效，记录不会更新；可在下方查看任务结果。首次同步成功后，刷新此页并输入 APP_PASSWORD 查看。</p>
     <p className="note">游戏记录会先用 APP_PASSWORD 加密，再发布到云端存储。首次同步完成前，这里不会出现密码输入框。</p>
     <a className="secondary full" href={workflow} target="_blank" rel="noreferrer">查看同步运行记录 ↗</a>
     <p className="note">微软授权已加密保存并自动续期；APP_PASSWORD 用于解锁档案。</p></>:

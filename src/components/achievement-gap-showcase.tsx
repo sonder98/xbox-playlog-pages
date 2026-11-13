@@ -79,13 +79,13 @@ export function AchievementGapDetails({items,onBack,onGame}:{items:AchievementGa
  return <section className="ah-page ah-gap-detail" data-achievement-gap="detail">
   <button type="button" className="ah-back" onClick={onBack}><ArrowLeft size={20}/> 返回概览</button>
   <div className="ah-intro-block"><span className="eyebrow">ACHIEVEMENT INTERVALS</span>
-   <h1>间隔最久成就</h1><p className="ah-intro">那些时隔许久才再次解锁的瞬间 · 按相邻成就间隔由长到短排列</p>
+   <h1>间隔最久成就</h1><p className="ah-intro">按相邻解锁间隔排序</p>
   </div>
   <div className="ah-showcase-detail-count"><span>跨游戏相邻解锁记录</span><strong>TOP {items.length}</strong></div>
   {items.length?<div className="ah-gap-detail-list">
    {items.map((item,index)=><article key={item.key} className="ah-gap-detail-card" data-gap-rank={index+1}>
     <div className="ah-gap-detail-heading"><span className="ah-gap-detail-rank">#{String(index+1).padStart(2,'0')}</span>
-     <span>同一游戏 · 相邻解锁成就</span></div>
+     </div>
     <div className="ah-gap-duo">
      <GapSide achievement={item.earlier} when={item.earlierTime} position="earlier"/>
      <span className="ah-gap-duo-arrow" aria-hidden="true"><ArrowRight size={19}/></span>

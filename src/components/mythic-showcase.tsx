@@ -143,13 +143,13 @@ export function MythicShowcase({posters,profile,onClose,onOpen}:{
     <button type="button" className="mythic-showcase-back" onClick={onClose}>
      <ArrowLeft size={18} aria-hidden="true"/>返回游戏库
     </button>
-    <span className="mythic-showcase-label">PRIVATE COLLECTION</span>
+    
    </div>
    <div className="mythic-showcase-hero">
     <div className="mythic-showcase-hero-copy">
      <span className="mythic-showcase-eyebrow">THE MYTHIC COLLECTION</span>
      <h1>Mythic 纪念墙</h1>
-     <p>每一张纪念卡，都是一段值得珍藏的游戏旅程。</p>
+     
     </div>
     <div className="mythic-showcase-counter">
      <span className="mythic-showcase-count">{String(posters.length).padStart(2,'0')}</span><span className="mythic-showcase-unit">张</span>
@@ -159,7 +159,7 @@ export function MythicShowcase({posters,profile,onClose,onOpen}:{
    <div className="mythic-showcase-rule" aria-hidden="true"/>
    <div className="mythic-showcase-section-heading">
     <strong>✦ <span>我的纪念卡</span></strong>
-    <span>按 Mythic 达成时间排序 · 点击放大</span>
+    
    </div>
    <div className="mythic-showcase-grid">
     {posters.map((entry,index)=><CollectionPreview key={entry.game.id}
@@ -167,7 +167,7 @@ export function MythicShowcase({posters,profile,onClose,onOpen}:{
      onOpen={()=>onOpen(entry.game.id)}
      onPrefetch={()=>{void prepareMythicPoster(entry,profile,true);}}/>)}
    </div>
-   <div className="mythic-showcase-bottom">✧ <span>THE JOURNEY IS THE REWARD</span> ✧</div>
+   
   </div>
  </section>;
 }

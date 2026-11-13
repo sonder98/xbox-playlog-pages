@@ -51,7 +51,7 @@ export function DustyDetails({items,onBack,onGame}:{items:DustyGame[];onBack:()=
  return <section className="ah-page dusty-detail" data-dusty="detail">
   <button className="ah-back" onClick={onBack} type="button"><ArrowLeft size={20}/> 返回概览</button>
   <div className="ah-intro-block"><span className="eyebrow">LEFT ON THE SHELF</span>
-   <h1>吃灰游戏</h1><p className="ah-intro">仅包含 Xbox 官方未返回可见状态的游戏 · 最近游玩与最近解锁成就取较晚者</p>
+   <h1>吃灰游戏</h1>
   </div>
   <div className="ah-showcase-detail-count"><span>可计算最后活跃日期</span><strong>{items.length} 款</strong></div>
   {items.length?<div className="dust-detail-list">
@@ -67,6 +67,6 @@ export function DustyDetails({items,onBack,onGame}:{items:DustyGame[];onBack:()=
     <AchievementRing game={item.game}/>
    </button>)}
   </div>:<p className="ah-empty-day">暂无符合条件的游戏。</p>}
-  <p className="ah-footnote">吃灰天数按照北京时间的自然日差计算。M 分是截至 2026-11-01 人工核实的 Metacritic PC 专业媒体评分；无可用媒体综合分则显示 M —，不会用单篇评测或玩家分数替代。数据不会随每半小时的 Xbox 同步自动改分。</p>
+  
  </section>;
 }

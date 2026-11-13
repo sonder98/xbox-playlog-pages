@@ -133,18 +133,8 @@ img {
   height:44px;
   border-radius:16px
 }
-.brand small {
-  display:block;
-  color:var(--text-muted);
-  font-size:9px;
-  letter-spacing:1.5px;
-  font-weight:500
-}
-.nav-caption {
-  margin:48px 12px 12px;
-  color:var(--text-muted);
-  font-size:12px
-}
+
+
 .sidebar nav {
   display:grid;
   gap:8px
@@ -173,20 +163,8 @@ img {
   background:var(--accent);
   border-radius:50%
 }
-.side-bottom {
-  display:flex;
-  gap:12px;
-  align-items:center;
-  margin-top:auto;
-  padding:24px 4px 0;
-  color:var(--text-secondary);
-  font-size:12px
-}
-.side-bottom small {
-  display:block;
-  color:var(--text-muted);
-  font-size:12px
-}
+
+
 main {
   margin-left:224px;
   width:calc(100% - 224px);
@@ -3804,9 +3782,8 @@ footer .dot {
  font:400 clamp(12px,1.35vw,16px)/1.35 Marcellus,"Noto Serif SC",Georgia,serif;color:#e7ece2}
 .mythic-showcase-meta-date{display:block;margin-top:5px;font-size:11px;color:#95a899}
 .mythic-showcase-open-icon{position:absolute;top:14px;right:6px;color:#ceb37d}
-.mythic-showcase-bottom{padding:46px 0 10px;text-align:center;letter-spacing:.12em;
- font-size:11px;color:#839286}
-.mythic-showcase-bottom span{margin:0 12px}
+
+
 @media(max-width:980px){
  .mythic-showcase-inner{padding-left:26px;padding-right:26px}
  .mythic-showcase-seat{padding:7px 7px 10px}
@@ -3836,7 +3813,7 @@ footer .dot {
  .mythic-showcase-meta-title{font-size:12px}
  .mythic-showcase-meta-date{font-size:10px;margin-top:4px}
  .mythic-showcase-open-icon{display:none}
- .mythic-showcase-bottom{padding:32px 0 0;font-size:10px}
+ 
 }
 @media(max-width:360px){
  .mythic-showcase-inner{padding-left:11px;padding-right:11px}
@@ -4108,7 +4085,7 @@ footer .dot {
   --danger:#B4252A;
 }
 :root[data-theme="light"] .sidebar {background:#FFFFFF;}
-:root[data-theme="light"] header {background:var(--bg);}
+:root[data-theme="light"] .shell > main > header {background:var(--bg);}
 :root[data-theme="light"] .panel,
 :root[data-theme="light"] .stat,
 :root[data-theme="light"] .dialog,
@@ -4413,3 +4390,40 @@ footer .dot {
 :root[data-theme="light"] .ah-sheet-game-chevron {color:var(--text-secondary);}
 :root[data-theme="light"] .ah-sheet .ah-sheet-game-count {border-color:var(--border);}
 :root[data-theme="light"] .ah-month-calendar .ah-cell:disabled {color:var(--text-muted);}
+
+
+/* The Mythic frame is still the original mint on dark. Only on white/light
+   surfaces, deepen the same green hue for a visible 2px collector outline.
+   Full's masked gold highlight remains registered to the same exact border. */
+:root[data-theme="light"] .game-cover.completion-frame {
+  border-color:#2D8C62;
+  box-shadow:0 0 0 1px rgba(20,89,57,.25),
+    0 0 7px rgba(44,137,92,.26),
+    0 0 17px rgba(51,151,99,.17),
+    inset 0 0 0 .5px rgba(241,255,247,.55);
+}
+:root[data-theme="light"] .completion-ornament {
+  color:#2D8C62;
+  filter:drop-shadow(0 1px 1px rgba(18,86,53,.46))
+    drop-shadow(0 0 3px rgba(35,125,81,.24));
+}
+
+/* No generic page-header fill may bleed into a caption or a day picker. */
+:root[data-theme="light"] .mythic-poster-caption,
+:root[data-theme="light"] .ah-sheet .ah-sheet-heading {
+  background:transparent;
+}
+:root[data-theme="light"] .mythic-poster-caption {
+  border:0;
+}
+
+/* Stronger ink on the pale heatmap-day game rows: body text, play time
+   and achievement counts all remain legible without changing sizes. */
+:root[data-theme="light"] .ah-sheet-game-name,
+:root[data-theme="light"] .ah-sheet-game-achievements b,
+:root[data-theme="light"] .ah-sheet .ah-sheet-game-hours b {color:#183523;}
+:root[data-theme="light"] .ah-sheet-game-sub,
+:root[data-theme="light"] .ah-sheet .ah-sheet-game-hours,
+:root[data-theme="light"] .ah-sheet-game-achievements small,
+:root[data-theme="light"] .ah-sheet-game-hours svg,
+:root[data-theme="light"] .ah-sheet-game-chevron {color:#344F3D;}
