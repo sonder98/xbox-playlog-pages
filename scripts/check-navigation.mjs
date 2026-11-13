@@ -496,6 +496,12 @@ try{
     await page.locator('[data-page="manage"]').waitFor();
     assert.ok(page.url().endsWith('#manage'),'Fourth tab opens combined management screen');
     assert.equal(await navSurface.locator('button').nth(3).getAttribute(mobile?'aria-current':'class'),mobile?'page':'active');
+    assert.equal(await page.locator('.manage-section-heading p').count(),0,
+      'Management headings no longer duplicate their meaning in explanatory paragraphs');
+    assert.equal(await page.locator('#sync-history > .panel > p.muted').count(),0,
+      'Sync methodology is not displayed as a permanent paragraph');
+    assert.equal(await page.locator('.title-row p').count(),0,
+      'Manage heading no longer has a repetitive subtitle');
     assert.deepEqual(await page.locator('.manage-section-heading h2').allTextContents(),['游戏展示','同步历史'],
       'Management contains game visibility and sync history only');
     assert.equal(await page.locator('.visibility-panel').count(),1,'One visibility card replaces the old three management cards');
@@ -553,8 +559,10 @@ try{
     assert.equal(lightAppearance.progress,'rgb(16, 124, 16)',
       'Original Xbox green remains the same in light mode');
     assert.equal(lightAppearance.heat,'rgb(158, 212, 166)');
-    assert.equal(lightAppearance.collector,'rgb(166, 243, 200)',
-      'The Mythic collector frame retains its exact mint, independent of theme');
+    assert.equal(darkAppearance.collector,'rgb(166, 243, 200)',
+      'The original mint frame stays unchanged in dark mode');
+    assert.equal(lightAppearance.collector,'rgb(45, 140, 98)',
+      'The light collector frame uses a darker shade from the same mint family');
     assert.equal(lightAppearance.status,'#F4F6F3');
     assert.equal(lightAppearance.stored,'light');
     // Dark-image badges must be recast for light chrome; even with no Dusty
@@ -585,6 +593,8 @@ try{
       const get=(selector,property)=>getComputedStyle(el.querySelector(selector))[property];
       return {sheet:getComputedStyle(el).backgroundColor,
         backdrop:getComputedStyle(el.parentElement).backgroundColor,
+        dateBar:get('.ah-sheet-heading','backgroundColor'),
+        dateText:get('.ah-sheet-heading strong','color'),
         row:get('.ah-sheet-game','backgroundColor'),
         name:get('.ah-sheet-game-name','color'),
         sub:get('.ah-sheet-game-sub','color'),
@@ -593,8 +603,9 @@ try{
     });
     assert.deepEqual(lightSheetColors,{
       sheet:'rgb(255, 255, 255)',backdrop:'rgba(27, 42, 30, 0.27)',
-      row:'rgb(247, 250, 246)',name:'rgb(25, 39, 29)',
-      sub:'rgb(89, 105, 94)',hours:'rgb(89, 105, 94)',numbers:'rgb(25, 39, 29)'
+      dateBar:'rgba(0, 0, 0, 0)',dateText:'rgb(25, 39, 29)',
+      row:'rgb(247, 250, 246)',name:'rgb(24, 53, 35)',
+      sub:'rgb(52, 79, 61)',hours:'rgb(52, 79, 61)',numbers:'rgb(24, 53, 35)'
     },'Daily heatmap summary rows and text render in light mode');
     await page.keyboard.press('Escape');
     await lightDaySheet.waitFor({state:'hidden'});
@@ -630,6 +641,14 @@ try{
     await page.getByRole('button',{name:'打开Mythic纪念墙'}).click();
     const lightGallery=page.getByRole('region',{name:'Mythic纪念墙展示柜'});
     await lightGallery.waitFor();
+    assert.equal(await lightGallery.locator('.mythic-showcase-hero p').count(),0,
+      'Mythic collection no longer displays inspirational filler');
+    assert.equal(await lightGallery.locator('.mythic-showcase-toolbar .mythic-showcase-label').count(),0,
+      'Mythic cabinet removes the duplicated private-collection English label');
+    assert.equal(await lightGallery.locator('.mythic-showcase-bottom').count(),0,
+      'Empty bottom motto no longer occupies vertical space');
+    assert.equal(await lightGallery.locator('.mythic-showcase-section-heading>span').count(),0,
+      'Cabinet sorting and enlargement are not repeated in helper copy');
     const galleryColors=await lightGallery.evaluate(el=>{
       const css=sel=>getComputedStyle(el.querySelector(sel));
       return {backdrop:getComputedStyle(el).backgroundImage,
@@ -659,6 +678,8 @@ try{
         frame:!!card.querySelector('.mythic-poster-ornament'),
         badge:getComputedStyle(card.querySelector('.mythic-poster-emblem')).backgroundColor,
         heading:getComputedStyle(card.querySelector('.mythic-poster-title')).color,
+        captionBackground:getComputedStyle(card.querySelector('.mythic-poster-caption')).backgroundColor,
+        captionBorder:getComputedStyle(card.querySelector('.mythic-poster-caption')).borderBottomWidth,
         shade:getComputedStyle(card.querySelector('.mythic-poster-backdrop-shade')).backgroundImage};
     });
     assert.ok(posterColors.wall.includes('rgb(255, 253, 247)') &&
@@ -666,6 +687,10 @@ try{
       posterColors.shade.includes('rgb(244, 235, 217)'),
       'Full-size Mythic poster uses the light parchment artwork treatment');
     assert.equal(posterColors.heading,'rgb(52, 44, 33)');
+    assert.equal(posterColors.captionBackground,'rgba(0, 0, 0, 0)',
+      'MYTHIC NO. caption must not inherit the main header light background');
+    assert.equal(posterColors.captionBorder,'0px',
+      'The collectible serial-number row has no page-header divider');
     assert.equal(posterColors.badge,'rgba(0, 0, 0, 0)');
     assert.equal(posterColors.frame,true,
       'Existing original frame and Mythic badge decoration remain intact');
@@ -762,6 +787,14 @@ try{
       'Overview page title has no explanatory paragraph');
     assert.equal(await page.locator('.ah-showcase-heading p').count(),0,
       'Rare, longest-gap and dusty preview headings show no helper subtitles');
+    assert.equal(await page.locator('.title-row .eyebrow').count(),0,
+      'Marketing eyebrow above the Overview heading is removed');
+    assert.equal(await page.locator('.brand small').count(),0,
+      'Brand uses XBOX Playlog without the redundant English tagline');
+    assert.equal(await page.locator('.nav-caption,.side-bottom').count(),0,
+      'Sidebar no longer repeats personal archive descriptions');
+    assert.ok(!(await page.locator('footer').innerText()).includes('只属于你的游戏旅程'),
+      'Footer no longer adds a personal-journey slogan');
     assert.deepEqual(await page.locator('[data-overview-section]').evaluateAll(els=>els.map(el=>el.dataset.overviewSection)),['recent','heatmap','showcases','dusty','stats']);
     assert.equal(await page.locator('.dusty-preview').count(),1,'Dusty preview belongs after achievements-gap showcase');
     assert.equal(await page.locator('.dusty-preview .dust-card').count(),0,'Non-Xbox fixtures must not invent official missing-visibility games');
