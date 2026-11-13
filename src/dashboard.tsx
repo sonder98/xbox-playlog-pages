@@ -173,7 +173,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  function openDisplayManager(){setDisplayError('');setDraftHidden([...hiddenIds]);setDisplayQuery('');setOnlyHidden(false);setManageDisplay(true);}
  async function saveDisplay(){setSavingDisplay(true);setDisplayError('');try{const saved=await api('/api/display-preferences',{hiddenGameIds:draftHidden});setHiddenIds(saved.hiddenGameIds);setManageDisplay(false);setNotice('游戏库显示设置已保存。');}catch(e){setDisplayError('显示设置保存失败：'+(e as Error).message);}finally{setSavingDisplay(false);}}
 
- const known=games.filter(g=>g.minutes!==null);const totalMinutes=known.reduce((a,g)=>a+(g.minutes||0),0),totalEarned=games.reduce((a,g)=>a+g.earned,0),completed=games.filter(g=>completion(g).mythic).length,full=games.filter(g=>completion(g).full).length;
+ const known=games.filter(g=>g.minutes!==null);const totalMinutes=known.reduce((a,g)=>a+(g.minutes||0),0),totalEarned=games.reduce((a,g)=>a+g.earned,0),completed=games.filter(g=>completion(g).mythic).length;
  const achievementSpans=useMemo(()=>new Map((current?.games||[]).map(g=>[g.id,achievementTimeSpan(g,playtimeLedger)])),[current,playtimeLedger]);
  const visible=displayGames.filter(g=>g.name.toLowerCase().includes(query.toLowerCase())&&(filter==='all'||filter==='mythic'&&completion(g).mythic||filter==='full'&&completion(g).full||filter==='playing'&&!completion(g).full)).sort((a,b)=>{
   if(sort==='span-desc'||sort==='span-asc'){
