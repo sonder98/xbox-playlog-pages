@@ -7,6 +7,7 @@
   --surface-raised:#222222;
   --surface-hover:#2E2E2E;
   --accent:#C7FF2E;
+  --progress-mint:#A6F3C8; /* exact Mythic frame tint; independent of global accent */
   --on-accent:#0F0F0F;
   --text-primary:#FFFFFF;
   --text-secondary:#B3B3B3;
@@ -542,11 +543,11 @@ header {
 .progress>span {
   display:block;
   height:100%;
-  background:var(--text-secondary);
+  background:var(--progress-mint);
   border-radius:99px
 }
 .progress.complete>span {
-  background:var(--accent)
+  background:var(--progress-mint)
 }
 .game-extra {
   display:block;
@@ -1687,7 +1688,7 @@ footer .dot {
   display:block;
   height:100%;
   border-radius:inherit;
-  background:var(--text-secondary);
+  background:var(--progress-mint);
 }
 @media(max-width:700px) {
   .game-detail .detail-cover { margin-bottom:20px; }
@@ -2716,7 +2717,7 @@ footer .dot {
 .recent-game-progress {margin-top:auto;display:flex;align-items:center;gap:7px;min-width:0;}
 .recent-game-progress-track {height:6px;flex:1;min-width:0;background:#3a3c3a;
  border-radius:100px;overflow:hidden;display:block;}
-.recent-game-progress-track>span {display:block;height:100%;border-radius:100px;background:var(--accent);}
+.recent-game-progress-track>span {display:block;height:100%;border-radius:100px;background:var(--progress-mint);}
 .recent-game-progress strong {flex:none;font-size:12px;line-height:1;font-weight:700;color:var(--text-primary);
  font-variant-numeric:tabular-nums;}
 .recent-game-card:active {transform:scale(.985);}
@@ -2851,7 +2852,7 @@ footer .dot {
 .dust-detail-numbers>span:first-child b{color:var(--accent);font-size:24px;font-variant-numeric:tabular-nums;}
 .dust-achievement-ring{display:block;flex:0 0 48px;width:48px;height:48px;margin-left:2px;overflow:visible;}
 .dust-achievement-ring-track{stroke:rgba(255,255,255,.13);}
-.dust-achievement-ring-progress{stroke:var(--accent);stroke-linecap:round;transition:stroke-dasharray .24s ease;}
+.dust-achievement-ring-progress{stroke:var(--progress-mint);stroke-linecap:round;transition:stroke-dasharray .24s ease;}
 .dust-achievement-ring-value{fill:var(--text-primary);font-size:10px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.2px;}
 .dusty-detail .ah-footnote{margin-bottom:25px;}
 @media(max-width:700px){
@@ -4051,16 +4052,8 @@ footer .dot {
  .ah-sheet .ah-sheet-game-hours b {font-size:11px;}
 }
 
-/* Game library Mythic styling: match the existing badge frame's exact
-   mint (#a6f3c8), not the global Xbox lime accent (#c7ff2e).
-   Full implies Mythic, so both receive the same name/progress color.
-   Typography, artwork, badge and layout stay unchanged. */
-.game-card.is-mythic .game-title {
-  color:#a6f3c8;
-}
-.game-card.is-mythic .game-progress .progress.complete>span {
-  background:#a6f3c8;
-}
+/* All quantitative progress fills (linear and circular) share the
+   Mythic badge's original mint: --progress-mint. Titles stay white. */
 
 /* Full: a single warm-gold highlight travels EXACTLY on the existing green
    Mythic frame. No rotating element, extra outline or separately scaled SVG.
