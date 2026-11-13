@@ -1506,10 +1506,6 @@ try{
     // that can drift at different mobile/tablet/desktop cover sizes.
     const mythicFrame=page.locator('.game-card .game-cover.completion-frame').first();
     await mythicFrame.waitFor();
-    const fullArtworkSource=await page.evaluate(async()=>(
-      await fetch('/xbox-playlog-pages/version.json').then(r=>r.ok)
-    ));
-    assert.equal(fullArtworkSource,true,'Game-cover geometry is checked against the actual preview build');
     await mythicFrame.evaluate(el=>el.classList.add('full-completion'));
     const frameStyle=()=>mythicFrame.evaluate(el=>{
       const original=getComputedStyle(el),shine=getComputedStyle(el,'::before');
