@@ -444,6 +444,35 @@ try{
         'Bottom nav hides again and stops intercepting touches once the grace period expires');
       await switchMainTab('概览');
       await page.locator('[data-overview-section="recent"]').waitFor();
+    // The entire product shares one mint UI theme, not a collection of old
+    // yellow-green overrides. Separate semantics (Xbox trademark, danger,
+    // rarity metalwork, gold collector art) retain their established colors.
+    const siteTheme=await page.evaluate(()=>{
+      const root=getComputedStyle(document.documentElement);
+      const draw=(cls)=>{
+        const el=document.createElement('div');el.className=cls;document.body.append(el);
+        const style=getComputedStyle(el),result={background:style.backgroundColor,color:style.color};
+        el.remove();return result;
+      };
+      const pill=document.createElement('div');pill.className='filter-pills';
+      const btn=document.createElement('button');btn.className='active';pill.append(btn);document.body.append(pill);
+      const selected=getComputedStyle(btn).backgroundColor;
+      pill.remove();
+      const level=[0,1,2,3,4].map(n=>draw('ah-level-'+n).background);
+      return {accent:root.getPropertyValue('--accent').trim().toUpperCase(),
+        progress:root.getPropertyValue('--progress-mint').trim().toUpperCase(),
+        primary:draw('primary'),selected,level};
+    });
+    assert.equal(siteTheme.accent,'#A6F3C8','The global Xbox Playlog theme is Mythic mint');
+    assert.equal(siteTheme.progress,'#A6F3C8','All progress bars resolve the global mint theme');
+    assert.equal(siteTheme.primary.background,'rgb(166, 243, 200)','Primary CTAs use mint');
+    assert.equal(siteTheme.primary.color,'rgb(15, 15, 15)','Mint CTA text stays dark and readable');
+    assert.equal(siteTheme.selected,'rgb(166, 243, 200)','Active filter pills use mint');
+    assert.deepEqual(siteTheme.level,['rgb(48, 48, 48)','rgb(43, 73, 59)',
+      'rgb(76, 129, 105)','rgb(112, 188, 152)','rgb(166, 243, 200)'],
+      'Achievement heatmap uses a coordinated mint intensity scale');
+    console.log((mobile?'Mobile':'Desktop')+': PASS unified mint buttons, filters, navigation palette and heatmap');
+
       assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
         'Tab switching back to overview also preserves navigation for 1.5 seconds');
       console.log('Mobile: PASS four tabs, scroll auto-hide and resettable 1.5-second post-tap navigation visibility');
