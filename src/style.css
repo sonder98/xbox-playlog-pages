@@ -4065,3 +4065,143 @@ footer .dot {
 @media(prefers-reduced-motion:reduce){
   .game-cover.completion-frame.full-completion::before {animation:none;opacity:0;}
 }
+
+/* Theme control sits immediately to the right of the Overview title.
+   This is an icon-only action; the tooltip and aria-label explain its action. */
+.overview-heading-actions {display:flex;align-items:center;gap:13px;min-width:0;}
+.overview-heading-actions h1 {min-width:0;white-space:nowrap;}
+.theme-toggle {
+  display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;
+  border-radius:50%;border:1px solid var(--border);
+  background:var(--surface-raised);color:var(--text-primary);
+  padding:0;transition:background .18s,color .18s,border-color .18s;
+}
+.theme-toggle:hover,.theme-toggle:focus-visible {
+  background:var(--surface-hover);color:var(--accent-text);border-color:var(--accent);
+}
+.theme-toggle svg {display:block;}
+@media(max-width:700px) {
+  .overview-heading-actions {gap:9px;}
+  .theme-toggle {flex-basis:36px;width:36px;height:36px;}
+}
+@media(max-width:360px) {
+  .overview-heading-actions h1 {font-size:25px;letter-spacing:-.9px;}
+  .overview-heading-actions {gap:6px;}
+  .theme-toggle {flex-basis:34px;width:34px;height:34px;}
+}
+
+/* Light is an alternative skin for the EXISTING Xbox Playlog architecture.
+   Typography, component layout, game artwork, Mythic mint border and Full
+   gold light are deliberately unchanged. */
+:root[data-theme="light"] {
+  color-scheme:light;
+  --bg:#F4F6F3;
+  --surface:#FFFFFF;
+  --surface-raised:#EDF1EC;
+  --surface-hover:#E2E9E1;
+  --text-primary:#19271D;
+  --text-secondary:#59695E;
+  --text-muted:#78867A;
+  --border:rgba(29,69,40,.14);
+  --accent-text:#107C10;
+  --rarity-accent:#266991;
+  --danger:#B4252A;
+}
+:root[data-theme="light"] .sidebar {background:#FFFFFF;}
+:root[data-theme="light"] header {background:var(--bg);}
+:root[data-theme="light"] .panel,
+:root[data-theme="light"] .stat,
+:root[data-theme="light"] .dialog,
+:root[data-theme="light"] .ah-month-card {
+  box-shadow:0 1px 2px rgba(22,52,27,.035),0 7px 24px rgba(28,57,32,.028);
+}
+:root[data-theme="light"] .stat:first-child {background:var(--surface);}
+:root[data-theme="light"] .secondary:hover,
+:root[data-theme="light"] .icon-button:hover,
+:root[data-theme="light"] .text-button:hover {color:var(--text-primary);}
+:root[data-theme="light"] .field input {color:var(--text-primary);}
+:root[data-theme="light"] .game-card+.game-card {border-color:var(--border);}
+:root[data-theme="light"] .dlc-mark {border-color:rgba(35,65,39,.23);}
+:root[data-theme="light"] .game-detail .achievement-progress-track,
+:root[data-theme="light"] .recent-game-progress-track {background:#DCE5DB;}
+:root[data-theme="light"] .game-detail .achievement-image:not(.ah-rarity-gold):not(.ah-rarity-ultra) {
+  background:var(--surface-raised);
+}
+:root[data-theme="light"] .game-detail .achievement-sort-option.selected,
+:root[data-theme="light"] .ah-day-detail .achievement-sort-option.selected,
+:root[data-theme="light"] .game-library-sort .achievement-sort-option.selected {
+  background:#DAE9DA;color:var(--text-primary);
+}
+:root[data-theme="light"] .game-detail .achievement-sort-option.selected:hover,
+:root[data-theme="light"] .game-detail .achievement-sort-option.selected:focus-visible,
+:root[data-theme="light"] .game-library-sort .achievement-sort-option.selected:hover,
+:root[data-theme="light"] .game-library-sort .achievement-sort-option.selected:focus-visible {
+  background:#CFDFCF;
+}
+:root[data-theme="light"] .ah-day-detail .achievement-sort-option:hover,
+:root[data-theme="light"] .ah-day-detail .achievement-sort-option:focus-visible {
+  background:var(--surface-hover);color:var(--text-primary);
+}
+/* Keep the heatmap's five activity levels and legible day numbers in both modes. */
+:root[data-theme="light"] .ah-level-0 {background:#E6EBE5;}
+:root[data-theme="light"] .ah-level-1 {background:#D9EBDA;}
+:root[data-theme="light"] .ah-level-2 {background:#9ED4A6;}
+:root[data-theme="light"] .ah-level-3 {background:#39864C;}
+:root[data-theme="light"] .ah-level-4 {background:#107C10;}
+:root[data-theme="light"] .ah-month-calendar .ah-cell .ah-dot.ah-level-1,
+:root[data-theme="light"] .ah-month-calendar .ah-cell .ah-dot.ah-level-2,
+:root[data-theme="light"] .ah-preview-cell .ah-dot.ah-level-1,
+:root[data-theme="light"] .ah-preview-cell .ah-dot.ah-level-2 {color:#193C24;}
+:root[data-theme="light"] .ah-cell:disabled,
+:root[data-theme="light"] .ah-blank-day {background:#ECEFEB;}
+:root[data-theme="light"] .ah-month-calendar .ah-cell:disabled .ah-dot {background:#ECEFEB;color:#9CA99D;}
+:root[data-theme="light"] .ah-year-jump button {background:var(--surface);border-color:var(--border);}
+:root[data-theme="light"] .ah-year-jump button.is-active,
+:root[data-theme="light"] .ah-year-jump button[aria-current="location"] {
+  color:var(--on-accent);background:var(--accent);
+}
+:root[data-theme="light"] .ah-sheet {border-color:var(--border);}
+:root[data-theme="light"] .ah-sheet-grab i {background:#ABB8AC;}
+:root[data-theme="light"] .ah-showcase {border-color:var(--border);}
+:root[data-theme="light"] .ah-showcase-art.ah-rarity-common,
+:root[data-theme="light"] .ah-achievement-art.ah-rarity-common {border-color:var(--border);}
+:root[data-theme="light"] .ah-showcase-rank {border-color:var(--border);}
+:root[data-theme="light"] .ah-month-played-list {
+  background:#FBFCFA;border-color:var(--border);
+}
+:root[data-theme="light"] .ah-month-played-game+.ah-month-played-game {border-color:var(--border);}
+:root[data-theme="light"] .ah-month-played-game:hover,
+:root[data-theme="light"] .ah-month-played-game:focus-visible {background:var(--surface-raised);}
+:root[data-theme="light"] .recent-game-card,
+:root[data-theme="light"] .dust-card {
+  background:#FAFBF9;border-color:var(--border);
+}
+:root[data-theme="light"] .recent-game-card:hover,
+:root[data-theme="light"] .recent-game-card:focus-visible {
+  background:var(--surface-raised);border-color:rgba(var(--accent-rgb),.35);
+}
+:root[data-theme="light"] .ah-gap-tile {
+  background:#F8FAF8;border-color:var(--border);
+}
+:root[data-theme="light"] .ah-gap-tile:hover,
+:root[data-theme="light"] .ah-gap-tile:focus-visible {
+  background:#EFF5EF;border-color:rgba(var(--accent-rgb),.32);
+}
+:root[data-theme="light"] .ah-gap-icon {background:#E8EFF6;color:#476480;}
+:root[data-theme="light"] .ah-gap-tile-duration {color:#53695A;}
+:root[data-theme="light"] .ah-gap-detail-card {background:var(--surface);border-color:var(--border);}
+:root[data-theme="light"] .ah-gap-side {background:#F5F8F4;border-color:var(--border);}
+:root[data-theme="light"] .ah-gap-side time {color:var(--text-secondary);}
+:root[data-theme="light"] .ah-gap-duo-arrow {background:#E0E9DF;color:var(--text-primary);border-color:var(--border);}
+:root[data-theme="light"] .ah-gap-achievement-condition {border-color:var(--border);}
+:root[data-theme="light"] .ah-gap-stack-rank {background:#DFE8E0;color:var(--text-primary);border-color:var(--border);}
+:root[data-theme="light"] .ah-gap-side-rarity.is-rare,
+:root[data-theme="light"] .ah-showcase-rarity-value.is-rare,
+:root[data-theme="light"] .game-detail .achievement-rarity.rare {color:#997226;}
+:root[data-theme="light"] .ah-showcase-detail .ah-achievement-meta .ah-rare,
+:root[data-theme="light"] .ah-showcase-detail .ah-achievement-meta .ah-rare svg {color:#997226;}
+:root[data-theme="light"] .pull-refresh-indicator {
+  background:rgba(255,255,255,.96);box-shadow:0 6px 26px rgba(18,49,26,.13);
+}
+:root[data-theme="light"] .pull-refresh-install {color:var(--on-accent);}
+
