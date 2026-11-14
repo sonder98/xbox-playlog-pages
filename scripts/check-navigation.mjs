@@ -2041,6 +2041,28 @@ try{
         copy:box(el.querySelector('.game-copy')),progress:box(el.querySelector('.game-progress')),
         columns:getComputedStyle(el).gridTemplateColumns.split(/\s+/).length};
     });
+    // The pressed/hovered row background needs breathing room past both
+    // the cover and the progress bar, without changing the existing grid.
+    const hoveredRow=await libraryCard.evaluate(card=>{
+      const box=el=>{const rect=el.getBoundingClientRect();return {left:rect.left,right:rect.right};};
+      return {
+        surface:box(card),
+        cover:box(card.querySelector('.game-art')),
+        progress:box(card.querySelector('.game-progress')),
+        panel:box(card.closest('.library-games-panel')),
+        paddingLeft:parseFloat(getComputedStyle(card).paddingLeft),
+        paddingRight:parseFloat(getComputedStyle(card).paddingRight)
+      };
+    });
+    assert.ok(hoveredRow.cover.left-hoveredRow.surface.left>=11,
+      'Game artwork must not touch the left edge of the hover surface');
+    assert.ok(hoveredRow.surface.right-hoveredRow.progress.right>=11,
+      'Progress bar must not touch the right edge of the hover surface');
+    assert.equal(hoveredRow.paddingLeft,12);
+    assert.equal(hoveredRow.paddingRight,12);
+    assert.ok(hoveredRow.surface.left>=hoveredRow.panel.left-1&&
+      hoveredRow.surface.right<=hoveredRow.panel.right+1,
+      'Expanded library hover surface stays inside the panel on phone/tablet');
     if(mobile){
       const measured=await measureLibraryCard();
       assert.equal(measured.columns,2,'Phone keeps its original two-column game library layout');

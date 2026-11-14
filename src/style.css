@@ -2942,6 +2942,14 @@ footer .dot {
   }
 }
 
+/* Give the library row's hover/pressed surface breathing room around
+   the cover and the achievement bar, without shifting either content column. */
+.library-games-panel .game-card {
+  width:calc(100% + 24px);
+  margin-inline:-12px;
+  padding-inline:12px;
+}
+
 /* Compact, same-row library search: sort is always to the LEFT; search grows
    only into the remaining horizontal space to the RIGHT of its icon. */
 .games-panel>.toolbar>.filters {width:100%;display:flex;align-items:center;flex-wrap:wrap;gap:12px;}
