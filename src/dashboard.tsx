@@ -6,6 +6,7 @@ import {GameCard,GameCover,GameDetail,Modal} from './components/game';
 import {MythicPosterWall} from './components/mythic-wall';
 import {MythicFontDemo} from './components/mythic-font-demo';
 import {MythicGoldDemo} from './components/mythic-gold-demo';
+import {MythicMomentDemo} from './components/mythic-moment-demo';
 import {MythicShowcase} from './components/mythic-showcase';
 import {mythicPosterWall} from './mythic-posters';
 import {mythicTitleFoil,useMythicRotationDay,warmMythicFonts,warmMythicPoster} from './mythic-assets';
@@ -37,6 +38,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  // Private preview URL: uses only the current unlocked Xbox data, never mock cards.
  const [fontDemoOpen,setFontDemoOpen]=useState(()=>new URLSearchParams(window.location.search).get('mythic-font-demo')==='1');
  const [goldDemoOpen,setGoldDemoOpen]=useState(()=>new URLSearchParams(window.location.search).get('mythic-gold-demo')==='1');
+ const [momentDemoOpen,setMomentDemoOpen]=useState(()=>new URLSearchParams(window.location.search).get('mythic-moment-demo')==='1');
   const [hiddenIds,setHiddenIds]=useState<string[]>([]),[manageDisplay,setManageDisplay]=useState(false),[draftHidden,setDraftHidden]=useState<string[]>([]),[displayQuery,setDisplayQuery]=useState(''),[onlyHidden,setOnlyHidden]=useState(false),[savingDisplay,setSavingDisplay]=useState(false),[displayError,setDisplayError]=useState('');
  const {tab,navigate:setTab,back,gameId,dayId,showcase,gapShowcase,openGame,openAchievementDay,openAchievementShowcase,openAchievementGapShowcase,openAchievementGame,changeAchievementDay}=usePageNavigation();
  const [mobileNavVisible,setMobileNavVisible]=useState(false);
@@ -253,7 +255,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  </Modal>}
  {showcaseOpen&&tab==='library'&&current&&<MythicShowcase posters={mythicPosters} profile={current.profile}
    onClose={()=>setShowcaseOpen(false)} onOpen={id=>setMythicWallStart({gameId:id})}/>}
- {selected&&!mythicWallStart&&!showcaseOpen&&!fontDemoOpen&&!goldDemoOpen&&<GameDetail game={selected} onClose={back}
+ {selected&&!mythicWallStart&&!showcaseOpen&&!fontDemoOpen&&!goldDemoOpen&&!momentDemoOpen&&<GameDetail game={selected} onClose={back}
    titleFoil={mythicTitleFoil(mythicRotationDay)}
    onOpenMythic={mythicPosters.some(p=>p.game.id===selected.id)?
     ()=>setMythicWallStart({gameId:selected.id}):undefined}/>}
@@ -274,6 +276,13 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
    url.searchParams.delete('mythic-gold-demo');
    window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
    setGoldDemoOpen(false);
+  }}/>} 
+ {momentDemoOpen&&current&&mythicPosters.length>0&&
+  <MythicMomentDemo posters={mythicPosters} profile={current.profile} onClose={()=>{
+   const url=new URL(window.location.href);
+   url.searchParams.delete('mythic-moment-demo');
+   window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
+   setMomentDemoOpen(false);
   }}/>} 
  <nav className={'mobile-nav'+(mobileNavVisible?' is-visible':'')} aria-label="主导航">{nav.map(([id,label,Icon])=><button key={id} onClick={event=>{
    event.currentTarget.blur();
