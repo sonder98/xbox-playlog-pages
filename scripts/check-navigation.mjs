@@ -131,7 +131,7 @@ try{
         state:css.animationPlayState,gradient:css.backgroundImage,fill:css.webkitTextFillColor};
     });
     const first=await style();
-    assert.ok(first.animation.includes('foil-sweep')&&first.gradient.includes('linear-gradient'),
+    assert.ok(first.animation.includes('continuous-satin')&&first.gradient.includes('linear-gradient'),
       'A uses an animated metallic gradient clipped into the actual text.');
     await page.getByRole('button',{name:'B · 镜面扫金'}).click();
     assert.equal(await lab.getAttribute('data-gold-effect'),'mirror');
@@ -141,7 +141,7 @@ try{
     assert.ok((await style()).animation.includes('foil-liquid'));
     await page.getByRole('button',{name:'D · 熔金辉光'}).click();
     assert.equal(await lab.getAttribute('data-gold-effect'),'ember');
-    assert.ok((await style()).animation.includes('foil-ember'));
+    assert.ok((await style()).animation.includes('continuous-ember'));
     const standard=(await style()).duration;
     await page.getByRole('button',{name:'慢速'}).click();
     const slow=(await style()).duration;
@@ -173,6 +173,65 @@ try{
     await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
     await context.close();
     console.log('Mythic title gold demo: PASS real poster, four effects, speed, pause, theme, game navigation and exit');
+  }
+
+
+  // The production full-size Mythic card shares Beijing midnight with the
+  // official screenshot rotation; its A/D title effect never idles.
+  {
+    const context=await browser.newContext({
+      viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'no-preference'
+    });
+    const page=await context.newPage();
+    await page.clock.install({time:new Date('2026-11-14T15:59:45.000Z')});
+    await page.route('**/status.json*',route=>route.fulfill({json:{initialized:true,latestAt:'2026-10-30T00:00:00Z'}}));
+    await page.route('**/vault.json*',route=>route.fulfill({json:envelope}));
+    await page.route('https://covers.example.test/**',route=>route.fulfill({
+      contentType:'image/svg+xml',
+      body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"></svg>'
+    }));
+    await page.route('https://fonts.googleapis.com/**',route=>route.fulfill({contentType:'text/css',body:''}));
+    await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/#library');
+    await page.locator('input[type="password"]').fill(password);
+    await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    await page.getByRole('button',{name:'打开Mythic纪念墙'}).click();
+    const showcase=page.getByRole('region',{name:'Mythic纪念墙展示柜'});
+    await showcase.locator('.mythic-showcase-item').first().click();
+    const wall=page.getByRole('dialog',{name:'Mythic纪念墙'});
+    await wall.waitFor();
+    await page.waitForFunction(()=>!!document.querySelector('.mythic-poster.is-active')&&
+      !document.querySelector('.mythic-poster.is-active').classList.contains('is-type-loading'));
+    assert.equal(await wall.getAttribute('data-title-foil'),'satin',
+      'November 14 Beijing date uses champagne gold in the actual Mythic poster.');
+    const title=wall.locator('.mythic-poster.is-active .mythic-poster-title');
+    const foil=()=>title.evaluate(el=>{
+      const s=getComputedStyle(el);
+      return {name:s.animationName,duration:s.animationDuration,
+        timing:s.animationTimingFunction,direction:s.animationDirection,
+        iterations:s.animationIterationCount,image:s.backgroundImage,
+        fill:s.webkitTextFillColor,font:s.fontFamily,play:s.animationPlayState};
+    });
+    let a=await foil();
+    assert.ok(a.name.includes('continuous-satin')&&a.duration==='2.1s'&&
+      a.timing==='linear'&&a.direction==='alternate'&&a.iterations==='infinite'&&
+      a.image.includes('linear-gradient')&&a.font.includes('Cinzel'),
+      'Production A foil uses approved font and continuous non-idling standard sweep: '+JSON.stringify(a));
+    await page.clock.fastForward(20_000);
+    await page.waitForFunction(()=>document.querySelector('.mythic-wall-overlay')?.getAttribute('data-title-foil')==='ember');
+    const d=await foil();
+    assert.ok(d.name.includes('continuous-ember')&&d.duration==='3.7s'&&
+      d.timing==='linear'&&d.direction==='alternate'&&d.iterations==='infinite',
+      'Exactly at Beijing midnight the title switches to uninterrupted D glow: '+JSON.stringify(d));
+    await page.evaluate(()=>document.documentElement.dataset.theme='light');
+    const light=await foil();
+    assert.notEqual(light.image,d.image,
+      'Production foil has readable bronze variation on light-theme collectible.');
+    await wall.getByRole('button',{name:'下一张Mythic纪念卡'}).click();
+    await wall.locator('.mythic-poster.is-active[data-poster-game="101"]').waitFor();
+    assert.equal(await wall.getAttribute('data-title-foil'),'ember',
+      'Every Mythic poster has the same daily effect.');
+    await context.close();
+    console.log('Mythic daily title foil: PASS Beijing midnight A/D, continuous speeds, themes and card changes');
   }
 
   // A user who leaves Overview open (without returning focus or entering Manage)
