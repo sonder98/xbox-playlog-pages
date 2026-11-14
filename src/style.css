@@ -3643,6 +3643,7 @@ footer .dot {
 /* Only the player's name needs the web font; never hide the avatar for it. */
 .mythic-poster.is-type-loading .mythic-poster-player strong,
 .mythic-poster.is-type-loading .mythic-poster-achievement small,
+.mythic-poster.is-type-loading .mythic-poster-achievement-name,
 .mythic-poster.is-type-loading .mythic-poster-achievement b,
 .mythic-poster.is-type-loading .mythic-poster-achievement > span:last-child,
 .mythic-poster.is-type-loading .mythic-poster-stats,
