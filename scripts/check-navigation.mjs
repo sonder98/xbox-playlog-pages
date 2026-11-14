@@ -128,6 +128,23 @@ try{
       ['首项成就','Mythic 达成']);
     assert.deepEqual(await poster.locator('.mythic-poster-achievement-name').allTextContents(),
       ['Achievement 0','Very long achievement name to check readable wrapping on mobile']);
+    const hierarchy=await poster.locator('.mythic-poster-achievement').first().evaluate(column=>{
+      const label=getComputedStyle(column.querySelector('small'));
+      const name=getComputedStyle(column.querySelector('.mythic-poster-achievement-name'));
+      return {
+        labelSize:parseFloat(label.fontSize),nameSize:parseFloat(name.fontSize),
+        labelWeight:label.fontWeight,nameWeight:name.fontWeight,
+        labelSpacing:parseFloat(label.letterSpacing),
+        labelFont:label.fontFamily,nameFont:name.fontFamily
+      };
+    });
+    assert.ok(hierarchy.nameSize>hierarchy.labelSize*1.35,
+      'Achievement name is visibly larger than its category label: '+JSON.stringify(hierarchy));
+    assert.equal(hierarchy.labelWeight,'500','Category label uses the softer serif weight');
+    assert.equal(hierarchy.nameWeight,'700','Achievement name retains bold serif emphasis');
+    assert.ok(hierarchy.labelFont.includes('Noto Serif SC')&&
+      hierarchy.nameFont.includes('Noto Serif SC')&&hierarchy.labelSpacing>0,
+      'Both rows preserve the chosen Chinese serif while separating their hierarchy');
     assert.deepEqual(await poster.locator('.mythic-poster-achievement-datetime').allTextContents(),
       ['2026.11.01 · 20:24','2026.11.02 · 20:24'],
       'Show the real Beijing-local date and specific time together on line three');
