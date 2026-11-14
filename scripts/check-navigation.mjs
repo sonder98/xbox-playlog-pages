@@ -154,7 +154,8 @@ try{
       'The first and second rows use distinct Chinese sans-serif and serif typefaces');
     assert.ok(hierarchy.dateFont.includes('Cormorant Garamond'),
       'Combined date/time restores the original Cormorant Garamond typeface');
-    assert.equal(hierarchy.dateWeight,'650','Combined date/time restores the original date emphasis');
+    assert.equal(hierarchy.dateWeight,'400','Combined date/time line retains the original regular timestamp weight');
+    assert.equal(hierarchy.dateNumberWeight,'650','Date retains the original bold date weight');
     assert.equal(hierarchy.dateColor,'rgb(170, 166, 155)',
       'Date/time is muted gray in dark mode');
     assert.equal(hierarchy.dateNumberWeight,'650');
