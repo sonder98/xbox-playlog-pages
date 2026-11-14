@@ -4002,11 +4002,11 @@ footer .dot {
  .ah-sheet .ah-sheet-game-hours b {font-size:11px;}
 }
 
-/* All quantitative progress fills (linear and circular) share the
-   Mythic badge's original mint: --progress-mint. Titles stay white. */
+/* Quantitative progress fills keep Xbox green independently of the
+   Mythic collectible frame and metallic title finish. */
 
-/* Full: a single warm-gold highlight travels EXACTLY on the existing green
-   Mythic frame. No rotating element, extra outline or separately scaled SVG.
+/* Every Mythic game, including Full: a warm-gold highlight travels EXACTLY
+   on the existing green frame. No additional outline or separately scaled SVG.
    The masked 2px layer has the same outer edge and border radius as the cover,
    so it stays registered at every size (including landscape detail covers). */
 @property --full-border-angle {
@@ -4014,7 +4014,7 @@ footer .dot {
   inherits:false;
   initial-value:0deg;
 }
-.game-cover.completion-frame.full-completion::before {
+.game-cover.completion-frame::before {
   content:"";
   position:absolute;
   z-index:4;
@@ -4040,7 +4040,7 @@ footer .dot {
 }
 @keyframes full-border-flow {to{--full-border-angle:360deg}}
 @media(prefers-reduced-motion:reduce){
-  .game-cover.completion-frame.full-completion::before {animation:none;opacity:0;}
+  .game-cover.completion-frame::before {animation:none;opacity:0;}
 }
 
 /* Theme control sits immediately to the right of the Overview title.
@@ -4067,9 +4067,8 @@ footer .dot {
   .theme-toggle {flex-basis:34px;width:34px;height:34px;}
 }
 
-/* Light is an alternative skin for the EXISTING Xbox Playlog architecture.
-   Typography, component layout, game artwork, Mythic mint border and Full
-   gold light are deliberately unchanged. */
+/* Light is an alternative skin for the existing Xbox Playlog architecture.
+   Typography, game artwork and the shared Mythic border glow stay intact. */
 :root[data-theme="light"] {
   color-scheme:light;
   --bg:#F4F6F3;
@@ -4392,17 +4391,16 @@ footer .dot {
 :root[data-theme="light"] .ah-month-calendar .ah-cell:disabled {color:var(--text-muted);}
 
 
-/* The Mythic frame is still the original mint on dark. Only on white/light
-   surfaces, deepen the same green hue for a visible 2px collector outline.
-   Full's masked gold highlight remains registered to the same exact border. */
-:root[data-theme="light"] .game-cover.completion-frame {
+/* Use the same high-contrast green in both themes. The gold border shimmer
+   is masked to the 2px edge and is present on every Mythic cover. */
+.game-cover.completion-frame {
   border-color:#2D8C62;
   box-shadow:0 0 0 1px rgba(20,89,57,.25),
     0 0 7px rgba(44,137,92,.26),
     0 0 17px rgba(51,151,99,.17),
     inset 0 0 0 .5px rgba(241,255,247,.55);
 }
-:root[data-theme="light"] .completion-ornament {
+.completion-ornament {
   color:#2D8C62;
   filter:drop-shadow(0 1px 1px rgba(18,86,53,.46))
     drop-shadow(0 0 3px rgba(35,125,81,.24));
@@ -4429,9 +4427,10 @@ footer .dot {
 :root[data-theme="light"] .ah-sheet-game-chevron {color:#344F3D;}
 
 
-/* Mythic large-card title: approved A/D foil alternates each Beijing day.
-   Animations move continuously, with no idle gap between sweeps. */
-.mythic-wall-overlay[data-title-foil] .mythic-poster-title{
+/* Mythic large posters and game-library names share the approved A/D foil,
+   Beijing-day rotation, and uninterrupted 2.1 / 3.7-second sweep. */
+:is(.mythic-wall-overlay[data-title-foil] .mythic-poster-title,
+    .library-games-panel[data-title-foil] .game-card[data-mythic="true"] .game-title){
  background-repeat:no-repeat;
  background-size:280% 100%;
  -webkit-background-clip:text;
@@ -4440,13 +4439,15 @@ footer .dot {
  color:transparent;
  will-change:background-position;
 }
-.mythic-wall-overlay[data-title-foil="satin"] .mythic-poster-title{
+:is(.mythic-wall-overlay[data-title-foil="satin"] .mythic-poster-title,
+    .library-games-panel[data-title-foil="satin"] .game-card[data-mythic="true"] .game-title){
  background-image:linear-gradient(105deg,
   #fcf5e8 0%,#f8eedb 35%,#d9aa5d 44%,#fffcee 48.5%,
   #f9d88a 51.5%,#d4a158 55%,#fcf2e1 64%,#fff7eb 100%);
  animation:mythic-title-continuous-satin 2.1s linear infinite alternate;
 }
-.mythic-wall-overlay[data-title-foil="ember"] .mythic-poster-title{
+:is(.mythic-wall-overlay[data-title-foil="ember"] .mythic-poster-title,
+    .library-games-panel[data-title-foil="ember"] .game-card[data-mythic="true"] .game-title){
  background-image:linear-gradient(115deg,
   #c58b41 0%,#f7ce77 29%,#8f5f28 39%,
   #ffe0a0 47%,#fff8d7 51%,#e6a84b 60%,#9c682c 73%,#f6d38d 100%);
@@ -4465,18 +4466,21 @@ footer .dot {
 .mythic-wall-overlay[data-title-foil] .mythic-poster.is-type-loading .mythic-poster-title{
  animation-play-state:paused;
 }
-:root[data-theme="light"] .mythic-wall-overlay[data-title-foil="satin"] .mythic-poster-title{
+:root[data-theme="light"] :is(.mythic-wall-overlay[data-title-foil="satin"] .mythic-poster-title,
+    .library-games-panel[data-title-foil="satin"] .game-card[data-mythic="true"] .game-title){
  background-image:linear-gradient(105deg,
   #6e471e 0%,#764d23 35%,#b27a2f 44%,#f3cf75 49%,
   #a46b22 54%,#67421b 64%,#704921 100%);
 }
-:root[data-theme="light"] .mythic-wall-overlay[data-title-foil="ember"] .mythic-poster-title{
+:root[data-theme="light"] :is(.mythic-wall-overlay[data-title-foil="ember"] .mythic-poster-title,
+    .library-games-panel[data-title-foil="ember"] .game-card[data-mythic="true"] .game-title){
  background-image:linear-gradient(115deg,
   #70471d 0%,#bf872e 29%,#593816 39%,#d7a554 47%,
   #ffe5a2 51%,#a77431 60%,#65401b 73%,#b78437 100%);
 }
 @media(prefers-reduced-motion:reduce){
- .mythic-wall-overlay[data-title-foil] .mythic-poster-title{
+ :is(.mythic-wall-overlay[data-title-foil] .mythic-poster-title,
+     .library-games-panel[data-title-foil] .game-card[data-mythic="true"] .game-title){
   animation:none;filter:none;background-position:50% 50%;will-change:auto;
  }
 }
