@@ -56,8 +56,9 @@ function OrnateBorder(){
   </g>
  </svg>;
 }
-function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,rotationDay}:{
+function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,rotationDay,momentLayout='original'}:{
  entry:MythicPoster;profile:Profile;index:number;total:number;active:boolean;opening:boolean;fontReady:boolean;rotationDay:number;
+ momentLayout?:'original'|'one'|'two';
 }){
  const {game,firstAt,mythicAt,firstAchievement,lastBaseAchievement,daysToMythic,baseTotal}=entry;
  const first=posterLocalDate(firstAt),finish=posterLocalDate(mythicAt);
@@ -114,15 +115,19 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
    <div className="mythic-poster-achievement">
     <MomentArt achievement={firstAchievement} active={active}/>
     <small>首项成就</small>
-    <b>{first.date}</b>
-    <span>{first.time}</span>
+    {momentLayout==='original'?<><b>{first.date}</b><span>{first.time}</span></>:<>
+     <strong className="mythic-poster-achievement-name" title={firstAchievement?.name||'名称暂缺'}>{firstAchievement?.name||'名称暂缺'}</strong>
+     <span className="mythic-poster-achievement-datetime">{first.date} · {first.time}</span>
+    </>}
    </div>
    <span className="mythic-poster-bridge" aria-hidden="true">✦</span>
    <div className="mythic-poster-achievement">
     <MomentArt achievement={lastBaseAchievement} active={active}/>
     <small>Mythic 达成</small>
-    <b>{finish.date}</b>
-    <span>{finish.time}</span>
+    {momentLayout==='original'?<><b>{finish.date}</b><span>{finish.time}</span></>:<>
+     <strong className="mythic-poster-achievement-name" title={lastBaseAchievement?.name||'名称暂缺'}>{lastBaseAchievement?.name||'名称暂缺'}</strong>
+     <span className="mythic-poster-achievement-datetime">{finish.date} · {finish.time}</span>
+    </>}
    </div>
   </div>
   <div className="mythic-poster-stats">
@@ -142,12 +147,13 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
  </article>;
 }
 
-export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=false,onClose,previewToolbar,previewStyle,previewKind='font',previewVariant,previewPaused=false,previewLabel}:{
+export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=false,onClose,previewToolbar,previewStyle,previewKind='font',previewVariant,previewPaused=false,previewLabel,previewMomentLayout='original'}:{
  posters:MythicPoster[];profile:Profile;initialGameId?:string|null;
  allowNavigation?:boolean;onClose:()=>void;
  /** Optional typography lab, never enabled by ordinary collectible views. */
  previewToolbar?:ReactNode;previewStyle?:CSSProperties;
- previewKind?:'font'|'gold';previewVariant?:string;previewPaused?:boolean;previewLabel?:string;
+ previewKind?:'font'|'gold'|'moment';previewVariant?:string;previewPaused?:boolean;previewLabel?:string;
+ previewMomentLayout?:'original'|'one'|'two';
 }){
  // Selecting a card in the cabinet chooses the initial index, not single-card
  // mode; the game-detail shortcut still opens only its own collectible.
@@ -201,9 +207,11 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
  return <div className="mythic-wall-overlay" role="dialog" aria-modal="true"
   data-font-demo={previewToolbar&&previewKind==='font'?'true':undefined}
   data-gold-demo={previewToolbar&&previewKind==='gold'?'true':undefined}
+  data-moment-demo={previewToolbar&&previewKind==='moment'?'true':undefined}
+  data-moment-layout={previewKind==='moment'?previewMomentLayout:undefined}
   data-gold-effect={previewKind==='gold'?previewVariant:undefined}
   data-gold-paused={previewKind==='gold'&&previewPaused?'true':undefined}
-  data-title-foil={previewToolbar?undefined:mythicTitleFoil(rotationDay)}
+  data-title-foil={previewToolbar&&previewKind!=='moment'?undefined:mythicTitleFoil(rotationDay)}
   style={previewStyle}
   aria-label={single?'Mythic纪念卡':'Mythic纪念墙'} data-display-mode={single?'single':'wall'}
   data-entry={allowNavigation?'showcase':single?'detail':'legacy'} data-transition="idle">
@@ -211,7 +219,7 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
    <div><span className="mythic-wall-eyebrow">YOUR MYTHIC LEGACY</span>
     <strong>{previewToolbar?(previewLabel||'Mythic 字体对比'):single?'Mythic纪念卡':allowNavigation?'Mythic纪念卡':'Mythic纪念墙'}</strong></div>
    {!single&&<span className="mythic-wall-counter" aria-live="polite">{index+1} / {posters.length}</span>}
-   <button type="button" className="mythic-wall-close" onClick={onClose} aria-label={previewToolbar?(previewKind==='gold'?'关闭鎏金预览':'关闭字体预览'):allowNavigation?'返回展示柜':single?'关闭Mythic纪念卡':'关闭Mythic纪念墙'}><X size={22}/></button>
+   <button type="button" className="mythic-wall-close" onClick={onClose} aria-label={previewToolbar?(previewKind==='gold'?'关闭鎏金预览':previewKind==='moment'?'关闭成就布局预览':'关闭字体预览'):allowNavigation?'返回展示柜':single?'关闭Mythic纪念卡':'关闭Mythic纪念墙'}><X size={22}/></button>
   </header>
   {previewToolbar&&<div className="mythic-font-demo-toolbar">{previewToolbar}</div>}
   <div className="mythic-wall-viewport" onTouchStart={e=>{
@@ -221,7 +229,8 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
     {visiblePosters.map(({entry,i,visible})=><div className="mythic-wall-slide" key={entry.game.id}
      aria-hidden={index!==i}>
      {visible&&<MythicPosterCard entry={entry} profile={profile} index={i} total={posters.length}
-      active={i===index} opening={i===initial&&celebrate&&fontReady} fontReady={fontReady} rotationDay={rotationDay}/>} 
+      active={i===index} opening={i===initial&&celebrate&&fontReady} fontReady={fontReady} rotationDay={rotationDay}
+      momentLayout={previewKind==='moment'?previewMomentLayout:'original'}/>} 
     </div>)}
    </div>
   </div>
