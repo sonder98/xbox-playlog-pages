@@ -92,7 +92,7 @@ try{
     await page.getByRole('button',{name:'思源黑体 · 粗体'}).click();
     assert.ok((await page.locator('.mythic-poster-congratulations').first()
       .evaluate(node=>getComputedStyle(node).fontFamily)).includes('Noto Sans SC'));
-    await page.getByRole('button',{name:'浅色'}).click();
+    await page.getByRole('button',{name:'浅色',exact:true}).click();
     await page.waitForFunction(()=>document.documentElement.dataset.theme==='light');
     await page.getByRole('button',{name:'关闭字体预览'}).click();
     await page.locator('.mythic-wall-overlay[data-font-demo="true"]').waitFor({state:'detached'});
