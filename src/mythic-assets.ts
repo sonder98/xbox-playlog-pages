@@ -112,7 +112,8 @@ export function warmMythicFonts():Promise<void>{
   fontReady=Promise.allSettled([
    document.fonts.load('700 26px "Cinzel"','WUCHANG Fallen Feathers 0123456789'),
    document.fonts.load('600 22px "Cormorant Garamond"','MYTHIC 0123456789'),
-   document.fonts.load('700 20px "Noto Serif SC"','恭喜首项成就小时天本体玩家')
+   document.fonts.load('700 20px "Noto Serif SC"','恭喜首项成就小时天本体玩家'),
+    document.fonts.load('400 18px "Cactus Classical Serif"','首项成就 Mythic 达成')
   ]).then(()=>{});
  }
  return fontReady;
