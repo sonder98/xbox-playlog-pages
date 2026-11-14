@@ -850,6 +850,8 @@ try{
         frame:!!card.querySelector('.mythic-poster-ornament'),
         badge:getComputedStyle(card.querySelector('.mythic-poster-emblem')).backgroundColor,
         heading:getComputedStyle(card.querySelector('.mythic-poster-title')).color,
+        headingGradient:getComputedStyle(card.querySelector('.mythic-poster-title')).backgroundImage,
+        headingFill:getComputedStyle(card.querySelector('.mythic-poster-title')).webkitTextFillColor,
         captionBackground:getComputedStyle(card.querySelector('.mythic-poster-caption')).backgroundColor,
         captionBorder:getComputedStyle(card.querySelector('.mythic-poster-caption')).borderBottomWidth,
         shade:getComputedStyle(card.querySelector('.mythic-poster-backdrop-shade')).backgroundImage};
@@ -858,7 +860,10 @@ try{
       posterColors.paper.includes('rgb(218, 210, 183)') &&
       posterColors.shade.includes('rgb(244, 235, 217)'),
       'Full-size Mythic poster uses the light parchment artwork treatment');
-    assert.equal(posterColors.heading,'rgb(52, 44, 33)');
+    assert.equal(posterColors.heading,'rgba(0, 0, 0, 0)');
+    assert.ok(posterColors.headingGradient.includes('linear-gradient')&&
+      posterColors.headingFill==='rgba(0, 0, 0, 0)',
+      'Light-theme Mythic title uses gradient-clipped bronze lettering, not solid ink');
     assert.equal(posterColors.captionBackground,'rgba(0, 0, 0, 0)',
       'MYTHIC NO. caption must not inherit the main header light background');
     assert.equal(posterColors.captionBorder,'0px',
