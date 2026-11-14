@@ -62,6 +62,46 @@ try{
   assert.ok(exported.catalogs[0].data.achievements.every(a=>!a.unlocked&&a.unlockedAt===null));
   await exportContext.close();
   console.log('Public catalog exporter: PASS popup, document parsing, JSON download, sanitized metadata');
+
+  // Real interactive typography preview uses the same Mythic poster as the
+  // production app, but has its own query-param entry and scoped font controls.
+  {
+    const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+    const page=await context.newPage();
+    await page.route('**/status.json*',route=>route.fulfill({json:{initialized:true,latestAt:'2026-10-30T00:00:00Z'}}));
+    await page.route('**/vault.json*',route=>route.fulfill({json:envelope}));
+    await page.route('https://covers.example.test/**',route=>route.fulfill({
+      contentType:'image/svg+xml',
+      body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"></svg>'
+    }));
+    // Testing actual CSS declarations should not require external Google Fonts.
+    await page.route('https://fonts.googleapis.com/**',route=>route.fulfill({contentType:'text/css',body:''}));
+    await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/?mythic-font-demo=1');
+    await page.locator('input[type="password"]').fill(password);
+    await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    await page.locator('.mythic-wall-overlay[data-font-demo="true"]').waitFor();
+    assert.ok(await page.locator('.mythic-poster-title').count()>0,
+      'Preview must render the original MythicPosterCard, not a separate mockup.');
+    const title=page.locator('.mythic-poster.is-active .mythic-poster-title');
+    await page.getByRole('button',{name:'C · Libre Baskerville Bold'}).click();
+    assert.ok((await title.evaluate(node=>getComputedStyle(node).fontFamily)).includes('Libre Baskerville'));
+    await page.getByRole('button',{name:'E · Fraunces Bold'}).click();
+    assert.ok((await title.evaluate(node=>getComputedStyle(node).fontFamily)).includes('Fraunces'));
+    await page.getByRole('button',{name:'B · Cinzel Bold'}).click();
+    assert.ok((await title.evaluate(node=>getComputedStyle(node).fontFamily)).includes('Cinzel'));
+    await page.getByRole('button',{name:'思源黑体 · 粗体'}).click();
+    assert.ok((await page.locator('.mythic-poster-congratulations').first()
+      .evaluate(node=>getComputedStyle(node).fontFamily)).includes('Noto Sans SC'));
+    await page.getByRole('button',{name:'浅色'}).click();
+    await page.waitForFunction(()=>document.documentElement.dataset.theme==='light');
+    await page.getByRole('button',{name:'关闭字体预览'}).click();
+    await page.locator('.mythic-wall-overlay[data-font-demo="true"]').waitFor({state:'detached'});
+    assert.ok(!new URL(page.url()).searchParams.has('mythic-font-demo'));
+    await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
+    await context.close();
+    console.log('Mythic typography demo: PASS real poster, B/C/E, Chinese font, theme and close');
+  }
+
   // A user who leaves Overview open (without returning focus or entering Manage)
   // must see new Xbox snapshots after the cheap global status poll.
   {
