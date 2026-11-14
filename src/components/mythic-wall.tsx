@@ -147,13 +147,13 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
  </article>;
 }
 
-export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=false,onClose,previewToolbar,previewStyle,previewKind='font',previewVariant,previewPaused=false,previewLabel,previewMomentLayout='original'}:{
+export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=false,onClose,previewToolbar,previewStyle,previewKind='font',previewVariant,previewPaused=false,previewLabel,previewMomentLayout='original',previewMomentFont='a'}:{
  posters:MythicPoster[];profile:Profile;initialGameId?:string|null;
  allowNavigation?:boolean;onClose:()=>void;
  /** Optional typography lab, never enabled by ordinary collectible views. */
  previewToolbar?:ReactNode;previewStyle?:CSSProperties;
  previewKind?:'font'|'gold'|'moment';previewVariant?:string;previewPaused?:boolean;previewLabel?:string;
- previewMomentLayout?:'original'|'one'|'two';
+ previewMomentLayout?:'original'|'one'|'two';previewMomentFont?:'a'|'b'|'c';
 }){
  // Selecting a card in the cabinet chooses the initial index, not single-card
  // mode; the game-detail shortcut still opens only its own collectible.
@@ -209,6 +209,7 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
   data-gold-demo={previewToolbar&&previewKind==='gold'?'true':undefined}
   data-moment-demo={previewToolbar&&previewKind==='moment'?'true':undefined}
   data-moment-layout={previewKind==='moment'?previewMomentLayout:undefined}
+   data-moment-font={previewKind==='moment'?previewMomentFont:undefined}
   data-gold-effect={previewKind==='gold'?previewVariant:undefined}
   data-gold-paused={previewKind==='gold'&&previewPaused?'true':undefined}
   data-title-foil={previewToolbar&&previewKind!=='moment'?undefined:mythicTitleFoil(rotationDay)}

@@ -1,3 +1,4 @@
+@import url("https://cdn.jsdelivr.net/npm/@free-fonts/zhuque-fangsong@1.0.0/zhuque-fangsong.css");
 /* Scoped preview; the published Mythic poster stays exactly as before. */
 .mythic-wall-overlay[data-moment-demo="true"] .mythic-wall-header{
  min-height:55px;padding-block:8px;
@@ -47,11 +48,22 @@
 .mythic-wall-overlay[data-moment-demo="true"]:not([data-moment-layout="original"]) .mythic-poster-achievement-art{
  width:31%;min-width:30px;max-width:40px;margin-bottom:1px;
 }
+/* The font lab changes only the first achievement label row.
+   A is a display face, B/C are serif families; all use the same size and weight. */
+.mythic-wall-overlay[data-moment-demo="true"][data-moment-font="a"]:not([data-moment-layout="original"]) .mythic-poster-achievement small{
+ font-family:"ZCOOL XiaoWei","Noto Serif SC",serif;font-weight:400;
+}
+.mythic-wall-overlay[data-moment-demo="true"][data-moment-font="b"]:not([data-moment-layout="original"]) .mythic-poster-achievement small{
+ font-family:"Zhuque Fangsong","Noto Serif SC",serif;font-weight:400;
+}
+.mythic-wall-overlay[data-moment-demo="true"][data-moment-font="c"]:not([data-moment-layout="original"]) .mythic-poster-achievement small{
+ font-family:"Cactus Classical Serif","Noto Serif SC",serif;font-weight:400;
+}
 /* First line is a discreet category label; the real achievement name
    receives the stronger type size and weight in the second line. */
 .mythic-wall-overlay[data-moment-demo="true"]:not([data-moment-layout="original"]) .mythic-poster-achievement small{
- font-family:"LXGW WenKai","Kaiti SC","KaiTi","STKaiti","Noto Serif SC",serif;
- font-size:2.7cqw;font-weight:500;line-height:1.25;letter-spacing:.045em;
+ font-family:"ZCOOL XiaoWei","Noto Serif SC",serif;
+ font-size:2.7cqw;font-weight:400;line-height:1.25;letter-spacing:.045em;
  color:#bcb09a;
 }
 .mythic-wall-overlay[data-moment-demo="true"] .mythic-poster-achievement-name{

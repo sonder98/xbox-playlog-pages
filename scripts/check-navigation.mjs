@@ -114,6 +114,7 @@ try{
       body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"></svg>'
     }));
     await page.route('https://fonts.googleapis.com/**',route=>route.fulfill({contentType:'text/css',body:''}));
+    await page.route('https://cdn.jsdelivr.net/**',route=>route.fulfill({contentType:'text/css',body:''}));
     await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/?mythic-moment-demo=1');
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
@@ -147,12 +148,22 @@ try{
     });
     assert.ok(hierarchy.nameSize>hierarchy.labelSize*1.35,
       'Achievement name is visibly larger than its category label: '+JSON.stringify(hierarchy));
-    assert.equal(hierarchy.labelWeight,'500','Category label uses medium weight');
+    assert.equal(hierarchy.labelWeight,'400','Font candidates use the same regular weight for a fair comparison');
     assert.equal(hierarchy.nameWeight,'700','Achievement name uses bold weight');
-    assert.ok(hierarchy.labelFont.includes('LXGW WenKai')&&
+    assert.ok(hierarchy.labelFont.includes('ZCOOL XiaoWei')&&
       !hierarchy.labelFont.includes('Noto Sans SC')&&
       hierarchy.nameFont.includes('Noto Serif SC')&&hierarchy.labelSpacing>0,
-      'The first and second rows use distinct Chinese serif/calligraphic typefaces, never Heiti');
+      'Candidate A uses the intended decorative face, while the achievement title remains Noto Serif SC');
+    await page.getByRole('button',{name:'B · 朱雀仿宋'}).click();
+    assert.equal(await lab.getAttribute('data-moment-font'),'b');
+    assert.ok((await poster.locator('.mythic-poster-achievement small').first()
+      .evaluate(el=>getComputedStyle(el).fontFamily)).includes('Zhuque Fangsong'));
+    await page.getByRole('button',{name:'C · 仙人掌明体'}).click();
+    assert.equal(await lab.getAttribute('data-moment-font'),'c');
+    assert.ok((await poster.locator('.mythic-poster-achievement small').first()
+      .evaluate(el=>getComputedStyle(el).fontFamily)).includes('Cactus Classical Serif'));
+    await page.getByRole('button',{name:'A · 站酷小薇体'}).click();
+    assert.equal(await lab.getAttribute('data-moment-font'),'a');
     assert.ok(hierarchy.dateFont.includes('Cormorant Garamond'),
       'Combined date/time restores the original Cormorant Garamond typeface');
     assert.equal(hierarchy.dateWeight,'400','Combined date/time line retains the original regular timestamp weight');
