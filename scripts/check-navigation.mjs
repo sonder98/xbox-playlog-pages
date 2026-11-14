@@ -194,6 +194,13 @@ try{
     await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/#library');
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    const library=page.locator('.library-games-panel');
+    await library.waitFor();
+    const libraryTitle=library.locator('.game-card[data-mythic="true"] .game-title').first();
+    assert.equal(await library.getAttribute('data-title-foil'),'satin',
+      'Library games share the November 14 A foil before opening the poster');
+    assert.equal(await libraryTitle.evaluate(el=>getComputedStyle(el).animationName),
+      'mythic-title-continuous-satin');
     await page.getByRole('button',{name:'打开Mythic纪念墙'}).click();
     const showcase=page.getByRole('region',{name:'Mythic纪念墙展示柜'});
     await showcase.locator('.mythic-showcase-item').first().click();
@@ -218,6 +225,10 @@ try{
       'Production A foil uses approved font and continuous non-idling standard sweep: '+JSON.stringify(a));
     await page.clock.fastForward(20_000);
     await page.waitForFunction(()=>document.querySelector('.mythic-wall-overlay')?.getAttribute('data-title-foil')==='ember');
+    assert.equal(await library.getAttribute('data-title-foil'),'ember',
+      'The library title uses D at the same Beijing midnight as the large card');
+    assert.equal(await libraryTitle.evaluate(el=>getComputedStyle(el).animationName),
+      'mythic-title-continuous-ember');
     const d=await foil();
     assert.ok(d.name.includes('continuous-ember')&&d.duration==='3.7s'&&
       d.timing==='linear'&&d.direction==='alternate'&&d.iterations==='infinite',
@@ -226,6 +237,9 @@ try{
     const light=await foil();
     assert.notEqual(light.image,d.image,
       'Production foil has readable bronze variation on light-theme collectible.');
+    const libraryLight=await libraryTitle.evaluate(el=>getComputedStyle(el).backgroundImage);
+    assert.equal(libraryLight,light.image,
+      'Mythic titles in the library and large card share the exact light-theme gold gradient');
     await wall.getByRole('button',{name:'下一张Mythic纪念卡'}).click();
     await wall.locator('.mythic-poster.is-active[data-poster-game="101"]').waitFor();
     assert.equal(await wall.getAttribute('data-title-foil'),'ember',
@@ -731,10 +745,10 @@ try{
     assert.equal(lightAppearance.progress,'rgb(16, 124, 16)',
       'Original Xbox green remains the same in light mode');
     assert.equal(lightAppearance.heat,'rgb(158, 212, 166)');
-    assert.equal(darkAppearance.collector,'rgb(166, 243, 200)',
-      'The original mint frame stays unchanged in dark mode');
+    assert.equal(darkAppearance.collector,'rgb(45, 140, 98)',
+      'Dark mode now uses the same collector green as light mode');
     assert.equal(lightAppearance.collector,'rgb(45, 140, 98)',
-      'The light collector frame uses a darker shade from the same mint family');
+      'The light collector frame matches the dark-mode green');
     assert.equal(lightAppearance.status,'#F4F6F3');
     assert.equal(lightAppearance.stored,'light');
     // Dark-image badges must be recast for light chrome; even with no Dusty
@@ -2005,8 +2019,8 @@ try{
       await page.setViewportSize({width:1440,height:1000});
     }
     console.log((mobile?'Mobile':'Tablet')+': PASS game library progress geometry and protected phone layout');
-    // All game names stay white; completion bars return to site green.
-    // The collectible Mythic frame keeps its original independent mint color.
+    // Mythic library titles share the real poster's A/D moving foil, while
+    // their achievement progress retains the official Xbox green.
     const progressPalette=await libraryCard.evaluate(card=>{
       const title=card.querySelector('.game-title');
       const cover=card.querySelector('.game-cover.completion-frame');
@@ -2014,6 +2028,11 @@ try{
       const fill=track?.querySelector(':scope>span');
       const original={
         title:getComputedStyle(title).color,
+        titleFill:getComputedStyle(title).webkitTextFillColor,
+        titleGradient:getComputedStyle(title).backgroundImage,
+        titleAnimation:getComputedStyle(title).animationName,
+        titleDuration:getComputedStyle(title).animationDuration,
+        mythic:card.dataset.mythic,
         frame:getComputedStyle(cover).borderTopColor,
         bar:getComputedStyle(fill).backgroundColor,
         fontSize:getComputedStyle(title).fontSize,
@@ -2027,10 +2046,30 @@ try{
       const restored=getComputedStyle(fill).backgroundColor;
       return {original,incomplete,restored,unusedMythicClass:card.classList.contains('is-mythic')};
     });
-    assert.equal(progressPalette.original.frame,'rgb(166, 243, 200)',
-      'Original Mythic badge frame color stays unchanged');
-    assert.equal(progressPalette.original.title,'rgb(255, 255, 255)',
-      'Mythic and Full game titles revert to the existing white');
+    assert.equal(progressPalette.original.frame,'rgb(45, 140, 98)',
+      'Mythic and Full use the same dark- and light-mode green border');
+    assert.equal(progressPalette.original.mythic,'true');
+    assert.equal(progressPalette.original.title,'rgba(0, 0, 0, 0)');
+    assert.equal(progressPalette.original.titleFill,'rgba(0, 0, 0, 0)');
+    assert.ok(progressPalette.original.titleGradient.includes('linear-gradient'),
+      'Mythic library names use metallic gradient clipped into real text');
+    const dayFoil=await page.locator('.library-games-panel').getAttribute('data-title-foil');
+    assert.equal(progressPalette.original.titleAnimation,
+      dayFoil==='satin'?'mythic-title-continuous-satin':'mythic-title-continuous-ember');
+    assert.equal(progressPalette.original.titleDuration,dayFoil==='satin'?'2.1s':'3.7s',
+      'Mythic library titles use the large poster’s standard A/D speed');
+    const plainName=await libraryCard.evaluate(card=>{
+      const title=card.querySelector('.game-title');
+      card.removeAttribute('data-mythic');
+      const style=getComputedStyle(title);
+      const result={animation:style.animationName,fill:style.webkitTextFillColor};
+      card.dataset.mythic='true';
+      return result;
+    });
+    assert.equal(plainName.animation,'none',
+      'Non-Mythic library names are not animated');
+    assert.equal(plainName.fill,'rgb(255, 255, 255)',
+      'Non-Mythic library names keep their normal typography');
     for(const color of [progressPalette.original.bar,progressPalette.incomplete,progressPalette.restored])
       assert.equal(color,'rgb(16, 124, 16)',
         'Complete and incomplete progress use Xbox official green');
@@ -2039,14 +2078,13 @@ try{
     assert.ok(progressPalette.original.fontSize&&progressPalette.original.fontWeight&&
       progressPalette.original.titleWidth>0&&progressPalette.original.titleHeight>0,
       'Game name typography and geometry stay intact');
-    console.log((mobile?'Mobile':'Desktop')+': PASS white titles, mint Mythic frames and original green progress');
+    console.log((mobile?'Mobile':'Desktop')+': PASS Mythic A/D library titles, unified green frames and unchanged progress');
     
-    // Full and Mythic share the same cover/badge geometry. The Full shimmer
-    // must be clipped to the existing 2px rounded border, not a floating SVG
+    // Every Mythic game receives the former Full-only golden border shimmer.
+    // The highlight stays clipped to the 2px rounded frame, not a floating SVG
     // that can drift at different mobile/tablet/desktop cover sizes.
     const mythicFrame=page.locator('.game-card .game-cover.completion-frame').first();
     await mythicFrame.waitFor();
-    await mythicFrame.evaluate(el=>el.classList.add('full-completion'));
     const frameStyle=()=>mythicFrame.evaluate(el=>{
       const original=getComputedStyle(el),shine=getComputedStyle(el,'::before');
       return {
@@ -2063,14 +2101,14 @@ try{
       };
     });
     const fullBefore=await frameStyle();
-    assert.equal(fullBefore.parentBorder,'2px','Full retains the original Mythic border thickness');
+    assert.equal(fullBefore.parentBorder,'2px','All Mythic games retain the original 2px border thickness');
     assert.equal(fullBefore.glowInset,'-2px','The shine outer edge aligns to the real outer border');
     assert.equal(fullBefore.glowPadding,'2px','Gold light occupies exactly the same 2px border width');
     assert.equal(fullBefore.glowRadius,fullBefore.parentRadius,
       'The traveling highlight follows the existing rounded corners');
     assert.equal(fullBefore.glowTransform,'none','The gold layer never rotates or shifts off the rounded frame');
     assert.ok(fullBefore.mask.includes('exclude'),'Only the original border ring may receive gold light');
-    assert.equal(fullBefore.animation,'full-border-flow','Full border has an active moving highlight');
+    assert.equal(fullBefore.animation,'full-border-flow','Mythic-only borders have the gold highlight without Full');
     await page.waitForTimeout(210);
     const fullAfter=await frameStyle();
     assert.ok(Number.isFinite(fullBefore.angle)&&Number.isFinite(fullAfter.angle)&&
@@ -2078,10 +2116,18 @@ try{
       'The gold highlight visibly advances along the frame rather than staying fixed');
     assert.ok(Math.abs(fullBefore.coverBox.width-fullBefore.coverBox.height)<2,
       'Compact game artwork keeps its original square geometry');
+    await mythicFrame.evaluate(el=>el.classList.add('full-completion'));
+    assert.equal((await frameStyle()).animation,'full-border-flow',
+      'Full retains the same gold border highlight as Mythic-only games');
     await mythicFrame.evaluate(el=>el.classList.remove('full-completion'));
-    assert.equal(await mythicFrame.evaluate(el=>getComputedStyle(el,'::before').content),'none',
-      'Mythic-only covers have no new shine overlay');
-    console.log((mobile?'Mobile':'Desktop')+': PASS Full glow path tracks Mythic border precisely');
+    const uncompleted=await mythicFrame.evaluate(el=>{
+      el.classList.remove('completion-frame');
+      const value=getComputedStyle(el,'::before').content;
+      el.classList.add('completion-frame');
+      return value;
+    });
+    assert.equal(uncompleted,'none','Games without Mythic have no gold border overlay');
+    console.log((mobile?'Mobile':'Desktop')+': PASS gold border follows every Mythic frame, Full included');
     const gameSort=page.getByRole('button',{name:'游戏排序',exact:true});
     const gameSearch=page.getByRole('button',{name:'搜索游戏',exact:true});
     assert.equal(await page.getByRole('searchbox',{name:'搜索游戏名称'}).count(),0,
