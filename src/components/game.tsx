@@ -108,7 +108,7 @@ function AchievementItem({achievement:a}:{achievement:Achievement}){
     </div>
   </article>;
 }
-export function GameDetail({game,onClose,onOpenMythic}:{game:Game;onClose:()=>void;onOpenMythic?:()=>void}){
+export function GameDetail({game,onClose,onOpenMythic,titleFoil}:{game:Game;onClose:()=>void;onOpenMythic?:()=>void;titleFoil?:'satin'|'ember'}){
   // Verified base/DLC memberships are the only source of truth for the category tabs.
   // A title with just one group or unverified grouping has no tabs at all.
   const groups=game.groupStatus==='verified'?game.groups||[]:[];
@@ -148,7 +148,7 @@ export function GameDetail({game,onClose,onOpenMythic}:{game:Game;onClose:()=>vo
     </div>:undefined}>
     <section className="game-detail-content" id={viewId+'-detail'} hidden={view!=='detail'}>
     <GameCover game={game} wide/>
-    <div className="detail-heading"><h2>{game.name}</h2></div>
+    <div className="detail-heading" data-title-foil={completion(game).mythic?titleFoil:undefined}><h2>{game.name}</h2></div>
     <div className="detail-summary">
       <div className="detail-metrics" aria-label="游戏统计">
         <span className="detail-stat detail-playtime"><Clock3 size={16} aria-hidden="true"/><span>{hours(game.minutes)}</span></span>

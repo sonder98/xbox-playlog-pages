@@ -201,6 +201,25 @@ try{
       'Library games share the November 14 A foil before opening the poster');
     assert.equal(await libraryTitle.evaluate(el=>getComputedStyle(el).animationName),
       'mythic-title-continuous-satin');
+    // The real detail heading reuses the same current-day foil (no font/layout change).
+    await library.locator('.game-card[data-mythic="true"]').first().click();
+    const detailHeading=page.locator('.game-detail .detail-heading');
+    await detailHeading.waitFor();
+    assert.equal(await detailHeading.getAttribute('data-title-foil'),'satin');
+    const detailTitle=detailHeading.locator('h2');
+    const detailFoil=()=>detailTitle.evaluate(el=>{
+      const css=getComputedStyle(el);
+      return {name:css.animationName,duration:css.animationDuration,
+        gradient:css.backgroundImage,fill:css.webkitTextFillColor,
+        fontSize:css.fontSize,lineHeight:css.lineHeight};
+    });
+    const detailA=await detailFoil();
+    assert.equal(detailA.name,'mythic-title-continuous-satin');
+    assert.equal(detailA.duration,'2.6s');
+    assert.ok(detailA.gradient.includes('linear-gradient'));
+    assert.equal(detailA.fill,'rgba(0, 0, 0, 0)');
+    await page.getByRole('button',{name:'关闭详情',exact:true}).click();
+    await detailHeading.waitFor({state:'detached'});
     await page.getByRole('button',{name:'打开Mythic纪念墙'}).click();
     const showcase=page.getByRole('region',{name:'Mythic纪念墙展示柜'});
     await showcase.locator('.mythic-showcase-item').first().click();
@@ -244,6 +263,32 @@ try{
     await wall.locator('.mythic-poster.is-active[data-poster-game="101"]').waitFor();
     assert.equal(await wall.getAttribute('data-title-foil'),'ember',
       'Every Mythic poster has the same daily effect.');
+    await wall.getByRole('button',{name:'返回展示柜'}).click();
+    await wall.waitFor({state:'detached'});
+    await showcase.getByRole('button',{name:'返回游戏库'}).click();
+    await showcase.waitFor({state:'detached'});
+    await library.locator('.game-card[data-mythic="true"]').first().click();
+    await detailHeading.waitFor();
+    assert.equal(await detailHeading.getAttribute('data-title-foil'),'ember',
+      'The game detail title switches to D at the same Beijing midnight.');
+    const detailD=await detailFoil();
+    assert.equal(detailD.name,'mythic-title-continuous-ember');
+    assert.equal(detailD.duration,'4.5s');
+    assert.equal(detailD.gradient,light.image,
+      'Detail, library and Mythic poster titles use the identical light-theme D gradient.');
+    assert.equal(detailD.fontSize,detailA.fontSize,
+      'The original detail game-title font size must remain unchanged.');
+    assert.equal(detailD.lineHeight,detailA.lineHeight,
+      'The original detail game-title line height must remain unchanged.');
+    // Normal/non-Mythic game details never receive the effect.
+    const defaultStyle=await detailHeading.evaluate(el=>{
+      const title=el.querySelector('h2');
+      el.removeAttribute('data-title-foil');
+      const css=getComputedStyle(title);
+      return {animation:css.animationName,fill:css.webkitTextFillColor};
+    });
+    assert.equal(defaultStyle.animation,'none');
+    assert.notEqual(defaultStyle.fill,'rgba(0, 0, 0, 0)');
     await context.close();
     console.log('Mythic daily title foil: PASS Beijing midnight A/D, continuous speeds, themes and card changes');
   }

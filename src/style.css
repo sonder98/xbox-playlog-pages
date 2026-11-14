@@ -4427,10 +4427,11 @@ footer .dot {
 :root[data-theme="light"] .ah-sheet-game-chevron {color:#344F3D;}
 
 
-/* Mythic large posters and game-library names share the approved A/D foil,
+/* Mythic posters, library names, and detail titles share the approved A/D foil,
    Beijing-day rotation, and uninterrupted 2.6 / 4.5-second sweep. */
 :is(.mythic-wall-overlay[data-title-foil] .mythic-poster-title,
-    .library-games-panel[data-title-foil] .game-card[data-mythic="true"] .game-title){
+    .library-games-panel[data-title-foil] .game-card[data-mythic="true"] .game-title,
+    .game-detail .detail-heading[data-title-foil] h2){
  background-repeat:no-repeat;
  background-size:280% 100%;
  -webkit-background-clip:text;
@@ -4440,14 +4441,16 @@ footer .dot {
  will-change:background-position;
 }
 :is(.mythic-wall-overlay[data-title-foil="satin"] .mythic-poster-title,
-    .library-games-panel[data-title-foil="satin"] .game-card[data-mythic="true"] .game-title){
+    .library-games-panel[data-title-foil="satin"] .game-card[data-mythic="true"] .game-title,
+    .game-detail .detail-heading[data-title-foil="satin"] h2){
  background-image:linear-gradient(105deg,
   #fcf5e8 0%,#f8eedb 35%,#d9aa5d 44%,#fffcee 48.5%,
   #f9d88a 51.5%,#d4a158 55%,#fcf2e1 64%,#fff7eb 100%);
  animation:mythic-title-continuous-satin 2.6s linear infinite alternate;
 }
 :is(.mythic-wall-overlay[data-title-foil="ember"] .mythic-poster-title,
-    .library-games-panel[data-title-foil="ember"] .game-card[data-mythic="true"] .game-title){
+    .library-games-panel[data-title-foil="ember"] .game-card[data-mythic="true"] .game-title,
+    .game-detail .detail-heading[data-title-foil="ember"] h2){
  background-image:linear-gradient(115deg,
   #c58b41 0%,#f7ce77 29%,#8f5f28 39%,
   #ffe0a0 47%,#fff8d7 51%,#e6a84b 60%,#9c682c 73%,#f6d38d 100%);
@@ -4467,20 +4470,23 @@ footer .dot {
  animation-play-state:paused;
 }
 :root[data-theme="light"] :is(.mythic-wall-overlay[data-title-foil="satin"] .mythic-poster-title,
-    .library-games-panel[data-title-foil="satin"] .game-card[data-mythic="true"] .game-title){
+    .library-games-panel[data-title-foil="satin"] .game-card[data-mythic="true"] .game-title,
+    .game-detail .detail-heading[data-title-foil="satin"] h2){
  background-image:linear-gradient(105deg,
   #6e471e 0%,#764d23 35%,#b27a2f 44%,#f3cf75 49%,
   #a46b22 54%,#67421b 64%,#704921 100%);
 }
 :root[data-theme="light"] :is(.mythic-wall-overlay[data-title-foil="ember"] .mythic-poster-title,
-    .library-games-panel[data-title-foil="ember"] .game-card[data-mythic="true"] .game-title){
+    .library-games-panel[data-title-foil="ember"] .game-card[data-mythic="true"] .game-title,
+    .game-detail .detail-heading[data-title-foil="ember"] h2){
  background-image:linear-gradient(115deg,
   #70471d 0%,#bf872e 29%,#593816 39%,#d7a554 47%,
   #ffe5a2 51%,#a77431 60%,#65401b 73%,#b78437 100%);
 }
 @media(prefers-reduced-motion:reduce){
  :is(.mythic-wall-overlay[data-title-foil] .mythic-poster-title,
-     .library-games-panel[data-title-foil] .game-card[data-mythic="true"] .game-title){
+     .library-games-panel[data-title-foil] .game-card[data-mythic="true"] .game-title,
+    .game-detail .detail-heading[data-title-foil] h2){
   animation:none;filter:none;background-position:50% 50%;will-change:auto;
  }
 }
