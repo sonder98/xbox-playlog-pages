@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {beijingDay,mythicBackdrop,mythicBackdropPreview} from '../src/mythic-assets.ts';
+import {beijingDay,mythicBackdrop,mythicBackdropPreview,mythicTitleFoil} from '../src/mythic-assets.ts';
 import type {Game} from '../src/data.ts';
 
 const from=(iso:string)=>beijingDay(Date.parse(iso));
@@ -76,4 +76,16 @@ test('reused galleries do not repeat yesterday when the Store lists duplicate si
   'Midnight selects the next distinct screenshot instead of a duplicate URL variant');
  assert.equal(mythicBackdropPreview(game,from('2026-11-06T16:00:00Z')),'https://cache.test/b-480.webp');
  assert.equal(mythicBackdrop(game,from('2026-11-07T16:00:00Z')),'https://cache.test/a.webp');
+});
+
+test('full Mythic title alternates A/D on the same Beijing calendar as screenshots',()=>{
+ const before=from('2026-11-14T15:59:59Z');
+ const midnight=from('2026-11-14T16:00:00Z');
+ assert.equal(before+1,midnight);
+ assert.equal(mythicTitleFoil(before),'satin');
+ assert.equal(mythicTitleFoil(midnight),'ember');
+ assert.equal(mythicTitleFoil(midnight+1),'satin');
+ assert.equal(mythicTitleFoil(midnight+2),'ember');
+ assert.equal(mythicTitleFoil(from('2026-11-14T00:00:00Z')),'satin',
+  'All Mythic posters have the same foil throughout the Beijing day');
 });
