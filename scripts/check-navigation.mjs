@@ -131,13 +131,18 @@ try{
     const hierarchy=await poster.locator('.mythic-poster-achievement').first().evaluate(column=>{
       const label=getComputedStyle(column.querySelector('small'));
       const name=getComputedStyle(column.querySelector('.mythic-poster-achievement-name'));
-      const date=getComputedStyle(column.querySelector('.mythic-poster-achievement-datetime'));
+      const date=column.querySelector('.mythic-poster-achievement-datetime');
+      const dateStyle=getComputedStyle(date);
+      const dateNumber=getComputedStyle(date.querySelector('.mythic-poster-achievement-date'));
+      const timeNumber=getComputedStyle(date.querySelector('.mythic-poster-achievement-time'));
       return {
         labelSize:parseFloat(label.fontSize),nameSize:parseFloat(name.fontSize),
         labelWeight:label.fontWeight,nameWeight:name.fontWeight,
         labelSpacing:parseFloat(label.letterSpacing),
         labelFont:label.fontFamily,nameFont:name.fontFamily,
-        dateFont:date.fontFamily,dateWeight:date.fontWeight,dateColor:date.color
+        dateFont:dateStyle.fontFamily,dateWeight:dateStyle.fontWeight,dateColor:dateStyle.color,
+        dateNumberSize:parseFloat(dateNumber.fontSize),timeNumberSize:parseFloat(timeNumber.fontSize),
+        dateNumberWeight:dateNumber.fontWeight
       };
     });
     assert.ok(hierarchy.nameSize>hierarchy.labelSize*1.35,
@@ -152,8 +157,11 @@ try{
     assert.equal(hierarchy.dateWeight,'650','Combined date/time restores the original date emphasis');
     assert.equal(hierarchy.dateColor,'rgb(170, 166, 155)',
       'Date/time is muted gray in dark mode');
+    assert.equal(hierarchy.dateNumberWeight,'650');
+    assert.ok(hierarchy.dateNumberSize>hierarchy.timeNumberSize*1.25,
+      'The date restores the original larger type size while the time keeps its original smaller size');
     assert.deepEqual(await poster.locator('.mythic-poster-achievement-datetime').allTextContents(),
-      ['2026.11.01 · 20:24','2026.11.02 · 20:24'],
+      ['2026.11.01·20:24','2026.11.02·20:24'],
       'Show the real Beijing-local date and specific time together on line three');
     const name=poster.locator('.mythic-poster-achievement-name').last();
     assert.equal(await name.getAttribute('title'),
