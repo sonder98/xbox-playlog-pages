@@ -1,0 +1,108 @@
+/* Scoped preview; the published Mythic poster stays exactly as before. */
+.mythic-wall-overlay[data-moment-demo="true"] .mythic-wall-header{
+ min-height:55px;padding-block:8px;
+}
+.mythic-wall-overlay[data-moment-demo="true"] .mythic-font-demo-toolbar{
+ flex:0 0 auto;z-index:8;max-height:158px;
+ overflow-y:auto;overscroll-behavior:contain;
+ padding:9px 12px 11px;
+ background:#111d18;color:#f5edda;
+ border-block:1px solid rgba(232,191,112,.27);
+}
+.mythic-moment-demo-controls{
+ max-width:1040px;margin:auto;display:flex;align-items:end;justify-content:center;
+ flex-wrap:wrap;gap:8px 16px;
+ font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+.mythic-moment-demo-group{margin:0;padding:0;border:0;min-width:0;}
+.mythic-moment-demo-group legend{
+ margin-bottom:5px;font-size:11px;letter-spacing:.045em;color:#cbbd9c;
+}
+.mythic-moment-demo-options{display:flex;flex-wrap:wrap;gap:5px;}
+.mythic-moment-demo-options button{
+ min-height:34px;border:1px solid #75694f;border-radius:8px;
+ padding:7px 11px;background:#26322b;color:#f3e8d1;
+ font:650 11px/1.2 Inter,"PingFang SC",sans-serif;
+ cursor:pointer;white-space:nowrap;
+}
+.mythic-moment-demo-options button.selected{
+ background:#e0bc75;border-color:#eed3a0;color:#1b281d;
+}
+.mythic-moment-demo-options button:hover:not(.selected){border-color:#efce8b;}
+.mythic-moment-demo-options button:focus-visible{outline:2px solid #f6dba1;outline-offset:2px;}
+.mythic-moment-demo-note{
+ width:100%;margin:0;text-align:center;font-size:11px;line-height:1.4;
+ color:#c2b69c;
+}
+.mythic-wall-overlay[data-moment-demo="true"] .mythic-poster{
+ width:min(408px,calc(100vw - 42px),calc((100dvh - 270px)*.563));
+ max-height:calc(100dvh - 270px);
+}
+
+/* New layout preserves both real achievement thumbnails and section geometry.
+   The two text lines under the label become name + a single timestamp line. */
+.mythic-wall-overlay[data-moment-demo="true"]:not([data-moment-layout="original"]) .mythic-poster-achievement{
+ gap:1.5px;line-height:1.13;
+}
+.mythic-wall-overlay[data-moment-demo="true"]:not([data-moment-layout="original"]) .mythic-poster-achievement-art{
+ width:31%;min-width:30px;max-width:40px;margin-bottom:1px;
+}
+.mythic-wall-overlay[data-moment-demo="true"] .mythic-poster-achievement-name{
+ display:-webkit-box;max-width:100%;min-width:0;width:100%;
+ -webkit-box-orient:vertical;-webkit-line-clamp:1;
+ overflow:hidden;overflow-wrap:anywhere;word-break:break-word;
+ font-family:"Noto Serif SC","Songti SC",Georgia,serif;
+ font-size:3.25cqw;font-weight:700;line-height:1.16;letter-spacing:-.008em;
+ color:#f3ddb4;text-align:center;
+}
+.mythic-wall-overlay[data-moment-demo="true"][data-moment-layout="two"] .mythic-poster-achievement-name{
+ -webkit-line-clamp:2;
+}
+.mythic-wall-overlay[data-moment-demo="true"] .mythic-poster-achievement .mythic-poster-achievement-datetime{
+ font-family:"Cormorant Garamond",Georgia,serif;
+ font-variant-numeric:lining-nums tabular-nums;
+ font-size:3.0cqw;line-height:1.1;font-weight:650;letter-spacing:0;
+ color:#d9d0bb;white-space:nowrap;
+}
+.mythic-wall-overlay[data-moment-demo="true"] .mythic-poster.is-type-loading .mythic-poster-achievement-name,
+.mythic-wall-overlay[data-moment-demo="true"] .mythic-poster.is-type-loading .mythic-poster-achievement-datetime{
+ visibility:hidden;
+}
+:root[data-theme="light"] .mythic-wall-overlay[data-moment-demo="true"] .mythic-font-demo-toolbar{
+ background:#f8f2e6;color:#3d3020;border-color:#d5bc8a;
+}
+:root[data-theme="light"] .mythic-moment-demo-group legend,
+:root[data-theme="light"] .mythic-moment-demo-note{color:#63543d;}
+:root[data-theme="light"] .mythic-moment-demo-options button{
+ color:#4b402e;background:#fffaf1;border-color:#b6aa92;
+}
+:root[data-theme="light"] .mythic-moment-demo-options button.selected{
+ background:#365d47;color:white;border-color:#365d47;
+}
+:root[data-theme="light"] .mythic-wall-overlay[data-moment-demo="true"] .mythic-poster-achievement-name{
+ color:#684719;
+}
+:root[data-theme="light"] .mythic-wall-overlay[data-moment-demo="true"] .mythic-poster-achievement .mythic-poster-achievement-datetime{
+ color:#6d5b40;
+}
+@media(max-width:700px){
+ .mythic-wall-overlay[data-moment-demo="true"] .mythic-font-demo-toolbar{
+  max-height:176px;padding:7px 10px;
+ }
+ .mythic-moment-demo-controls{justify-content:flex-start;gap:7px 12px;}
+ .mythic-moment-demo-group legend{font-size:10px;}
+ .mythic-moment-demo-options button{min-height:30px;padding:6px 8px;font-size:10px;}
+ .mythic-moment-demo-note{text-align:left;font-size:10px;}
+ .mythic-wall-overlay[data-moment-demo="true"] .mythic-poster{
+  width:min(calc(100vw - 32px),calc((100dvh - 295px)*.563));
+  max-height:calc(100dvh - 295px);
+ }
+}
+@media(max-width:375px), (max-height:700px){
+ .mythic-wall-overlay[data-moment-demo="true"]:not([data-moment-layout="original"]) .mythic-poster-achievement-pair{
+  padding:4px 5px;
+ }
+ .mythic-wall-overlay[data-moment-demo="true"]:not([data-moment-layout="original"]) .mythic-poster-achievement-art{
+  width:28%;min-width:25px;max-width:34px;margin-bottom:0;
+ }
+}
