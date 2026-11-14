@@ -22,7 +22,7 @@ export function MythicMomentDemo({posters,profile,onClose}:{
  posters:MythicPoster[];profile:Profile;onClose:()=>void;
 }){
  const [layout,setLayout]=useState<MomentLayout>('two');
- const [font,setFont]=useState<MomentFont>('a');
+ const [font,setFont]=useState<MomentFont>('c');
  const initialTheme=useRef<PlaylogTheme>(readThemePreference());
  const [theme,setTheme]=useState<PlaylogTheme>(initialTheme.current);
  useEffect(()=>()=>applyTheme(initialTheme.current),[]);

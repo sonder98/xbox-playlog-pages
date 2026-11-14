@@ -150,10 +150,10 @@ try{
       'Achievement name is visibly larger than its category label: '+JSON.stringify(hierarchy));
     assert.equal(hierarchy.labelWeight,'400','Font candidates use the same regular weight for a fair comparison');
     assert.equal(hierarchy.nameWeight,'700','Achievement name uses bold weight');
-    assert.ok(hierarchy.labelFont.includes('ZCOOL XiaoWei')&&
+    assert.ok(hierarchy.labelFont.includes('Cactus Classical Serif')&&
       !hierarchy.labelFont.includes('Noto Sans SC')&&
       hierarchy.nameFont.includes('Noto Serif SC')&&hierarchy.labelSpacing>0,
-      'Candidate A uses the intended decorative face, while the achievement title remains Noto Serif SC');
+      'Selected candidate C uses Cactus Classical Serif, while the achievement title remains Noto Serif SC');
     await page.getByRole('button',{name:'B · 朱雀仿宋'}).click();
     assert.equal(await lab.getAttribute('data-moment-font'),'b');
     assert.ok((await poster.locator('.mythic-poster-achievement small').first()
@@ -164,6 +164,8 @@ try{
       .evaluate(el=>getComputedStyle(el).fontFamily)).includes('Cactus Classical Serif'));
     await page.getByRole('button',{name:'A · 站酷小薇体'}).click();
     assert.equal(await lab.getAttribute('data-moment-font'),'a');
+    await page.getByRole('button',{name:'C · 仙人掌明体'}).click();
+    assert.equal(await lab.getAttribute('data-moment-font'),'c');
     assert.ok(hierarchy.dateFont.includes('Cormorant Garamond'),
       'Combined date/time restores the original Cormorant Garamond typeface');
     assert.equal(hierarchy.dateWeight,'400','Combined date/time line retains the original regular timestamp weight');
@@ -1953,6 +1955,10 @@ try{
         gameName:type('.mythic-poster-title'),
         greeting:type('.mythic-poster-congratulations'),
         achievementLabel:type('.mythic-poster-achievement small'),
+        achievementName:type('.mythic-poster-achievement-name'),
+        achievementDateTime:type('.mythic-poster-achievement-datetime'),
+        achievementNameCount:card.querySelectorAll('.mythic-poster-achievement-name').length,
+        achievementDateTimeCount:card.querySelectorAll('.mythic-poster-achievement-datetime').length,
         statUnit:type('.mythic-poster-stats small'),
         statLabel:type('.mythic-poster-stats span')
       };
@@ -1960,10 +1966,24 @@ try{
     assert.ok(productionTypography.gameName.family.includes('Cinzel')&&
       productionTypography.gameName.weight==='700',
       'Real Mythic poster adopts selected Cinzel Bold, not only the font lab: '+JSON.stringify(productionTypography));
+    assert.ok(productionTypography.achievementLabel.family.includes('Cactus Classical Serif')&&
+      productionTypography.achievementLabel.weight==='400',
+      'Production Mythic labels use selected Cactus Classical Serif Regular: '+JSON.stringify(productionTypography.achievementLabel));
+    assert.ok(productionTypography.achievementName.family.includes('Noto Serif SC')&&
+      productionTypography.achievementName.weight==='700',
+      'Production achievement names use Noto Serif SC Bold: '+JSON.stringify(productionTypography.achievementName));
+    assert.ok(productionTypography.achievementDateTime.family.includes('Cormorant Garamond')&&
+      productionTypography.achievementDateTime.weight==='400',
+      'Production date/time retains Cormorant Garamond Regular: '+JSON.stringify(productionTypography.achievementDateTime));
+    assert.equal(productionTypography.achievementNameCount,2,
+      'Both first achievement and Mythic completion names appear in production cards');
+    assert.equal(productionTypography.achievementDateTimeCount,2,
+      'Both timestamps appear in production cards');
     for(const [area,font] of Object.entries(productionTypography)){
-      if(area==='gameName')continue;
+      if(['gameName','achievementLabel','achievementName','achievementDateTime',
+          'achievementNameCount','achievementDateTimeCount'].includes(area))continue;
       assert.ok(font.family.includes('Noto Serif SC')&&font.weight==='700',
-        'Mythic Chinese labels use selected Noto Serif SC 700: '+JSON.stringify({area,font}));
+        'Other Mythic Chinese labels retain Noto Serif SC 700: '+JSON.stringify({area,font}));
     }
     const posterBottomLayout=await posterWall.locator('.mythic-poster.is-active').evaluate(el=>{
       const card=el.getBoundingClientRect();
