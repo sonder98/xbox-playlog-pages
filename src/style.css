@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manjari:wght@700&family=Cormorant+Garamond:wght@400;500;600;700&family=Marcellus&family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manjari:wght@700&family=Cinzel:wght@700&family=Cormorant+Garamond:wght@400;500;600;700&family=Marcellus&family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
 :root {
   --rarity-accent: #8CD7FA;
   color-scheme:dark;
@@ -3410,16 +3410,16 @@ footer .dot {
 }
 .mythic-poster-congratulations{
  font-family:"Noto Serif SC","Songti SC","STSong",serif;
- font-size:5.25cqw;letter-spacing:.15em;font-weight:500;
+ font-size:5.25cqw;letter-spacing:.15em;font-weight:700;
 }
-.mythic-poster-congratulations strong{font-weight:500;}
+.mythic-poster-congratulations strong{font-weight:700;}
 .mythic-poster-congratulations strong span{
  font-family:"Cormorant Garamond",Georgia,serif;
  font-size:1.15em;letter-spacing:.17em;font-weight:600;
 }
 .mythic-poster-title{
- font-family:"Marcellus","Noto Serif SC","Songti SC",Georgia,serif;
- font-size:6.55cqw;line-height:1.14;font-weight:400;letter-spacing:.008em;
+ font-family:"Cinzel","Noto Serif SC","Songti SC",Georgia,serif;
+ font-size:6.55cqw;line-height:1.14;font-weight:700;letter-spacing:-.015em;
  top:44.3%;max-height:9.4%;text-wrap:balance;
 }
 .mythic-poster-player strong{
@@ -3427,7 +3427,7 @@ footer .dot {
  font-size:5.5cqw;font-weight:600;letter-spacing:.015em;
 }
 .mythic-poster-achievement small{
- font-family:"Noto Serif SC","Songti SC",serif;font-size:2.85cqw;
+ font-family:"Noto Serif SC","Songti SC",serif;font-size:3.0cqw;font-weight:700;
 }
 .mythic-poster-achievement b{
  font-family:"Cormorant Garamond",Georgia,serif;
@@ -3441,7 +3441,7 @@ footer .dot {
  font-size:8.15cqw;font-weight:550;line-height:1.0;letter-spacing:-.015em;
 }
 .mythic-poster-stats small,.mythic-poster-stats span{
- font-family:"Noto Serif SC","Songti SC",serif;
+ font-family:"Noto Serif SC","Songti SC",serif;font-weight:700;
 }
 .mythic-poster-stats small{font-size:2.65cqw;}
 .mythic-poster-stats span{font-size:2.45cqw;}
@@ -3497,7 +3497,7 @@ footer .dot {
  max-height:calc(100dvh - 142px);
 }
 @media(max-width:700px){
- .mythic-poster-title{font-size:6.45cqw;}
+ .mythic-poster-title{font-size:6.55cqw;}
  .mythic-poster-gamepad{top:95.25%;bottom:auto;}
  .game-detail .achievement-progress-actions{gap:5px;}
  .game-detail .achievement-sort-row:has(.detail-mythic-trigger){min-height:57px;}
@@ -3739,13 +3739,13 @@ footer .dot {
 .mythic-showcase-emblem img{display:block;width:100%;height:100%;object-fit:contain}
 .mythic-showcase-greeting{position:absolute;top:39.0%;left:8%;right:8%;z-index:4;white-space:nowrap;
  display:flex;align-items:center;justify-content:center;gap:1.8cqw;text-align:center;
- font-family:"Noto Serif SC","Songti SC",serif;font-size:5.3cqw;font-weight:500;color:#ead1a1}
+ font-family:"Noto Serif SC","Songti SC",serif;font-size:5.3cqw;font-weight:700;color:#ead1a1}
 .mythic-showcase-greeting span{font-size:4cqw;color:#bda06b}
 .mythic-showcase-game-name{
  position:absolute;top:45.4%;left:7%;right:7%;height:10%;z-index:4;
  display:flex;align-items:center;justify-content:center;text-align:center;
- font:400 6.5cqw/1.13 Marcellus,"Noto Serif SC",Georgia,serif;
- color:#fff6e7;text-shadow:0 1px 6px #000;overflow:hidden;overflow-wrap:anywhere;
+ font:700 6.5cqw/1.13 "Cinzel","Noto Serif SC",Georgia,serif;
+ letter-spacing:-.015em;color:#fff6e7;text-shadow:0 1px 6px #000;overflow:hidden;overflow-wrap:anywhere;
 }
 .mythic-showcase-player{position:absolute;top:57.4%;left:8%;right:8%;height:7.2%;z-index:4;
  border:1px solid #95845d88;border-radius:2cqw;background:#182522e3;
@@ -3762,7 +3762,7 @@ footer .dot {
  border:1px solid #caa971;border-radius:1.2cqw;overflow:hidden;color:#e8c479}
 .mythic-showcase-achievement-art img{display:block;width:100%;height:100%;object-fit:cover}
 .mythic-showcase-achievement-art svg{width:100%;height:100%}
-.mythic-showcase-moment small{font-family:"Noto Serif SC","Songti SC",serif;color:#c4af8b;font-size:2.6cqw;white-space:nowrap}
+.mythic-showcase-moment small{font-family:"Noto Serif SC","Songti SC",serif;font-weight:700;color:#c4af8b;font-size:2.6cqw;white-space:nowrap}
 .mythic-showcase-moment b{font-family:"Cormorant Garamond",Georgia,serif;font-weight:500;font-size:4.2cqw;white-space:nowrap}
 .mythic-showcase-moment-separator{color:#c8ae79;font-size:3.9cqw}
 .mythic-showcase-stats{position:absolute;z-index:4;top:83.1%;left:8%;right:8%;height:7.6%;
@@ -3771,7 +3771,7 @@ footer .dot {
 .mythic-showcase-stats>span+span{border-left:1px solid #c2a56c5a}
 .mythic-showcase-stats b{display:block;font-family:"Cormorant Garamond",Georgia,serif;font-weight:550;
  font-size:7.5cqw;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:clip}
-.mythic-showcase-stats small{display:block;color:#baa889;font-size:2.9cqw;line-height:1.3}
+.mythic-showcase-stats small{display:block;color:#baa889;font-family:"Noto Serif SC","Songti SC",serif;font-weight:700;font-size:2.9cqw;line-height:1.3}
 .mythic-showcase-signature{position:absolute;top:93.8%;left:0;right:0;z-index:4;
  display:flex;align-items:center;justify-content:center;gap:.32em;
  color:#dac18d;text-align:center;letter-spacing:.08em;font:500 3.2cqw "Cormorant Garamond",Georgia,serif}
@@ -3779,7 +3779,7 @@ footer .dot {
  background:linear-gradient(90deg,transparent,#b9975488,transparent);filter:blur(1px)}
 .mythic-showcase-meta{position:relative;display:block;padding:12px 26px 0 8px;min-height:46px}
 .mythic-showcase-meta-title{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
- font:400 clamp(12px,1.35vw,16px)/1.35 Marcellus,"Noto Serif SC",Georgia,serif;color:#e7ece2}
+ font:700 clamp(12px,1.35vw,16px)/1.35 "Cinzel","Noto Serif SC",Georgia,serif;letter-spacing:-.012em;color:#e7ece2}
 .mythic-showcase-meta-date{display:block;margin-top:5px;font-size:11px;color:#95a899}
 .mythic-showcase-open-icon{position:absolute;top:14px;right:6px;color:#ceb37d}
 
