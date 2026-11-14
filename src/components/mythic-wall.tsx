@@ -231,7 +231,7 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
      aria-hidden={index!==i}>
      {visible&&<MythicPosterCard entry={entry} profile={profile} index={i} total={posters.length}
       active={i===index} opening={i===initial&&celebrate&&fontReady} fontReady={fontReady} rotationDay={rotationDay}
-      momentLayout={previewKind==='moment'?previewMomentLayout:'original'}/>} 
+      momentLayout={previewKind==='moment'?previewMomentLayout:'two'}/>} 
     </div>)}
    </div>
   </div>
