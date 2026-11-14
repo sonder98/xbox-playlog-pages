@@ -1382,6 +1382,28 @@ try{
     assert.equal(miniatureRing.background,'rgba(0, 0, 0, 0)',
       'Mythic showcase miniature also reveals its own scene through the medal ring');
     assert.ok(miniatureRing.border>=1,'Miniature keeps the original gold border');
+    const shelfTypography=await showcase.locator('.mythic-showcase-item').first().evaluate(card=>{
+      const type=selector=>{
+        const css=getComputedStyle(card.querySelector(selector));
+        return {family:css.fontFamily,weight:css.fontWeight};
+      };
+      return {
+        gameName:type('.mythic-showcase-game-name'),
+        listingTitle:type('.mythic-showcase-meta-title'),
+        greeting:type('.mythic-showcase-greeting'),
+        achievementLabel:type('.mythic-showcase-moment small'),
+        statLabel:type('.mythic-showcase-stats small')
+      };
+    });
+    assert.ok(shelfTypography.gameName.family.includes('Cinzel')&&
+      shelfTypography.listingTitle.family.includes('Cinzel')&&
+      shelfTypography.gameName.weight==='700'&&shelfTypography.listingTitle.weight==='700',
+      'Mythic cabinet and game labels use approved Cinzel Bold: '+JSON.stringify(shelfTypography));
+    for(const [area,font] of Object.entries(shelfTypography)){
+      if(area==='gameName'||area==='listingTitle')continue;
+      assert.ok(font.family.includes('Noto Serif SC')&&font.weight==='700',
+        'Mythic cabinet Chinese labels use approved Noto Serif SC Bold: '+JSON.stringify({area,font}));
+    }
     const showcaseContact=await showcase.locator('.mythic-showcase-item[data-showcase-game="100"]').evaluate(item=>{
       const cover=item.querySelector('.mythic-showcase-portrait');
       const medal=item.querySelector('.mythic-showcase-emblem');
@@ -1513,7 +1535,7 @@ try{
       return result;
     });
     assert.equal(fontLoadingPlayer.avatarVisibility,'visible',
-      'The player avatar must never wait for Marcellus or Chinese fonts');
+      'The player avatar must never wait for Cinzel or Chinese fonts');
     assert.equal(fontLoadingPlayer.nameVisibility,'hidden',
       'The player name may wait for its font without affecting the avatar');
     assert.equal(fontLoadingPlayer.imagePriority,'high',
@@ -1594,9 +1616,27 @@ try{
       'Opening a cabinet card enters the existing swipeable full-size gallery');
     assert.equal(await posterWall.getAttribute('data-entry'),'showcase',
       'A selected showcase item does not trigger the game-detail single-card mode');
-    assert.ok((await posterWall.locator('.mythic-poster-title').first().evaluate(el=>
-      getComputedStyle(el).fontFamily)).includes('Marcellus'),
-      'The Mythic collectible uses the chosen Marcellus serif for the game title');
+    const productionTypography=await posterWall.locator('.mythic-poster.is-active').evaluate(card=>{
+      const type=selector=>{
+        const css=getComputedStyle(card.querySelector(selector));
+        return {family:css.fontFamily,weight:css.fontWeight};
+      };
+      return {
+        gameName:type('.mythic-poster-title'),
+        greeting:type('.mythic-poster-congratulations'),
+        achievementLabel:type('.mythic-poster-achievement small'),
+        statUnit:type('.mythic-poster-stats small'),
+        statLabel:type('.mythic-poster-stats span')
+      };
+    });
+    assert.ok(productionTypography.gameName.family.includes('Cinzel')&&
+      productionTypography.gameName.weight==='700',
+      'Real Mythic poster adopts selected Cinzel Bold, not only the font lab: '+JSON.stringify(productionTypography));
+    for(const [area,font] of Object.entries(productionTypography)){
+      if(area==='gameName')continue;
+      assert.ok(font.family.includes('Noto Serif SC')&&font.weight==='700',
+        'Mythic Chinese labels use selected Noto Serif SC 700: '+JSON.stringify({area,font}));
+    }
     const posterBottomLayout=await posterWall.locator('.mythic-poster.is-active').evaluate(el=>{
       const card=el.getBoundingClientRect();
       const pad=el.querySelector('.mythic-poster-gamepad').getBoundingClientRect();
