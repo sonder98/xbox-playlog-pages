@@ -8,7 +8,7 @@ import {MythicFontDemo} from './components/mythic-font-demo';
 import {MythicGoldDemo} from './components/mythic-gold-demo';
 import {MythicShowcase} from './components/mythic-showcase';
 import {mythicPosterWall} from './mythic-posters';
-import {warmMythicFonts,warmMythicPoster} from './mythic-assets';
+import {mythicTitleFoil,useMythicRotationDay,warmMythicFonts,warmMythicPoster} from './mythic-assets';
 import {RecentGamesRail} from './components/recent-games';
 import {DustyPreview,DustyDetails} from './components/dusty-games';
 import {rankDustyGames} from './dusty-games';
@@ -29,6 +29,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState<GameLibrarySort>('recent'),[filter,setFilter]=useState<GameLibraryFilter>('all');
  const [manualPhase,setManualPhase]=useState<'idle'|'queued'|'running'|'deploying'|'ready'|'error'>('idle');
  const [theme,setTheme]=useState<PlaylogTheme>(()=>readThemePreference());
+ const mythicRotationDay=useMythicRotationDay();
  useEffect(()=>{applyTheme(theme);},[theme]);
  const toggleTheme=()=>{const next=theme==='dark'?'light':'dark';saveThemePreference(next);applyTheme(next);setTheme(next);};
  const [mythicWallStart,setMythicWallStart]=useState<{gameId:string|null}|null>(null);
@@ -224,7 +225,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
 </>}
  {tab==='dusty'&&<DustyDetails items={dusty} onBack={back} onGame={openGame}/>}
  {tab==='achievements'&&<AchievementJourney games={games} records={records} playtimeLedger={playtimeLedger} dayId={dayId} showcase={showcase} gapShowcase={gapShowcase} onBack={dayId?back:()=>setTab('overview')} onOpenDay={openAchievementDay} onChangeDay={changeAchievementDay} onOpenGame={openAchievementGame}/>} 
- {tab==='library'&&<section className="panel games-panel library-games-panel"><div className="toolbar"><div className="filters"><div className="filter-pills" role="group" aria-label="筛选游戏">{([['all','全部'],['playing','未完成'],['mythic','Mythic'],['full','Full']] as const).map(([id,label])=><button key={id} aria-pressed={filter===id} className={filter===id?'active':''} onClick={()=>changeLibraryFilter(id)}>{label}</button>)}</div><div className="library-toolbar-actions"><GameLibrarySortControl sort={sort} filter={filter} onChange={setSort}/><GameLibrarySearchControl query={query} onChange={setQuery}/><span className="library-game-count" role="status" aria-live="polite">游戏数：{visible.length}</span></div></div></div>{renderGames(visible)}</section>}
+ {tab==='library'&&<section className="panel games-panel library-games-panel" data-title-foil={mythicTitleFoil(mythicRotationDay)}><div className="toolbar"><div className="filters"><div className="filter-pills" role="group" aria-label="筛选游戏">{([['all','全部'],['playing','未完成'],['mythic','Mythic'],['full','Full']] as const).map(([id,label])=><button key={id} aria-pressed={filter===id} className={filter===id?'active':''} onClick={()=>changeLibraryFilter(id)}>{label}</button>)}</div><div className="library-toolbar-actions"><GameLibrarySortControl sort={sort} filter={filter} onChange={setSort}/><GameLibrarySearchControl query={query} onChange={setQuery}/><span className="library-game-count" role="status" aria-live="polite">游戏数：{visible.length}</span></div></div></div>{renderGames(visible)}</section>}
  {tab==='manage'&&<div className="manage-page" data-page="manage">
   <section className="manage-section" aria-labelledby="manage-visibility-title">
    <div className="manage-section-heading"><div><span className="eyebrow">GAME VISIBILITY</span><h2 id="manage-visibility-title">游戏展示</h2></div></div>
