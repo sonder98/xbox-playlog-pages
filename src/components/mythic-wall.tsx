@@ -147,7 +147,7 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
  </article>;
 }
 
-export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=false,onClose,previewToolbar,previewStyle,previewKind='font',previewVariant,previewPaused=false,previewLabel,previewMomentLayout='original',previewMomentFont='a'}:{
+export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=false,onClose,previewToolbar,previewStyle,previewKind='font',previewVariant,previewPaused=false,previewLabel,previewMomentLayout='original',previewMomentFont='c'}:{
  posters:MythicPoster[];profile:Profile;initialGameId?:string|null;
  allowNavigation?:boolean;onClose:()=>void;
  /** Optional typography lab, never enabled by ordinary collectible views. */
