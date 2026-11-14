@@ -194,6 +194,13 @@ try{
     await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/#library');
     await page.locator('input[type="password"]').fill(password);
     await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    const library=page.locator('.library-games-panel');
+    await library.waitFor();
+    const libraryTitle=library.locator('.game-card[data-mythic="true"] .game-title').first();
+    assert.equal(await library.getAttribute('data-title-foil'),'satin',
+      'Library games share the November 14 A foil before opening the poster');
+    assert.equal(await libraryTitle.evaluate(el=>getComputedStyle(el).animationName),
+      'mythic-title-continuous-satin');
     await page.getByRole('button',{name:'打开Mythic纪念墙'}).click();
     const showcase=page.getByRole('region',{name:'Mythic纪念墙展示柜'});
     await showcase.locator('.mythic-showcase-item').first().click();
@@ -218,6 +225,10 @@ try{
       'Production A foil uses approved font and continuous non-idling standard sweep: '+JSON.stringify(a));
     await page.clock.fastForward(20_000);
     await page.waitForFunction(()=>document.querySelector('.mythic-wall-overlay')?.getAttribute('data-title-foil')==='ember');
+    assert.equal(await library.getAttribute('data-title-foil'),'ember',
+      'The library title uses D at the same Beijing midnight as the large card');
+    assert.equal(await libraryTitle.evaluate(el=>getComputedStyle(el).animationName),
+      'mythic-title-continuous-ember');
     const d=await foil();
     assert.ok(d.name.includes('continuous-ember')&&d.duration==='3.7s'&&
       d.timing==='linear'&&d.direction==='alternate'&&d.iterations==='infinite',
@@ -226,6 +237,9 @@ try{
     const light=await foil();
     assert.notEqual(light.image,d.image,
       'Production foil has readable bronze variation on light-theme collectible.');
+    const libraryLight=await libraryTitle.evaluate(el=>getComputedStyle(el).backgroundImage);
+    assert.equal(libraryLight,light.image,
+      'Mythic titles in the library and large card share the exact light-theme gold gradient');
     await wall.getByRole('button',{name:'下一张Mythic纪念卡'}).click();
     await wall.locator('.mythic-poster.is-active[data-poster-game="101"]').waitFor();
     assert.equal(await wall.getAttribute('data-title-foil'),'ember',
