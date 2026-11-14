@@ -5,7 +5,7 @@ import type {MythicPoster} from '../mythic-posters';
 import {posterLocalDate} from '../mythic-posters';
 import {MythicBadgeArt} from './mythic-badge';
 import {XboxBrandMark} from './xbox-brand-mark';
-import {mythicAvatar,mythicBackdrop,mythicBackdropPreview,mythicCover,mythicImageAlreadyDecoded,useMythicRotationDay,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
+import {mythicAvatar,mythicBackdrop,mythicBackdropPreview,mythicCover,mythicImageAlreadyDecoded,mythicTitleFoil,useMythicRotationDay,warmMythicFonts,warmMythicImage,warmMythicPoster} from '../mythic-assets';
 import {MythicOpeningFireworks} from './mythic-fireworks';
 
 const GOLD='#e6c47b';
@@ -203,6 +203,7 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
   data-gold-demo={previewToolbar&&previewKind==='gold'?'true':undefined}
   data-gold-effect={previewKind==='gold'?previewVariant:undefined}
   data-gold-paused={previewKind==='gold'&&previewPaused?'true':undefined}
+  data-title-foil={previewToolbar?undefined:mythicTitleFoil(rotationDay)}
   style={previewStyle}
   aria-label={single?'Mythic纪念卡':'Mythic纪念墙'} data-display-mode={single?'single':'wall'}
   data-entry={allowNavigation?'showcase':single?'detail':'legacy'} data-transition="idle">
