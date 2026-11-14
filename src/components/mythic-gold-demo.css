@@ -71,8 +71,9 @@
  background-image:linear-gradient(105deg,
   #fcf5e8 0%,#f8eedb 35%,#d9aa5d 44%,#fffcee 48.5%,
   #f9d88a 51.5%,#d4a158 55%,#fcf2e1 64%,#fff7eb 100%);
- animation-name:mythic-title-foil-sweep;
- animation-timing-function:ease-in-out;
+ animation-name:mythic-title-continuous-satin;
+ animation-timing-function:linear;
+ animation-direction:alternate;
 }
 /* B. A high-contrast, almost mirrorlike band of gold and ivory. */
 .mythic-wall-overlay[data-gold-demo="true"][data-gold-effect="mirror"] .mythic-poster-title{
@@ -101,13 +102,9 @@
   #c58b41 0%,#f7ce77 29%,#8f5f28 39%,
   #ffe0a0 47%,#fff8d7 51%,#e6a84b 60%,#9c682c 73%,#f6d38d 100%);
  background-size:280% 100%;
- animation-name:mythic-title-foil-ember;
- animation-timing-function:ease-in-out;
-}
-@keyframes mythic-title-foil-sweep{
- 0%,14%{background-position:100% 50%}
- 54%{background-position:0% 50%}
- 55%,100%{background-position:0% 50%}
+ animation-name:mythic-title-continuous-ember;
+ animation-timing-function:linear;
+ animation-direction:alternate;
 }
 @keyframes mythic-title-foil-flash{
  0%,19%{background-position:100% 50%}
@@ -117,12 +114,6 @@
 @keyframes mythic-title-foil-liquid{
  0%{background-position:0% 50%}
  100%{background-position:100% 50%}
-}
-@keyframes mythic-title-foil-ember{
- 0%,12%{background-position:100% 50%;filter:brightness(.94) drop-shadow(0 0 0 transparent)}
- 42%{background-position:35% 50%;filter:brightness(1.13) drop-shadow(0 0 6px #f7cb6475)}
- 62%{background-position:0% 50%;filter:brightness(1.0) drop-shadow(0 0 3px #ddae5350)}
- 73%,100%{background-position:0% 50%;filter:brightness(.97) drop-shadow(0 0 0 transparent)}
 }
 .mythic-wall-overlay[data-gold-demo="true"][data-gold-paused="true"] .mythic-poster-title,
 .mythic-wall-overlay[data-gold-demo="true"] .mythic-poster:not(.is-active) .mythic-poster-title{

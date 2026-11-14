@@ -29,6 +29,8 @@ export function warmMythicImage(url:string|undefined|null,priority:'auto'|'high'
 }
 /** Rotate at midnight Beijing time, regardless of the viewer's device timezone. */
 export const beijingDay=(now:number)=>Math.floor((now+8*3600_000)/86400_000);
+/** Alternate the full Mythic title's foil daily, on the existing Beijing calendar. */
+export const mythicTitleFoil=(day:number)=>day%2?'satin':'ember';
 export function useMythicRotationDay(){
  const [day,setDay]=useState(()=>beijingDay(Date.now()));
  useEffect(()=>{

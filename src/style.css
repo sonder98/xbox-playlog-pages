@@ -4427,3 +4427,56 @@ footer .dot {
 :root[data-theme="light"] .ah-sheet-game-achievements small,
 :root[data-theme="light"] .ah-sheet-game-hours svg,
 :root[data-theme="light"] .ah-sheet-game-chevron {color:#344F3D;}
+
+
+/* Mythic large-card title: approved A/D foil alternates each Beijing day.
+   Animations move continuously, with no idle gap between sweeps. */
+.mythic-wall-overlay[data-title-foil] .mythic-poster-title{
+ background-repeat:no-repeat;
+ background-size:280% 100%;
+ -webkit-background-clip:text;
+ background-clip:text;
+ -webkit-text-fill-color:transparent;
+ color:transparent;
+ will-change:background-position;
+}
+.mythic-wall-overlay[data-title-foil="satin"] .mythic-poster-title{
+ background-image:linear-gradient(105deg,
+  #fcf5e8 0%,#f8eedb 35%,#d9aa5d 44%,#fffcee 48.5%,
+  #f9d88a 51.5%,#d4a158 55%,#fcf2e1 64%,#fff7eb 100%);
+ animation:mythic-title-continuous-satin 2.1s linear infinite alternate;
+}
+.mythic-wall-overlay[data-title-foil="ember"] .mythic-poster-title{
+ background-image:linear-gradient(115deg,
+  #c58b41 0%,#f7ce77 29%,#8f5f28 39%,
+  #ffe0a0 47%,#fff8d7 51%,#e6a84b 60%,#9c682c 73%,#f6d38d 100%);
+ animation:mythic-title-continuous-ember 3.7s linear infinite alternate;
+}
+@keyframes mythic-title-continuous-satin{
+ from{background-position:100% 50%}
+ to{background-position:0% 50%}
+}
+@keyframes mythic-title-continuous-ember{
+ 0%{background-position:100% 50%;filter:brightness(.96) drop-shadow(0 0 0 transparent)}
+ 50%{background-position:50% 50%;filter:brightness(1.12) drop-shadow(0 0 6px #f7cb6475)}
+ 100%{background-position:0% 50%;filter:brightness(.96) drop-shadow(0 0 0 transparent)}
+}
+.mythic-wall-overlay[data-title-foil] .mythic-poster:not(.is-active) .mythic-poster-title,
+.mythic-wall-overlay[data-title-foil] .mythic-poster.is-type-loading .mythic-poster-title{
+ animation-play-state:paused;
+}
+:root[data-theme="light"] .mythic-wall-overlay[data-title-foil="satin"] .mythic-poster-title{
+ background-image:linear-gradient(105deg,
+  #6e471e 0%,#764d23 35%,#b27a2f 44%,#f3cf75 49%,
+  #a46b22 54%,#67421b 64%,#704921 100%);
+}
+:root[data-theme="light"] .mythic-wall-overlay[data-title-foil="ember"] .mythic-poster-title{
+ background-image:linear-gradient(115deg,
+  #70471d 0%,#bf872e 29%,#593816 39%,#d7a554 47%,
+  #ffe5a2 51%,#a77431 60%,#65401b 73%,#b78437 100%);
+}
+@media(prefers-reduced-motion:reduce){
+ .mythic-wall-overlay[data-title-foil] .mythic-poster-title{
+  animation:none;filter:none;background-position:50% 50%;will-change:auto;
+ }
+}
