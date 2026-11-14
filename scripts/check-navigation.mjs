@@ -149,9 +149,10 @@ try{
       'Achievement name is visibly larger than its category label: '+JSON.stringify(hierarchy));
     assert.equal(hierarchy.labelWeight,'500','Category label uses medium weight');
     assert.equal(hierarchy.nameWeight,'700','Achievement name uses bold weight');
-    assert.ok(hierarchy.labelFont.includes('Noto Sans SC')&&
+    assert.ok(hierarchy.labelFont.includes('LXGW WenKai')&&
+      !hierarchy.labelFont.includes('Noto Sans SC')&&
       hierarchy.nameFont.includes('Noto Serif SC')&&hierarchy.labelSpacing>0,
-      'The first and second rows use distinct Chinese sans-serif and serif typefaces');
+      'The first and second rows use distinct Chinese serif/calligraphic typefaces, never Heiti');
     assert.ok(hierarchy.dateFont.includes('Cormorant Garamond'),
       'Combined date/time restores the original Cormorant Garamond typeface');
     assert.equal(hierarchy.dateWeight,'400','Combined date/time line retains the original regular timestamp weight');
@@ -159,8 +160,12 @@ try{
     assert.equal(hierarchy.dateColor,'rgb(170, 166, 155)',
       'Date/time is muted gray in dark mode');
     assert.equal(hierarchy.dateNumberWeight,'650');
+    const posterWidth=await poster.evaluate(el=>el.getBoundingClientRect().width);
+    assert.ok(hierarchy.dateNumberSize/posterWidth<.035&&
+      hierarchy.timeNumberSize/posterWidth<.027,
+      'Date and time use the reduced 3.2cqw / 2.4cqw sizes');
     assert.ok(hierarchy.dateNumberSize>hierarchy.timeNumberSize*1.25,
-      'The date restores the original larger type size while the time keeps its original smaller size');
+      'The date remains modestly larger than the time');
     assert.deepEqual(await poster.locator('.mythic-poster-achievement-datetime').allTextContents(),
       ['2026.11.01·20:24','2026.11.02·20:24'],
       'Show the real Beijing-local date and specific time together on line three');
