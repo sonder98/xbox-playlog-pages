@@ -254,6 +254,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  {showcaseOpen&&tab==='library'&&current&&<MythicShowcase posters={mythicPosters} profile={current.profile}
    onClose={()=>setShowcaseOpen(false)} onOpen={id=>setMythicWallStart({gameId:id})}/>}
  {selected&&!mythicWallStart&&!showcaseOpen&&!fontDemoOpen&&!goldDemoOpen&&<GameDetail game={selected} onClose={back}
+   titleFoil={mythicTitleFoil(mythicRotationDay)}
    onOpenMythic={mythicPosters.some(p=>p.game.id===selected.id)?
     ()=>setMythicWallStart({gameId:selected.id}):undefined}/>}
   {mythicWallStart&&current&&mythicPosters.length>0&&
