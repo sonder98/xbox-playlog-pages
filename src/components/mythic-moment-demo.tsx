@@ -8,8 +8,8 @@ import './mythic-moment-demo.css';
 type MomentLayout='original'|'one'|'two';
 const LAYOUTS={
  original:{label:'当前版本',description:'成就标签 / 解锁日期 / 解锁时间'},
- one:{label:'新版 · 单行成就名',description:'成就标签 / 成就名称（单行省略） / 日期与时间'},
- two:{label:'新版 · 双行成就名',description:'成就标签 / 成就名称（最多两行） / 日期与时间'}
+ one:{label:'新版 · 单行成就名',description:'小号说明标签 / 大号成就名（单行） / 日期与时间'},
+ two:{label:'新版 · 双行成就名',description:'小号说明标签 / 大号成就名（最多两行） / 日期与时间'}
 } as const;
 
 export function MythicMomentDemo({posters,profile,onClose}:{
