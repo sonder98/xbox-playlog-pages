@@ -102,6 +102,86 @@ try{
     console.log('Mythic typography demo: PASS real poster, B/C/E, Chinese font, theme and close');
   }
 
+  // Use real MythicPosterCard and stored achievements for the proposed
+  // name-plus-timestamp layout; compare it directly to the production version.
+  {
+    const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+    const page=await context.newPage();
+    await page.route('**/status.json*',route=>route.fulfill({json:{initialized:true,latestAt:'2026-10-30T00:00:00Z'}}));
+    await page.route('**/vault.json*',route=>route.fulfill({json:envelope}));
+    await page.route('https://covers.example.test/**',route=>route.fulfill({
+      contentType:'image/svg+xml',
+      body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"></svg>'
+    }));
+    await page.route('https://fonts.googleapis.com/**',route=>route.fulfill({contentType:'text/css',body:''}));
+    await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/?mythic-moment-demo=1');
+    await page.locator('input[type="password"]').fill(password);
+    await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    const lab=page.locator('.mythic-wall-overlay[data-moment-demo="true"]');
+    await lab.waitFor();
+    const poster=lab.locator('.mythic-poster.is-active');
+    assert.equal(await poster.getAttribute('data-poster-game'),'100');
+    assert.equal(await lab.getAttribute('data-moment-layout'),'two');
+    assert.equal(await poster.locator('.mythic-poster-achievement-art').count(),2,
+      'The two authentic unlocked-achievement artworks remain in place');
+    assert.deepEqual(await poster.locator('.mythic-poster-achievement small').allTextContents(),
+      ['首项成就','Mythic 达成']);
+    assert.deepEqual(await poster.locator('.mythic-poster-achievement-name').allTextContents(),
+      ['Achievement 0','Very long achievement name to check readable wrapping on mobile']);
+    assert.deepEqual(await poster.locator('.mythic-poster-achievement-datetime').allTextContents(),
+      ['2026.11.01 · 20:24','2026.11.02 · 20:24'],
+      'Show the real Beijing-local date and specific time together on line three');
+    const name=poster.locator('.mythic-poster-achievement-name').last();
+    assert.equal(await name.getAttribute('title'),
+      'Very long achievement name to check readable wrapping on mobile',
+      'Long achievement names retain their full text in the title attribute');
+    assert.equal(await name.evaluate(el=>getComputedStyle(el).webkitLineClamp),'2');
+    const fit=()=>poster.evaluate(el=>{
+      const pair=el.querySelector('.mythic-poster-achievement-pair').getBoundingClientRect();
+      return [...el.querySelectorAll('.mythic-poster-achievement')].map(col=>{
+        const art=col.querySelector('.mythic-poster-achievement-art').getBoundingClientRect();
+        const label=col.querySelector('small').getBoundingClientRect();
+        const name=col.querySelector('.mythic-poster-achievement-name').getBoundingClientRect();
+        const time=col.querySelector('.mythic-poster-achievement-datetime').getBoundingClientRect();
+        const column=col.getBoundingClientRect();
+        return {inside:art.top>=pair.top-1&&time.bottom<=pair.bottom+1,
+          order:art.bottom<=label.top+2&&label.bottom<=name.top+2&&name.bottom<=time.top+2,
+          xFit:name.left>=column.left-1&&name.right<=column.right+1,
+          timeFit:time.left>=column.left-1&&time.right<=column.right+1};
+      });
+    });
+    assert.ok((await fit()).every(x=>Object.values(x).every(Boolean)),
+      'Achievement names and timestamp remain inside the original fixed poster zone on mobile');
+    await page.getByRole('button',{name:'新版 · 单行成就名'}).click();
+    assert.equal(await lab.getAttribute('data-moment-layout'),'one');
+    assert.equal(await name.evaluate(el=>getComputedStyle(el).webkitLineClamp),'1');
+    assert.equal(await poster.locator('.mythic-poster-achievement-datetime').count(),2);
+    await page.getByRole('button',{name:'当前版本'}).click();
+    assert.equal(await lab.getAttribute('data-moment-layout'),'original');
+    assert.equal(await poster.locator('.mythic-poster-achievement-name').count(),0);
+    assert.deepEqual(await poster.locator('.mythic-poster-achievement b').allTextContents(),
+      ['2026.11.01','2026.11.02'],
+      'Old version remains unchanged for side-by-side comparison by switching');
+    await page.getByRole('button',{name:'新版 · 双行成就名'}).click();
+    await page.getByRole('button',{name:'浅色',exact:true}).click();
+    await page.waitForFunction(()=>document.documentElement.dataset.theme==='light');
+    assert.notEqual(await name.evaluate(el=>getComputedStyle(el).color),'rgb(243, 221, 180)',
+      'The achievement names use legible bronze text in light mode');
+    await page.setViewportSize({width:320,height:700});
+    assert.ok((await fit()).every(x=>x.inside&&x.xFit&&x.timeFit),
+      'Small phones retain readable moment content inside the achievement panel');
+    await lab.getByRole('button',{name:'下一张Mythic纪念卡'}).click();
+    await lab.locator('.mythic-poster.is-active[data-poster-game="101"]').waitFor();
+    assert.equal(await lab.locator('.mythic-poster.is-active .mythic-poster-achievement-name').count(),2,
+      'The chosen layout persists while browsing different actual Mythic games');
+    await page.getByRole('button',{name:'关闭成就布局预览'}).click();
+    await lab.waitFor({state:'detached'});
+    assert.equal(new URL(page.url()).searchParams.has('mythic-moment-demo'),false);
+    await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
+    await context.close();
+    console.log('Mythic achievement layout demo: PASS real names, combined dates, 3 modes, themes, small screen and navigation');
+  }
+
   // Compare four animated foil techniques on the ACTUAL Mythic card; no
   // generated image, standalone fake poster or production style mutation.
   {
