@@ -9,10 +9,10 @@ import './mythic-gold-demo.css';
 // It does not alter the game-name font, saved theme or production card CSS.
 const EFFECTS={
  original:{label:'原版',note:'Cinzel Bold 原有米白文字，没有流光',duration:5.2},
- satin:{label:'A · 香槟流金',note:'浅金底色，窄光带无间隔扫过',duration:2.1},
+ satin:{label:'A · 香槟流金',note:'浅金底色，窄光带无间隔扫过',duration:2.6},
  mirror:{label:'B · 镜面扫金',note:'明亮而集中的金箔高光',duration:4.6},
  liquid:{label:'C · 液态鎏金',note:'深浅金色持续缓缓流动',duration:8.5},
- ember:{label:'D · 熔金辉光',note:'金色流纹连续流动，伴随轻微呼吸辉光',duration:3.7}
+ ember:{label:'D · 熔金辉光',note:'金色流纹连续流动，伴随轻微呼吸辉光',duration:4.5}
 } as const;
 type GoldEffect=keyof typeof EFFECTS;
 const RATES={
