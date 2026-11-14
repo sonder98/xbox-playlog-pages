@@ -1,0 +1,196 @@
+/* Real Mythic poster title effects, strictly isolated to ?mythic-gold-demo=1.
+   Never modify normal poster typography or the separate font-comparison lab. */
+.mythic-wall-overlay[data-gold-demo="true"] .mythic-wall-header{
+ min-height:55px;padding-block:8px;
+}
+.mythic-wall-overlay[data-gold-demo="true"] .mythic-font-demo-toolbar{
+ max-height:210px;padding:9px 14px 10px;
+}
+.mythic-gold-demo-controls{
+ max-width:1140px;margin:auto;
+ color:#f5ecd7;font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;
+ display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.mythic-gold-demo-options{margin:0;padding:0;border:0;min-width:0;}
+.mythic-gold-demo-options legend{
+ margin:0 0 5px;color:#c5b78e;font-size:11px;letter-spacing:.05em;
+}
+.mythic-gold-demo-buttons{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;}
+.mythic-gold-demo-buttons button,.mythic-gold-demo-pause{
+ padding:8px 10px;min-height:34px;border:1px solid #72654c;border-radius:9px;
+ background:#233128;color:#eee6d5;font:650 11px/1.2 Inter,"PingFang SC",sans-serif;
+ white-space:nowrap;cursor:pointer;
+}
+.mythic-gold-demo-buttons button.selected{
+ background:#dfbc75;border-color:#f1d7a0;color:#1a261c;
+}
+.mythic-gold-demo-buttons button:hover:not(.selected),
+.mythic-gold-demo-pause:hover:not(:disabled){
+ border-color:#efce8b;
+}
+.mythic-gold-demo-buttons button:focus-visible,.mythic-gold-demo-pause:focus-visible{
+ outline:2px solid #f8e4ad;outline-offset:2px;
+}
+.mythic-gold-demo-secondary{
+ display:flex;align-items:flex-end;justify-content:center;gap:10px 20px;flex-wrap:wrap;
+}
+.mythic-gold-demo-pause{margin-bottom:0;}
+.mythic-gold-demo-pause[aria-pressed="true"]{
+ border-color:#f3d38e;background:#4a3d24;color:#ffeba9;
+}
+.mythic-gold-demo-pause:disabled{cursor:not-allowed;opacity:.5;}
+.mythic-gold-demo-note{
+ color:#d6c6a3;text-align:center;margin:0;
+ font:500 11px/1.45 Inter,"PingFang SC",sans-serif;
+}
+.mythic-wall-overlay[data-gold-demo="true"] .mythic-poster{
+ width:min(408px,calc(100vw - 42px),calc((100dvh - 270px)*.563));
+ max-height:calc(100dvh - 270px);
+}
+
+/* Keep Cinzel Bold's exact layout and glyph geometry. Only paint and animate
+   a gradient *inside* the existing text, not a duplicated text overlay. */
+.mythic-wall-overlay[data-gold-demo="true"]:is(
+ [data-gold-effect="satin"],[data-gold-effect="mirror"],
+ [data-gold-effect="liquid"],[data-gold-effect="ember"]
+) .mythic-poster-title{
+ background-repeat:no-repeat;
+ background-size:280% 100%;
+ background-position:100% 50%;
+ -webkit-background-clip:text;
+ background-clip:text;
+ -webkit-text-fill-color:transparent;
+ color:transparent;
+ animation-duration:var(--gold-demo-duration,5.2s);
+ animation-iteration-count:infinite;
+ animation-fill-mode:both;
+ will-change:background-position;
+}
+/* A. A restrained champagne-colored title crossed by a slim silk-like glint. */
+.mythic-wall-overlay[data-gold-demo="true"][data-gold-effect="satin"] .mythic-poster-title{
+ background-image:linear-gradient(105deg,
+  #fcf5e8 0%,#f8eedb 35%,#d9aa5d 44%,#fffcee 48.5%,
+  #f9d88a 51.5%,#d4a158 55%,#fcf2e1 64%,#fff7eb 100%);
+ animation-name:mythic-title-foil-sweep;
+ animation-timing-function:ease-in-out;
+}
+/* B. A high-contrast, almost mirrorlike band of gold and ivory. */
+.mythic-wall-overlay[data-gold-demo="true"][data-gold-effect="mirror"] .mythic-poster-title{
+ background-image:linear-gradient(106deg,
+  #be8b41 0%,#ecc67c 29%,#a56f2d 39%,
+  #ffe39c 45%,#ffffff 49%,#fff9d3 51%,#d39942 57%,
+  #f5da9d 68%,#ba8335 100%);
+ background-size:290% 100%;
+ animation-name:mythic-title-foil-flash;
+ animation-timing-function:cubic-bezier(.28,.08,.48,1);
+ text-shadow:0 1px 1px #0002;
+}
+/* C. Broad metallic bands move continuously and then reverse like liquid. */
+.mythic-wall-overlay[data-gold-demo="true"][data-gold-effect="liquid"] .mythic-poster-title{
+ background-image:linear-gradient(112deg,
+  #b7833c 0%,#f7d48b 13%,#fff0bd 24%,#9d6b30 38%,
+  #f7e4b0 53%,#c38b42 65%,#fff2c7 79%,#c08c48 91%,#f7db9f 100%);
+ background-size:240% 100%;
+ animation-name:mythic-title-foil-liquid;
+ animation-timing-function:ease-in-out;
+ animation-direction:alternate;
+}
+/* D. Travelling amber-gold alloy with an occasional very soft warm halo. */
+.mythic-wall-overlay[data-gold-demo="true"][data-gold-effect="ember"] .mythic-poster-title{
+ background-image:linear-gradient(115deg,
+  #c58b41 0%,#f7ce77 29%,#8f5f28 39%,
+  #ffe0a0 47%,#fff8d7 51%,#e6a84b 60%,#9c682c 73%,#f6d38d 100%);
+ background-size:280% 100%;
+ animation-name:mythic-title-foil-ember;
+ animation-timing-function:ease-in-out;
+}
+@keyframes mythic-title-foil-sweep{
+ 0%,14%{background-position:100% 50%}
+ 54%{background-position:0% 50%}
+ 55%,100%{background-position:0% 50%}
+}
+@keyframes mythic-title-foil-flash{
+ 0%,19%{background-position:100% 50%}
+ 43%{background-position:0% 50%}
+ 44%,100%{background-position:0% 50%}
+}
+@keyframes mythic-title-foil-liquid{
+ 0%{background-position:0% 50%}
+ 100%{background-position:100% 50%}
+}
+@keyframes mythic-title-foil-ember{
+ 0%,12%{background-position:100% 50%;filter:brightness(.94) drop-shadow(0 0 0 transparent)}
+ 42%{background-position:35% 50%;filter:brightness(1.13) drop-shadow(0 0 6px #f7cb6475)}
+ 62%{background-position:0% 50%;filter:brightness(1.0) drop-shadow(0 0 3px #ddae5350)}
+ 73%,100%{background-position:0% 50%;filter:brightness(.97) drop-shadow(0 0 0 transparent)}
+}
+.mythic-wall-overlay[data-gold-demo="true"][data-gold-paused="true"] .mythic-poster-title,
+.mythic-wall-overlay[data-gold-demo="true"] .mythic-poster:not(.is-active) .mythic-poster-title{
+ animation-play-state:paused;
+}
+
+/* The light-theme collectible needs darker bronze inks; the original pale
+   highlights would otherwise disappear against its ivory parchment. */
+:root[data-theme="light"] .mythic-wall-overlay[data-gold-demo="true"][data-gold-effect="satin"] .mythic-poster-title{
+ background-image:linear-gradient(105deg,
+  #6e471e 0%,#764d23 35%,#b27a2f 44%,#f3cf75 49%,
+  #a46b22 54%,#67421b 64%,#704921 100%);
+}
+:root[data-theme="light"] .mythic-wall-overlay[data-gold-demo="true"][data-gold-effect="mirror"] .mythic-poster-title{
+ background-image:linear-gradient(106deg,
+  #663b16 0%,#ab752c 30%,#563517 40%,#edc46b 46%,
+  #fff0b1 50%,#b77c31 56%,#785021 68%,#583819 100%);
+ text-shadow:none;
+}
+:root[data-theme="light"] .mythic-wall-overlay[data-gold-demo="true"][data-gold-effect="liquid"] .mythic-poster-title{
+ background-image:linear-gradient(112deg,
+  #69431b 0%,#bd8a40 13%,#f3c673 24%,#613c19 38%,
+  #dba75b 53%,#7c4c20 65%,#f0c879 79%,#734820 91%,#a57730 100%);
+}
+:root[data-theme="light"] .mythic-wall-overlay[data-gold-demo="true"][data-gold-effect="ember"] .mythic-poster-title{
+ background-image:linear-gradient(115deg,
+  #70471d 0%,#bf872e 29%,#593816 39%,#d7a554 47%,
+  #ffe5a2 51%,#a77431 60%,#65401b 73%,#b78437 100%);
+}
+
+/* Full accessibility: no movement when the user requests reduced motion. */
+@media(prefers-reduced-motion:reduce){
+ .mythic-wall-overlay[data-gold-demo="true"] .mythic-poster-title{
+  animation:none!important;filter:none!important;
+ }
+}
+:root[data-theme="light"] .mythic-wall-overlay[data-gold-demo="true"] .mythic-font-demo-toolbar{
+ background:#f7f3e9;color:#372d22;border-color:#d8bf91;
+}
+:root[data-theme="light"] .mythic-gold-demo-options legend{color:#635239;}
+:root[data-theme="light"] .mythic-gold-demo-buttons button,
+:root[data-theme="light"] .mythic-gold-demo-pause{
+ background:#fffdfa;color:#514329;border-color:#bbae98;
+}
+:root[data-theme="light"] .mythic-gold-demo-buttons button.selected{
+ background:#365d47;border-color:#365d47;color:#fff;
+}
+:root[data-theme="light"] .mythic-gold-demo-note{color:#635239;}
+@media(max-width:700px){
+ .mythic-wall-overlay[data-gold-demo="true"] .mythic-font-demo-toolbar{
+  max-height:219px;padding:7px 10px;
+ }
+ .mythic-gold-demo-controls{gap:7px;}
+ .mythic-gold-demo-options legend{font-size:10px;}
+ .mythic-gold-demo-buttons button,.mythic-gold-demo-pause{
+  padding:6px 8px;min-height:30px;font-size:10px;
+ }
+ .mythic-gold-demo-secondary{gap:7px 12px;}
+ .mythic-gold-demo-note{font-size:10px;}
+ .mythic-wall-overlay[data-gold-demo="true"] .mythic-poster{
+  width:min(calc(100vw - 30px),calc((100dvh - 340px)*.563));
+  max-height:calc(100dvh - 340px);
+ }
+}
+@media(max-height:600px){
+ .mythic-wall-overlay[data-gold-demo="true"] .mythic-font-demo-toolbar{max-height:140px;}
+ .mythic-wall-overlay[data-gold-demo="true"] .mythic-poster{
+  width:min(calc(100vw - 30px),calc((100dvh - 260px)*.563));
+  max-height:calc(100dvh - 260px);
+ }
+}
