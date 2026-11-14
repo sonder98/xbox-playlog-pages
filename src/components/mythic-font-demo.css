@@ -1,0 +1,100 @@
+/* Isolated typography lab: ordinary Mythic cards are never restyled. */
+.mythic-wall-overlay[data-font-demo="true"] .mythic-wall-header{
+ min-height:55px;padding-block:8px;
+}
+.mythic-font-demo-toolbar{
+ flex:0 0 auto;z-index:8;position:relative;
+ max-height:166px;overflow-y:auto;overscroll-behavior:contain;
+ padding:8px 12px 10px;
+ border-block:1px solid rgba(232,191,112,.27);
+ background:#101b18;color:#f5ead2;
+ scrollbar-width:thin;
+}
+.mythic-font-demo-toolbar-content{
+ max-width:1200px;margin:0 auto;display:flex;justify-content:center;
+ align-items:end;gap:8px 18px;flex-wrap:wrap;
+ font-family:Inter,"PingFang SC",sans-serif;
+}
+.mythic-font-demo-group{border:0;padding:0;margin:0;min-width:0;}
+.mythic-font-demo-group legend{
+ margin-bottom:5px;color:#c5b793;font-size:11px;letter-spacing:.045em;
+}
+.mythic-font-demo-options{display:flex;flex-wrap:wrap;gap:5px;}
+.mythic-font-demo-options button{
+ padding:7px 10px;min-height:33px;border:1px solid #6a634f;border-radius:8px;
+ font:600 11px/1.25 Inter,"PingFang SC",sans-serif;
+ background:#22302a;color:#e3e7d8;cursor:pointer;white-space:nowrap;
+}
+.mythic-font-demo-options button:hover,.mythic-font-demo-options button:focus-visible{
+ border-color:#e0bd74;outline-offset:2px;
+}
+.mythic-font-demo-options button.selected{
+ background:#e0bc75;color:#162016;border-color:#efd8a9;
+}
+.mythic-font-demo-size{display:flex;align-items:center;gap:7px;min-height:33px;
+ white-space:nowrap;font-size:11px;color:#ddd6c5;}
+.mythic-font-demo-size span{color:#e9ca8d;font-weight:700;min-width:37px;}
+.mythic-font-demo-size input{width:88px;accent-color:#d9b56d;cursor:pointer;}
+.mythic-font-demo-status{font-size:10px;color:#afc9ac;white-space:nowrap;padding-bottom:9px;}
+.mythic-font-demo-status.is-fallback{color:#ffbf88;}
+
+:root .mythic-wall-overlay[data-font-demo="true"] .mythic-poster-title{
+ font-family:var(--mythic-demo-en-font);
+ font-weight:700;
+ font-size:var(--mythic-demo-title-size);
+ letter-spacing:-.015em;
+}
+:root .mythic-wall-overlay[data-font-demo="true"] .mythic-poster-congratulations,
+:root .mythic-wall-overlay[data-font-demo="true"] .mythic-poster-congratulations strong,
+:root .mythic-wall-overlay[data-font-demo="true"] .mythic-poster-achievement small,
+:root .mythic-wall-overlay[data-font-demo="true"] .mythic-poster-stats small,
+:root .mythic-wall-overlay[data-font-demo="true"] .mythic-poster-stats span{
+ font-family:var(--mythic-demo-zh-font);
+ font-weight:var(--mythic-demo-zh-weight);
+}
+:root .mythic-wall-overlay[data-font-demo="true"] .mythic-poster-congratulations strong span{
+ font-family:"Cormorant Garamond",Georgia,serif;font-weight:650;
+}
+:root .mythic-wall-overlay[data-font-demo="true"] .mythic-poster-achievement small{
+ font-size:3.0cqw;
+}
+:root .mythic-wall-overlay[data-font-demo="true"] .mythic-poster-stats span{
+ font-size:2.45cqw;
+}
+/* The existing poster has a fixed 420:748 aspect ratio. Compensate for the
+   demo's additional toolbar height so it never clips on smaller screens. */
+.mythic-wall-overlay[data-font-demo="true"] .mythic-poster{
+ width:min(408px,calc(100vw - 42px),calc((100dvh - 265px)*.563));
+ max-height:calc(100dvh - 265px);
+}
+:root[data-theme="light"] .mythic-font-demo-toolbar{
+ background:#f7f3e9;color:#332c21;border-color:#d8bf91;
+}
+:root[data-theme="light"] .mythic-font-demo-group legend,
+:root[data-theme="light"] .mythic-font-demo-size{color:#5a5347;}
+:root[data-theme="light"] .mythic-font-demo-options button{
+ background:#fffdf9;color:#4b4335;border-color:#bcb5a9;
+}
+:root[data-theme="light"] .mythic-font-demo-options button.selected{
+ background:#345c46;color:#fff;border-color:#345c46;
+}
+:root[data-theme="light"] .mythic-font-demo-size span{color:#305e43;}
+:root[data-theme="light"] .mythic-font-demo-status{color:#305e43;}
+:root[data-theme="light"] .mythic-font-demo-status.is-fallback{color:#9f4b2f;}
+@media(max-width:700px){
+ .mythic-font-demo-toolbar{max-height:172px;padding:7px 10px;}
+ .mythic-font-demo-toolbar-content{justify-content:flex-start;gap:8px 12px;}
+ .mythic-font-demo-group legend{margin-bottom:4px;font-size:10px;}
+ .mythic-font-demo-options button{padding:6px 8px;min-height:31px;font-size:10px;}
+ .mythic-wall-overlay[data-font-demo="true"] .mythic-poster{
+  width:min(calc(100vw - 32px),calc((100dvh - 304px)*.563));
+  max-height:calc(100dvh - 304px);
+ }
+}
+@media(max-height:600px){
+ .mythic-font-demo-toolbar{max-height:125px;}
+ .mythic-wall-overlay[data-font-demo="true"] .mythic-poster{
+  width:min(calc(100vw - 32px),calc((100dvh - 240px)*.563));
+  max-height:calc(100dvh - 240px);
+ }
+}
