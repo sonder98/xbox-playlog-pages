@@ -4,6 +4,7 @@ import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRi
 import {compareRecords,officialGameVisible,syncMechanismLabel,type Game,type RecordData} from './data';
 import {GameCard,GameCover,GameDetail,Modal} from './components/game';
 import {MythicPosterWall} from './components/mythic-wall';
+import {MythicFontDemo} from './components/mythic-font-demo';
 import {MythicShowcase} from './components/mythic-showcase';
 import {mythicPosterWall} from './mythic-posters';
 import {warmMythicFonts,warmMythicPoster} from './mythic-assets';
@@ -31,6 +32,8 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  const toggleTheme=()=>{const next=theme==='dark'?'light':'dark';saveThemePreference(next);applyTheme(next);setTheme(next);};
  const [mythicWallStart,setMythicWallStart]=useState<{gameId:string|null}|null>(null);
  const [showcaseOpen,setShowcaseOpen]=useState(false);
+ // Private preview URL: uses only the current unlocked Xbox data, never mock cards.
+ const [fontDemoOpen,setFontDemoOpen]=useState(()=>new URLSearchParams(window.location.search).get('mythic-font-demo')==='1');
   const [hiddenIds,setHiddenIds]=useState<string[]>([]),[manageDisplay,setManageDisplay]=useState(false),[draftHidden,setDraftHidden]=useState<string[]>([]),[displayQuery,setDisplayQuery]=useState(''),[onlyHidden,setOnlyHidden]=useState(false),[savingDisplay,setSavingDisplay]=useState(false),[displayError,setDisplayError]=useState('');
  const {tab,navigate:setTab,back,gameId,dayId,showcase,gapShowcase,openGame,openAchievementDay,openAchievementShowcase,openAchievementGapShowcase,openAchievementGame,changeAchievementDay}=usePageNavigation();
  const [mobileNavVisible,setMobileNavVisible]=useState(false);
@@ -247,13 +250,20 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  </Modal>}
  {showcaseOpen&&tab==='library'&&current&&<MythicShowcase posters={mythicPosters} profile={current.profile}
    onClose={()=>setShowcaseOpen(false)} onOpen={id=>setMythicWallStart({gameId:id})}/>}
- {selected&&!mythicWallStart&&!showcaseOpen&&<GameDetail game={selected} onClose={back}
+ {selected&&!mythicWallStart&&!showcaseOpen&&!fontDemoOpen&&<GameDetail game={selected} onClose={back}
    onOpenMythic={mythicPosters.some(p=>p.game.id===selected.id)?
     ()=>setMythicWallStart({gameId:selected.id}):undefined}/>}
   {mythicWallStart&&current&&mythicPosters.length>0&&
    <MythicPosterWall posters={mythicPosters} profile={current.profile}
     initialGameId={mythicWallStart.gameId} allowNavigation={showcaseOpen}
     onClose={()=>setMythicWallStart(null)}/>} 
+ {fontDemoOpen&&current&&mythicPosters.length>0&&
+  <MythicFontDemo posters={mythicPosters} profile={current.profile} onClose={()=>{
+   const url=new URL(window.location.href);
+   url.searchParams.delete('mythic-font-demo');
+   window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
+   setFontDemoOpen(false);
+  }}/>} 
  <nav className={'mobile-nav'+(mobileNavVisible?' is-visible':'')} aria-label="主导航">{nav.map(([id,label,Icon])=><button key={id} onClick={event=>{
    event.currentTarget.blur();
    ignoreMobileScrollUntil.current=performance.now()+350;
