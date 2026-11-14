@@ -219,7 +219,7 @@ try{
         fill:s.webkitTextFillColor,font:s.fontFamily,play:s.animationPlayState};
     });
     let a=await foil();
-    assert.ok(a.name.includes('continuous-satin')&&a.duration==='2.1s'&&
+    assert.ok(a.name.includes('continuous-satin')&&a.duration==='2.6s'&&
       a.timing==='linear'&&a.direction==='alternate'&&a.iterations==='infinite'&&
       a.image.includes('linear-gradient')&&a.font.includes('Cinzel'),
       'Production A foil uses approved font and continuous non-idling standard sweep: '+JSON.stringify(a));
@@ -230,7 +230,7 @@ try{
     assert.equal(await libraryTitle.evaluate(el=>getComputedStyle(el).animationName),
       'mythic-title-continuous-ember');
     const d=await foil();
-    assert.ok(d.name.includes('continuous-ember')&&d.duration==='3.7s'&&
+    assert.ok(d.name.includes('continuous-ember')&&d.duration==='4.5s'&&
       d.timing==='linear'&&d.direction==='alternate'&&d.iterations==='infinite',
       'Exactly at Beijing midnight the title switches to uninterrupted D glow: '+JSON.stringify(d));
     await page.evaluate(()=>document.documentElement.dataset.theme='light');
@@ -2056,7 +2056,7 @@ try{
     const dayFoil=await page.locator('.library-games-panel').getAttribute('data-title-foil');
     assert.equal(progressPalette.original.titleAnimation,
       dayFoil==='satin'?'mythic-title-continuous-satin':'mythic-title-continuous-ember');
-    assert.equal(progressPalette.original.titleDuration,dayFoil==='satin'?'2.1s':'3.7s',
+    assert.equal(progressPalette.original.titleDuration,dayFoil==='satin'?'2.6s':'4.5s',
       'Mythic library titles use the large poster’s standard A/D speed');
     const plainName=await libraryCard.evaluate(card=>{
       const title=card.querySelector('.game-title');
