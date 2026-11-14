@@ -131,22 +131,38 @@ try{
     const hierarchy=await poster.locator('.mythic-poster-achievement').first().evaluate(column=>{
       const label=getComputedStyle(column.querySelector('small'));
       const name=getComputedStyle(column.querySelector('.mythic-poster-achievement-name'));
+      const date=column.querySelector('.mythic-poster-achievement-datetime');
+      const dateStyle=getComputedStyle(date);
+      const dateNumber=getComputedStyle(date.querySelector('.mythic-poster-achievement-date'));
+      const timeNumber=getComputedStyle(date.querySelector('.mythic-poster-achievement-time'));
       return {
         labelSize:parseFloat(label.fontSize),nameSize:parseFloat(name.fontSize),
         labelWeight:label.fontWeight,nameWeight:name.fontWeight,
         labelSpacing:parseFloat(label.letterSpacing),
-        labelFont:label.fontFamily,nameFont:name.fontFamily
+        labelFont:label.fontFamily,nameFont:name.fontFamily,
+        dateFont:dateStyle.fontFamily,dateWeight:dateStyle.fontWeight,dateColor:dateStyle.color,
+        dateNumberSize:parseFloat(dateNumber.fontSize),timeNumberSize:parseFloat(timeNumber.fontSize),
+        dateNumberWeight:dateNumber.fontWeight
       };
     });
     assert.ok(hierarchy.nameSize>hierarchy.labelSize*1.35,
       'Achievement name is visibly larger than its category label: '+JSON.stringify(hierarchy));
-    assert.equal(hierarchy.labelWeight,'500','Category label uses the softer serif weight');
-    assert.equal(hierarchy.nameWeight,'700','Achievement name retains bold serif emphasis');
-    assert.ok(hierarchy.labelFont.includes('Noto Serif SC')&&
+    assert.equal(hierarchy.labelWeight,'500','Category label uses medium weight');
+    assert.equal(hierarchy.nameWeight,'700','Achievement name uses bold weight');
+    assert.ok(hierarchy.labelFont.includes('Noto Sans SC')&&
       hierarchy.nameFont.includes('Noto Serif SC')&&hierarchy.labelSpacing>0,
-      'Both rows preserve the chosen Chinese serif while separating their hierarchy');
+      'The first and second rows use distinct Chinese sans-serif and serif typefaces');
+    assert.ok(hierarchy.dateFont.includes('Cormorant Garamond'),
+      'Combined date/time restores the original Cormorant Garamond typeface');
+    assert.equal(hierarchy.dateWeight,'400','Combined date/time line retains the original regular timestamp weight');
+    assert.equal(hierarchy.dateNumberWeight,'650','Date retains the original bold date weight');
+    assert.equal(hierarchy.dateColor,'rgb(170, 166, 155)',
+      'Date/time is muted gray in dark mode');
+    assert.equal(hierarchy.dateNumberWeight,'650');
+    assert.ok(hierarchy.dateNumberSize>hierarchy.timeNumberSize*1.25,
+      'The date restores the original larger type size while the time keeps its original smaller size');
     assert.deepEqual(await poster.locator('.mythic-poster-achievement-datetime').allTextContents(),
-      ['2026.11.01 · 20:24','2026.11.02 · 20:24'],
+      ['2026.11.01·20:24','2026.11.02·20:24'],
       'Show the real Beijing-local date and specific time together on line three');
     const name=poster.locator('.mythic-poster-achievement-name').last();
     assert.equal(await name.getAttribute('title'),
@@ -184,6 +200,9 @@ try{
     await page.waitForFunction(()=>document.documentElement.dataset.theme==='light');
     assert.notEqual(await name.evaluate(el=>getComputedStyle(el).color),'rgb(243, 221, 180)',
       'The achievement names use legible bronze text in light mode');
+    assert.equal(await poster.locator('.mythic-poster-achievement-datetime').first()
+      .evaluate(el=>getComputedStyle(el).color),'rgb(136, 130, 118)',
+      'Date/time remains muted gray in light mode too');
     await page.setViewportSize({width:320,height:700});
     assert.ok((await fit()).every(x=>x.inside&&x.xFit&&x.timeFit),
       'Small phones retain readable moment content inside the achievement panel');
