@@ -131,20 +131,27 @@ try{
     const hierarchy=await poster.locator('.mythic-poster-achievement').first().evaluate(column=>{
       const label=getComputedStyle(column.querySelector('small'));
       const name=getComputedStyle(column.querySelector('.mythic-poster-achievement-name'));
+      const date=getComputedStyle(column.querySelector('.mythic-poster-achievement-datetime'));
       return {
         labelSize:parseFloat(label.fontSize),nameSize:parseFloat(name.fontSize),
         labelWeight:label.fontWeight,nameWeight:name.fontWeight,
         labelSpacing:parseFloat(label.letterSpacing),
-        labelFont:label.fontFamily,nameFont:name.fontFamily
+        labelFont:label.fontFamily,nameFont:name.fontFamily,
+        dateFont:date.fontFamily,dateWeight:date.fontWeight,dateColor:date.color
       };
     });
     assert.ok(hierarchy.nameSize>hierarchy.labelSize*1.35,
       'Achievement name is visibly larger than its category label: '+JSON.stringify(hierarchy));
-    assert.equal(hierarchy.labelWeight,'500','Category label uses the softer serif weight');
-    assert.equal(hierarchy.nameWeight,'700','Achievement name retains bold serif emphasis');
-    assert.ok(hierarchy.labelFont.includes('Noto Serif SC')&&
+    assert.equal(hierarchy.labelWeight,'500','Category label uses medium weight');
+    assert.equal(hierarchy.nameWeight,'700','Achievement name uses bold weight');
+    assert.ok(hierarchy.labelFont.includes('Noto Sans SC')&&
       hierarchy.nameFont.includes('Noto Serif SC')&&hierarchy.labelSpacing>0,
-      'Both rows preserve the chosen Chinese serif while separating their hierarchy');
+      'The first and second rows use distinct Chinese sans-serif and serif typefaces');
+    assert.ok(hierarchy.dateFont.includes('Cormorant Garamond'),
+      'Combined date/time restores the original Cormorant Garamond typeface');
+    assert.equal(hierarchy.dateWeight,'650','Combined date/time restores the original date emphasis');
+    assert.equal(hierarchy.dateColor,'rgb(170, 166, 155)',
+      'Date/time is muted gray in dark mode');
     assert.deepEqual(await poster.locator('.mythic-poster-achievement-datetime').allTextContents(),
       ['2026.11.01 · 20:24','2026.11.02 · 20:24'],
       'Show the real Beijing-local date and specific time together on line three');
@@ -184,6 +191,9 @@ try{
     await page.waitForFunction(()=>document.documentElement.dataset.theme==='light');
     assert.notEqual(await name.evaluate(el=>getComputedStyle(el).color),'rgb(243, 221, 180)',
       'The achievement names use legible bronze text in light mode');
+    assert.equal(await poster.locator('.mythic-poster-achievement-datetime').first()
+      .evaluate(el=>getComputedStyle(el).color),'rgb(136, 130, 118)',
+      'Date/time remains muted gray in light mode too');
     await page.setViewportSize({width:320,height:700});
     assert.ok((await fit()).every(x=>x.inside&&x.xFit&&x.timeFit),
       'Small phones retain readable moment content inside the achievement panel');
