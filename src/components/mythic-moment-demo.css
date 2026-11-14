@@ -1,4 +1,4 @@
-@import url("https://cdn.jsdelivr.net/gh/free-fonts-npm/zhuque-fangsong@main/zhuque-fangsong.css");
+@import url("https://cdn.jsdelivr.net/npm/@free-fonts/zhuque-fangsong@1.0.0/zhuque-fangsong.css");
 /* Scoped preview; the published Mythic poster stays exactly as before. */
 .mythic-wall-overlay[data-moment-demo="true"] .mythic-wall-header{
  min-height:55px;padding-block:8px;
