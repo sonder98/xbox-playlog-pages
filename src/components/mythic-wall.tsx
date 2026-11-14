@@ -117,7 +117,7 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
     <small>首项成就</small>
     {momentLayout==='original'?<><b>{first.date}</b><span>{first.time}</span></>:<>
      <strong className="mythic-poster-achievement-name" title={firstAchievement?.name||'名称暂缺'}>{firstAchievement?.name||'名称暂缺'}</strong>
-     <span className="mythic-poster-achievement-datetime">{first.date} · {first.time}</span>
+     <span className="mythic-poster-achievement-datetime"><span className="mythic-poster-achievement-date">{first.date}</span><span className="mythic-poster-achievement-separator">·</span><span className="mythic-poster-achievement-time">{first.time}</span></span>
     </>}
    </div>
    <span className="mythic-poster-bridge" aria-hidden="true">✦</span>
@@ -126,7 +126,7 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
     <small>Mythic 达成</small>
     {momentLayout==='original'?<><b>{finish.date}</b><span>{finish.time}</span></>:<>
      <strong className="mythic-poster-achievement-name" title={lastBaseAchievement?.name||'名称暂缺'}>{lastBaseAchievement?.name||'名称暂缺'}</strong>
-     <span className="mythic-poster-achievement-datetime">{finish.date} · {finish.time}</span>
+     <span className="mythic-poster-achievement-datetime"><span className="mythic-poster-achievement-date">{finish.date}</span><span className="mythic-poster-achievement-separator">·</span><span className="mythic-poster-achievement-time">{finish.time}</span></span>
     </>}
    </div>
   </div>
