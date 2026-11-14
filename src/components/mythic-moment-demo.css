@@ -50,7 +50,7 @@
 /* First line is a discreet category label; the real achievement name
    receives the stronger type size and weight in the second line. */
 .mythic-wall-overlay[data-moment-demo="true"]:not([data-moment-layout="original"]) .mythic-poster-achievement small{
- font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+ font-family:"LXGW WenKai","Kaiti SC","KaiTi","STKaiti","Noto Serif SC",serif;
  font-size:2.7cqw;font-weight:500;line-height:1.25;letter-spacing:.045em;
  color:#bcb09a;
 }
@@ -69,15 +69,15 @@
  display:flex;align-items:baseline;justify-content:center;gap:.18em;
  font-family:"Cormorant Garamond",Georgia,serif;
  font-variant-numeric:lining-nums tabular-nums;
- font-size:3cqw;line-height:1.05;font-weight:400;letter-spacing:0;
+ font-size:2.4cqw;line-height:1.05;font-weight:400;letter-spacing:0;
  color:#aaa69b;white-space:nowrap;
 }
 .mythic-wall-overlay[data-moment-demo="true"] .mythic-poster-achievement-date{
- font-size:4cqw;line-height:1.05;font-weight:650;letter-spacing:.005em;
+ font-size:3.2cqw;line-height:1.05;font-weight:650;letter-spacing:.005em;
 }
 .mythic-wall-overlay[data-moment-demo="true"] .mythic-poster-achievement-time,
 .mythic-wall-overlay[data-moment-demo="true"] .mythic-poster-achievement-separator{
- font-size:3cqw;line-height:1.05;font-weight:400;
+ font-size:2.4cqw;line-height:1.05;font-weight:400;
 }
 .mythic-wall-overlay[data-moment-demo="true"] .mythic-poster.is-type-loading .mythic-poster-achievement-name,
 .mythic-wall-overlay[data-moment-demo="true"] .mythic-poster.is-type-loading .mythic-poster-achievement-datetime{
