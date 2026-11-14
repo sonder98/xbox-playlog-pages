@@ -47,12 +47,19 @@
 .mythic-wall-overlay[data-moment-demo="true"]:not([data-moment-layout="original"]) .mythic-poster-achievement-art{
  width:31%;min-width:30px;max-width:40px;margin-bottom:1px;
 }
+/* First line is a discreet category label; the real achievement name
+   receives the stronger type size and weight in the second line. */
+.mythic-wall-overlay[data-moment-demo="true"]:not([data-moment-layout="original"]) .mythic-poster-achievement small{
+ font-family:"Noto Serif SC","Songti SC",serif;
+ font-size:2.6cqw;font-weight:500;line-height:1.25;letter-spacing:.07em;
+ color:#bcb09a;
+}
 .mythic-wall-overlay[data-moment-demo="true"] .mythic-poster-achievement-name{
  display:-webkit-box;max-width:100%;min-width:0;width:100%;
  -webkit-box-orient:vertical;-webkit-line-clamp:1;
  overflow:hidden;overflow-wrap:anywhere;word-break:break-word;
  font-family:"Noto Serif SC","Songti SC",Georgia,serif;
- font-size:3.25cqw;font-weight:700;line-height:1.16;letter-spacing:-.008em;
+ font-size:3.8cqw;font-weight:700;line-height:1.12;letter-spacing:-.012em;
  color:#f3ddb4;text-align:center;
 }
 .mythic-wall-overlay[data-moment-demo="true"][data-moment-layout="two"] .mythic-poster-achievement-name{
