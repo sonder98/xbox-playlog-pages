@@ -142,11 +142,12 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
  </article>;
 }
 
-export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=false,onClose,previewToolbar,previewStyle}:{
+export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=false,onClose,previewToolbar,previewStyle,previewKind='font',previewVariant,previewPaused=false,previewLabel}:{
  posters:MythicPoster[];profile:Profile;initialGameId?:string|null;
  allowNavigation?:boolean;onClose:()=>void;
  /** Optional typography lab, never enabled by ordinary collectible views. */
  previewToolbar?:ReactNode;previewStyle?:CSSProperties;
+ previewKind?:'font'|'gold';previewVariant?:string;previewPaused?:boolean;previewLabel?:string;
 }){
  // Selecting a card in the cabinet chooses the initial index, not single-card
  // mode; the game-detail shortcut still opens only its own collectible.
@@ -198,14 +199,18 @@ export function MythicPosterWall({posters,profile,initialGameId,allowNavigation=
   setIndex(i=>Math.max(0,Math.min(posters.length-1,i+(dx<0?1:-1))));
  }
  return <div className="mythic-wall-overlay" role="dialog" aria-modal="true"
-  data-font-demo={previewToolbar?'true':undefined} style={previewStyle}
+  data-font-demo={previewToolbar&&previewKind==='font'?'true':undefined}
+  data-gold-demo={previewToolbar&&previewKind==='gold'?'true':undefined}
+  data-gold-effect={previewKind==='gold'?previewVariant:undefined}
+  data-gold-paused={previewKind==='gold'&&previewPaused?'true':undefined}
+  style={previewStyle}
   aria-label={single?'Mythic纪念卡':'Mythic纪念墙'} data-display-mode={single?'single':'wall'}
   data-entry={allowNavigation?'showcase':single?'detail':'legacy'} data-transition="idle">
   <header className="mythic-wall-header">
    <div><span className="mythic-wall-eyebrow">YOUR MYTHIC LEGACY</span>
-    <strong>{previewToolbar?'Mythic 字体对比':single?'Mythic纪念卡':allowNavigation?'Mythic纪念卡':'Mythic纪念墙'}</strong></div>
+    <strong>{previewToolbar?(previewLabel||'Mythic 字体对比'):single?'Mythic纪念卡':allowNavigation?'Mythic纪念卡':'Mythic纪念墙'}</strong></div>
    {!single&&<span className="mythic-wall-counter" aria-live="polite">{index+1} / {posters.length}</span>}
-   <button type="button" className="mythic-wall-close" onClick={onClose} aria-label={previewToolbar?'关闭字体预览':allowNavigation?'返回展示柜':single?'关闭Mythic纪念卡':'关闭Mythic纪念墙'}><X size={22}/></button>
+   <button type="button" className="mythic-wall-close" onClick={onClose} aria-label={previewToolbar?(previewKind==='gold'?'关闭鎏金预览':'关闭字体预览'):allowNavigation?'返回展示柜':single?'关闭Mythic纪念卡':'关闭Mythic纪念墙'}><X size={22}/></button>
   </header>
   {previewToolbar&&<div className="mythic-font-demo-toolbar">{previewToolbar}</div>}
   <div className="mythic-wall-viewport" onTouchStart={e=>{

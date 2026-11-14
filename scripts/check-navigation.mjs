@@ -102,6 +102,79 @@ try{
     console.log('Mythic typography demo: PASS real poster, B/C/E, Chinese font, theme and close');
   }
 
+  // Compare four animated foil techniques on the ACTUAL Mythic card; no
+  // generated image, standalone fake poster or production style mutation.
+  {
+    const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+    const page=await context.newPage();
+    await page.route('**/status.json*',route=>route.fulfill({json:{initialized:true,latestAt:'2026-10-30T00:00:00Z'}}));
+    await page.route('**/vault.json*',route=>route.fulfill({json:envelope}));
+    await page.route('https://covers.example.test/**',route=>route.fulfill({
+      contentType:'image/svg+xml',
+      body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"></svg>'
+    }));
+    await page.route('https://fonts.googleapis.com/**',route=>route.fulfill({contentType:'text/css',body:''}));
+    await page.goto('http://127.0.0.1:4173/xbox-playlog-pages/?mythic-gold-demo=1');
+    await page.locator('input[type="password"]').fill(password);
+    await page.getByRole('button',{name:'解锁我的游戏档案'}).click();
+    const lab=page.locator('.mythic-wall-overlay[data-gold-demo="true"]');
+    await lab.waitFor();
+    assert.equal(await page.locator('.mythic-poster.is-active .mythic-poster-title').innerText(),'Test Game 0',
+      'Gold lab uses the current unlocked game title in the production Mythic poster.');
+    const title=page.locator('.mythic-poster.is-active .mythic-poster-title');
+    assert.ok((await title.evaluate(el=>getComputedStyle(el).fontFamily)).includes('Cinzel'),
+      'The already-approved Cinzel Bold typography is preserved.');
+    assert.equal(await lab.getAttribute('data-gold-effect'),'satin');
+    const style=()=>title.evaluate(el=>{
+      const css=getComputedStyle(el);
+      return {animation:css.animationName,duration:parseFloat(css.animationDuration),
+        state:css.animationPlayState,gradient:css.backgroundImage,fill:css.webkitTextFillColor};
+    });
+    const first=await style();
+    assert.ok(first.animation.includes('foil-sweep')&&first.gradient.includes('linear-gradient'),
+      'A uses an animated metallic gradient clipped into the actual text.');
+    await page.getByRole('button',{name:'B · 镜面扫金'}).click();
+    assert.equal(await lab.getAttribute('data-gold-effect'),'mirror');
+    assert.ok((await style()).animation.includes('foil-flash'));
+    await page.getByRole('button',{name:'C · 液态鎏金'}).click();
+    assert.equal(await lab.getAttribute('data-gold-effect'),'liquid');
+    assert.ok((await style()).animation.includes('foil-liquid'));
+    await page.getByRole('button',{name:'D · 熔金辉光'}).click();
+    assert.equal(await lab.getAttribute('data-gold-effect'),'ember');
+    assert.ok((await style()).animation.includes('foil-ember'));
+    const standard=(await style()).duration;
+    await page.getByRole('button',{name:'慢速'}).click();
+    const slow=(await style()).duration;
+    await page.getByRole('button',{name:'快速'}).click();
+    const fast=(await style()).duration;
+    assert.ok(slow>standard&&fast<standard&&fast>0,
+      'Gold lab changes CSS animation durations without redrawing the poster.');
+    await page.getByRole('button',{name:'暂停动画'}).click();
+    assert.equal((await style()).state,'paused');
+    await page.getByRole('button',{name:'继续播放'}).click();
+    assert.equal((await style()).state,'running');
+    const darkGradient=(await style()).gradient;
+    await page.getByRole('button',{name:'浅色',exact:true}).click();
+    await page.waitForFunction(()=>document.documentElement.dataset.theme==='light');
+    assert.notEqual((await style()).gradient,darkGradient,
+      'Light mode has separate bronze ink gradients with sufficient contrast.');
+    await page.getByRole('button',{name:'原版',exact:true}).click();
+    assert.equal(await lab.getAttribute('data-gold-effect'),'original');
+    assert.equal((await style()).animation,'none',
+      'Original option restores the unanimated production text.');
+    await page.getByRole('button',{name:'A · 香槟流金'}).click();
+    await lab.getByRole('button',{name:'下一张Mythic纪念卡'}).click();
+    await page.locator('.mythic-poster.is-active[data-poster-game="101"]').waitFor();
+    assert.equal(await title.innerText(),'Test Game 1',
+      'Switching real Mythic games retains selected foil treatment.');
+    await page.getByRole('button',{name:'关闭鎏金预览'}).click();
+    await lab.waitFor({state:'detached'});
+    assert.ok(!new URL(page.url()).searchParams.has('mythic-gold-demo'));
+    await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
+    await context.close();
+    console.log('Mythic title gold demo: PASS real poster, four effects, speed, pause, theme, game navigation and exit');
+  }
+
   // A user who leaves Overview open (without returning focus or entering Manage)
   // must see new Xbox snapshots after the cheap global status poll.
   {
