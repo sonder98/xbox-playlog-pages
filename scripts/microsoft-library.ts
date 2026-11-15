@@ -353,7 +353,12 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    }
    if(version==='1')game.score=awards.filter(a=>a.unlocked).reduce((sum,a)=>sum+(a.points||0),0);
    if(expectedScore===null)game.maxScore=returnedScore;
-   if(awards.length!==game.total||unlocked!==game.earned||(expectedScore!==null&&expectedScore!==returnedScore)){audit.summaryMismatches++;throw Error('Xbox 成就明细与摘要不一致。');}
+   const mismatches={total:awards.length!==game.total,earned:unlocked!==game.earned,score:expectedScore!==null&&expectedScore!==returnedScore};
+   if(mismatches.total||mismatches.earned||mismatches.score){
+    // Booleans only: identify the broken server contract without exposing a game or player.
+    console.error('微软成就摘要校验差异：'+JSON.stringify(mismatches));
+    audit.summaryMismatches++;throw Error('Xbox 成就明细与摘要不一致。');
+   }
    game.achievements=awards;game.progressScanVersion=1;complete=true;audit.complete++;audit.detailedReads++;audit.contracts[version]=(audit.contracts[version]||0)+1;
    failureStage='group-metadata';
    let groups=officialGroups(data.pages,game.id,awards);
