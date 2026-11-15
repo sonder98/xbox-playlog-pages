@@ -8,6 +8,8 @@ on:
       - '.github/workflows/sync.yml'
       - 'src/**'
       - 'scripts/**'
+      # Xbox-only backend changes already run sync.yml, which dispatches Pages on success.
+      - '!scripts/microsoft-*.ts'
       - 'data/**'
       - 'public/**'
       - 'index.html'
