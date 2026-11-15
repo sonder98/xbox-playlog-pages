@@ -235,6 +235,8 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  const fatal=(error:unknown)=>error instanceof XboxReadError&&[401,429].includes(error.status);
  for(let i=0;i<games.length;i++){
   const game=games[i],old=prior.get(game.id);let complete=false;
+  // Diagnostic breadcrumbs never include gamer data, title IDs, or endpoint URLs.
+  let failureStage='before-detail',failureDecision='not-classified';
   // Xbox visibility controls the game library and recent lists, not achievement
   // history. Hidden/unknown titles with earned-achievement evidence must be scanned.
   const titleForVisibility=titles.find(t=>String(t.titleId)===game.id);
@@ -255,6 +257,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
     audit.processed++;options.progress?.(audit.processed,games.length,audit);continue;
    }
    let decision=detailCacheDecision(old,summary,lastPlayed,audit.fullRefresh);
+   failureDecision=decision;
    // The official achievement detail endpoint can reflect new unlocks before
    // Xbox title-history summary counters update. Re-read recent games even
    // when the title-history summary looks unchanged.
@@ -273,6 +276,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    // New earned IDs force a full read. Unlocked-but-unchanged catalogs are
    // refreshed during the daily full scan to detect unearned DLC additions.
    if(decision==='missingSummary'&&old){
+    failureStage='earned-probe';
     const isLegacy=titles.find(t=>String(t.titleId)===game.id)?.devices?.some((d:any)=>/xbox\s*360/i.test(String(d)))||summary?.sourceVersion===1;
     try{
      const probe=isLegacy?await pagesFor(game.id,'1',false,true,true):
@@ -284,11 +288,14 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
       decision='verifiedEarned';
     }catch(error){if(fatal(error))throw error;/* Unknown probe contract: full fetch below. */}
    }
+   failureDecision=decision;
+   failureStage='reuse-or-detail';
    audit.reuseReasons[decision]=(audit.reuseReasons[decision]||0)+1;
    if(decision==='reused'||decision==='verifiedEarned'||decision==='inactiveReuse'){
     const cached=old!,oldAchievements=cached.achievements||[],oldGroups=cached.groups||[];
     let minutes=cached.minutes;
     if(sweepPlaytime||shouldReadPlaytime(lastPlayed,cached.minutes,audit.at)){
+     failureStage='playtime-stats';
      const observed=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id);
      sampleMinutes(game.id,observed);
      minutes=observed??cached.minutes;
@@ -300,6 +307,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
     if(game.minutes!==null)audit.playtimeTitles++;options.progress?.(audit.processed,games.length,audit);continue;
    }
    let data:Awaited<ReturnType<typeof pagesFor>>|undefined,version='6';const isLegacy=titles.find(t=>String(t.titleId)===game.id)?.devices?.some((d:any)=>/xbox\s*360/i.test(String(d)))||titles.find(t=>String(t.titleId)===game.id)?.achievement?.sourceVersion===1;
+   failureStage='achievement-details';
    if(isLegacy){
     data=await legacyFor(game.id);version='1';audit.legacy++;
    }else{
@@ -322,6 +330,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    }
    if(version!=='1'){
     // Explicit possibleOnly catalog prevents unlocked-only payloads from masquerading as full lists.
+    failureStage='achievement-catalog';
     const catalog=await pagesFor(game.id,version,true),current=new Map(data.raw.map(a=>[String(a.id),a])),ids=new Set(catalog.raw.map(a=>String(a.id)));
     if(data.raw.some(a=>!ids.has(String(a.id))))throw Error('Xbox 已解锁成就与完整目录不一致。');
     data={raw:catalog.raw.map(a=>{
@@ -329,6 +338,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
      return {...a,...progress,rarity:progress?.rarity??a.rarity,mediaAssets:progress?.mediaAssets?.length?progress.mediaAssets:a.mediaAssets,...(!progress?{progressState:'NotStarted',progression:undefined,unlocked:false}:{})};
     }),pages:[...data.pages,...catalog.pages]};
    }
+   failureStage='catalog-validation';
    const awards=data.raw.map(achievement),unlocked=awards.filter(a=>a.unlocked).length;
    const titleSummary=titles.find(t=>String(t.titleId)===game.id)?.achievement;
    const expectedTotal=typeof titleSummary?.totalAchievements==='number'&&titleSummary.totalAchievements>0?titleSummary.totalAchievements:null,expectedEarned=version==='1'||(titleSummary?.totalAchievements===0&&titleSummary?.currentAchievements===0&&unlocked>0)?null:typeof titleSummary?.currentAchievements==='number'?titleSummary.currentAchievements:null;
@@ -345,6 +355,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    if(expectedScore===null)game.maxScore=returnedScore;
    if(awards.length!==game.total||unlocked!==game.earned||(expectedScore!==null&&expectedScore!==returnedScore)){audit.summaryMismatches++;throw Error('Xbox 成就明细与摘要不一致。');}
    game.achievements=awards;game.progressScanVersion=1;complete=true;audit.complete++;audit.detailedReads++;audit.contracts[version]=(audit.contracts[version]||0)+1;
+   failureStage='group-metadata';
    let groups=officialGroups(data.pages,game.id,awards);
    if(!groups&&version!=='6'){
     try{const metadata=await pagesFor(game.id,'6',true);groups=officialGroups(metadata.pages,game.id,awards);
@@ -364,6 +375,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    audit.images+=awards.filter(a=>!!a.image).length;audit.unlockDates+=awards.filter(a=>!!a.unlockedAt).length;
    // Legacy time is explicitly unavailable, unless an earlier direct snapshot has a value.
    if(version!=='1'){
+    failureStage='playtime-stats';
     game.minutes=playtime(await provider.call('/player/stats',{xuids:[provider.xuid],arrangebyfield:'xuid',stats:[{name:'MinutesPlayed',titleId:game.id}]}),game.id);
     sampleMinutes(game.id,game.minutes);audit.statsReads++;
    }
@@ -374,6 +386,23 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    if(game.officialHidden!==false&&error instanceof XboxReadError&&[403,404].includes(error.status)){
     if(old){games[i]={...old,officialHidden:game.officialHidden};audit.preserved++;}
    }else{
+    // Only emit controlled error categories. Raw messages can carry private data.
+    const knownErrors:Record<string,string>={
+     'Xbox 成就明细与摘要不一致。':'summary-mismatch',
+     'Xbox 成就读取未完成。':'no-achievement-data',
+     'Xbox 已解锁成就与完整目录不一致。':'catalog-mismatch',
+     'Xbox 成就编号无效或重复。':'invalid-achievement-id',
+     'Xbox 旧版目录与已解锁列表不一致。':'legacy-catalog-mismatch',
+     'Xbox 分页响应格式无效。':'invalid-page',
+     'Xbox 分页令牌无效或重复。':'invalid-pagination-token',
+     'Xbox 分页超过验证上限。':'pagination-limit',
+     'Xbox 数据读取连接失败。':'connection-failure',
+     'Xbox 数据读取返回无效 JSON。':'invalid-json',
+     'Title ID 格式无效。':'invalid-title-id'
+    };
+    const reason=error instanceof XboxReadError?'http-'+error.status:
+     error instanceof Error?(knownErrors[error.message]||'other'):'other';
+    console.error('微软单游戏失败诊断：'+JSON.stringify({kind:old?'existing':'new',stage:failureStage,decision:failureDecision,reason}));
     audit.failed++;
     if(old){games[i]=complete?{...game,minutes:old.minutes,officialHidden:game.officialHidden}:{...old,officialHidden:game.officialHidden};audit.preserved++;}
     if(fatal(error)){audit.interrupted=true;break;}
