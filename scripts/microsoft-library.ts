@@ -105,6 +105,12 @@ export async function titleAliases(read:(path:string)=>Promise<any>){
  for(const version of ['2','1'])try{const extra=await collectPages(t=>read('/player/achievementHistory?contractVersion='+version+'&locale=en-US'+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');values.push(...extra.values);}catch(error){if(error instanceof XboxReadError&&[401,429].includes(error.status))throw error;}
  const aliases=new Map<string,string[]>();for(const t of values)if(typeof t.name==='string'){const id=String(t.titleId);aliases.set(id,[...new Set([...(aliases.get(id)||[]),t.name])]);}return aliases;
 }
+/** League of Legends is a Riot PC/Game Pass linked entitlement, not an Xbox-achievement title.
+ * An Xbox association/title-history entry does not establish actual gameplay.
+ * Match only the exact title; never hide unrelated games or all zero-achievement games. */
+export function isXboxEntitlementOnlyTitle(name:unknown):boolean{
+ return typeof name==='string'&&normalizedName(name)==='leagueoflegends';
+}
 export function mergeTitleHistories(hub:any[],modern:any[],legacy:any[]){
  const titles=new Map(hub.filter(t=>t.type!=='App').map(t=>[String(t.titleId),t]));
  for(const [source,list] of [[2,modern],[1,legacy]] as const)for(const item of list){
@@ -202,6 +208,11 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
   try{const list=await collectPages(t=>provider.call('/player/achievementHistory?locale=en-AU&contractVersion='+version+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');extra.push(list.values);achievementPages+=list.pages;}catch(error){if(error instanceof XboxReadError&&[401,429].includes(error.status))throw error;historyFailures++;extra.push([]);}
  }
  const hubTitles=titles.length;titles=mergeTitleHistories(titles,extra[0],extra[1]);
+ // Title-history and achievement-history may report a linked Riot entitlement even
+ // if it has never been played. Remove it from the current scan and the prior
+ // encrypted candidate; avoid repeatedly querying a nonexistent Xbox catalog.
+ const entitlementOnlyIds=new Set(titles.filter(t=>isXboxEntitlementOnlyTitle(t.name)).map(t=>String(t.titleId)));
+ titles=titles.filter(t=>!entitlementOnlyIds.has(String(t.titleId)));
  if(!titles.length||titles.length>=5000)throw Error('Xbox 游戏历史为空或超出上限；未覆盖暂存记录。');
  const prior=options.previous?.profile.xuid===provider.xuid?new Map(options.previous.games.map(g=>[g.id,g])):new Map<string,Game>();
  // Display policy: explicit visible=true is the only showable Xbox state.
@@ -420,7 +431,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
   audit.processed++;options.progress?.(audit.processed,games.length,audit);
  }
  // Keep previous titles missing from this response; a partial response cannot erase history.
- const ids=new Set(games.map(g=>g.id));for(const [id,g]of prior)if(!ids.has(id)){games.push({...g,officialHidden:undefined});audit.preserved++;}
+ const ids=new Set(games.map(g=>g.id));for(const [id,g]of prior)if(!ids.has(id)&&!entitlementOnlyIds.has(id)&&!isXboxEntitlementOnlyTitle(g.name)){games.push({...g,officialHidden:undefined});audit.preserved++;}
  let aliases=new Map<string,string[]>();if(options.baseline)aliases=await titleAliases(p=>provider.call(p));
  audit.comparison=compareLibrary(games,options.baseline,aliases);
  audit.unknownGroups=countVisibleUnknownGroups(games);
