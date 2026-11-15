@@ -355,7 +355,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    if(expectedScore===null)game.maxScore=returnedScore;
    const mismatches={total:awards.length!==game.total,earned:unlocked!==game.earned,score:expectedScore!==null&&expectedScore!==returnedScore};
    if(mismatches.total||mismatches.earned||mismatches.score){
-    // Booleans only: identify the broken server contract without exposing a game or player.
+    // Booleans only: distinguish server summary discrepancies without exposing title or player data.
     console.error('微软成就摘要校验差异：'+JSON.stringify(mismatches));
     audit.summaryMismatches++;throw Error('Xbox 成就明细与摘要不一致。');
    }
