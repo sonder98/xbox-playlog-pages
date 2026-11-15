@@ -508,4 +508,5 @@ test('a single existing Xbox summary mismatch preserves old awards and is explic
  assert.equal(audit.summaryMismatches,1);
  assert.deepEqual(result.games[0],{...old,officialHidden:false});
  assert.ok(result.warnings.some(w=>w.includes('1 个游戏')));
+ assert.ok(result.warnings.some(w=>w.includes('同步异常游戏：PRIVATE-GAME')),'Failed title names appear only in authenticated encrypted history warnings');
 });
