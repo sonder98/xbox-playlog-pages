@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {australianArtwork} from '../scripts/microsoft-artwork.ts';
+import {australianArtwork,artworkCheckDue,AU_ARTWORK_CHECK_MS} from '../scripts/microsoft-artwork.ts';
 import type {RecordData} from '../src/data.ts';
 const image=(purpose:string,width:number,height:number,uri:string)=>({ImagePurpose:purpose,Width:width,Height:height,Uri:'//store-images.s-microsoft.com/'+uri});
 test('AU catalog selects TitledHeroArt before higher-resolution SuperHeroArt, never a screenshot',async()=>{
@@ -50,7 +50,7 @@ test('Missing TitledHeroArt uses SuperHeroArt, then BoxArt if no hero exists',as
  assert.equal(square.games[0].posterImagePurpose,'Screenshot');
 });
 test('Verified AU TitledHeroArt remains reusable for incremental sync',async()=>{
- const old={games:[{id:'123',name:'Game',image:'https://store-images.s-microsoft.com/image/square',detailImage:'https://store-images.s-microsoft.com/image/hero',detailImagePurpose:'TitledHeroArt',posterImage:'https://store-images.s-microsoft.com/image/shot',posterImagePurpose:'Screenshot',posterSelectionVersion:2}]} as RecordData;
+ const old={games:[{id:'123',name:'Game',image:'https://store-images.s-microsoft.com/image/square',detailImage:'https://store-images.s-microsoft.com/image/hero',detailImagePurpose:'TitledHeroArt',posterImage:'https://store-images.s-microsoft.com/image/shot',posterImagePurpose:'Screenshot',posterSelectionVersion:2,artworkCheckedAt:new Date().toISOString()}]} as RecordData;
  const next={games:[{id:'123',name:'Game',image:''}]} as RecordData;
  await australianArtwork(next,async()=>{throw Error('should not contact catalog');},old);
  assert.equal(next.games[0].detailImage,old.games[0].detailImage);
@@ -183,7 +183,7 @@ test('incremental Mythic gallery removes old repeated screenshots without resett
  const old={games:[{id:'7',name:'Way of the Sword',image:'https://store-images.s-microsoft.com/image/cover',
   detailImage:'https://store-images.s-microsoft.com/image/titled',
   detailImagePurpose:'TitledHeroArt',posterImage:'https://store-images.s-microsoft.com/image/repeated',
-  posterImagePurpose:'Screenshot',posterSelectionVersion:3,earned:1,total:1,
+  posterImagePurpose:'Screenshot',posterSelectionVersion:3,earned:1,total:1,artworkCheckedAt:new Date().toISOString(),
   posterScreenshots:['https://store-images.s-microsoft.com/image/repeated?w=720',
    'https://store-images.s-microsoft.com/image/repeated?w=1080',
    'https://store-images.s-microsoft.com/image/scene-two'],
@@ -195,4 +195,53 @@ test('incremental Mythic gallery removes old repeated screenshots without resett
   'https://store-images.s-microsoft.com/image/scene-two'
  ]);
  assert.equal(fresh.games[0].posterRotationStartDay,'2026-11-06');
+});
+
+test('seven-day Australian Store audit updates Wuthering Waves square and wide cover',async()=>{
+ const yesterday=new Date(Date.now()-86400_000).toISOString();
+ const eightDays=new Date(Date.now()-8*86400_000).toISOString();
+ const current=new Date().toISOString();
+ assert.equal(AU_ARTWORK_CHECK_MS,604800000);
+ assert.equal(artworkCheckDue(eightDays,current),true);
+ assert.equal(artworkCheckDue(yesterday,current),false);
+ assert.equal(artworkCheckDue(undefined,current),true);
+ const old={games:[{id:'201',name:'Wuthering Waves',
+  image:'https://store-images.s-microsoft.com/image/old-square',
+  detailImage:'https://store-images.s-microsoft.com/image/old-titled',
+  detailImagePurpose:'TitledHeroArt',
+  posterImage:'https://store-images.s-microsoft.com/image/old-shot',
+  posterImagePurpose:'Screenshot',posterSelectionVersion:3,artworkCheckedAt:eightDays,
+  earned:0,total:1}]} as RecordData;
+ const fresh={at:current,games:[{id:'201',name:'Wuthering Waves',image:'',earned:0,total:1}]} as RecordData;
+ let calls=0;
+ const request:typeof fetch=async()=>{calls++;return Response.json({Products:[{ProductKind:'Game',LocalizedProperties:[{
+  Language:'en-AU',ProductTitle:'Wuthering Waves',Images:[
+   image('BoxArt',1024,1024,'image/new-square'),
+   image('TitledHeroArt',1920,1080,'image/new-titled'),
+   image('Screenshot',1920,1080,'image/new-shot')
+  ]}]}]});};
+ const checked=await australianArtwork(fresh,request,old);
+ assert.equal(calls,1);
+ assert.equal(checked.squareChanged,1);
+ assert.equal(checked.heroChanged,1);
+ assert.equal(fresh.games[0].image,'https://store-images.s-microsoft.com/image/new-square');
+ assert.equal(fresh.games[0].detailImage,'https://store-images.s-microsoft.com/image/new-titled');
+ assert.equal(fresh.games[0].artworkCheckedAt,current);
+ const next={at:new Date(Date.parse(current)+3600_000).toISOString(),games:[{id:'201',name:'Wuthering Waves',image:'',earned:0,total:1}]} as RecordData;
+ const reused=await australianArtwork(next,async()=>{throw Error('must not fetch every hour');},fresh);
+ assert.equal(reused.queried,0);
+ assert.equal(next.games[0].image,fresh.games[0].image);
+ assert.equal(next.games[0].detailImage,fresh.games[0].detailImage);
+});
+test('weekly AU lookup missing data preserves old cover and remains retryable',async()=>{
+ const old={games:[{id:'201',name:'Wuthering Waves',image:'https://store-images.s-microsoft.com/image/old-square',
+  detailImage:'https://store-images.s-microsoft.com/image/old-titled',detailImagePurpose:'TitledHeroArt',
+  posterImage:'https://store-images.s-microsoft.com/image/old-shot',posterImagePurpose:'Screenshot',
+  posterSelectionVersion:3,artworkCheckedAt:'2026-01-01T00:00:00Z'}]} as RecordData;
+ const fresh={at:new Date().toISOString(),games:[{id:'201',name:'Wuthering Waves',image:''}]} as RecordData;
+ const answer=await australianArtwork(fresh,async()=>new Response('',{status:404}),old);
+ assert.equal(answer.queried,1);
+ assert.equal(fresh.games[0].image,old.games[0].image);
+ assert.equal(fresh.games[0].detailImage,old.games[0].detailImage);
+ assert.equal(fresh.games[0].artworkCheckedAt,old.games[0].artworkCheckedAt);
 });
