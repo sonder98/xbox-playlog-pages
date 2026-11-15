@@ -114,8 +114,11 @@ const scanSeconds=Math.round((Date.now()-began)/1000);
 // than being guessed from their timestamps.
 if(syncMechanism)result.record.syncMechanism=syncMechanism;
 // Only aggregate counts: no XUID, game names, credentials, private snapshots or timestamps.
-console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,emptySkipped:result.audit.emptySkipped,emptyCached:result.emptyTitles.length,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed}));
-if(result.audit.failed||result.audit.interrupted||result.audit.historySourcesFailed)throw Error('微软同步未完整完成。');
+console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,emptySkipped:result.audit.emptySkipped,emptyCached:result.emptyTitles.length,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed,unpreservedFailures:result.audit.unpreservedFailures}));
+// An isolated previously seen title can preserve its last data without blocking other games.
+// Never publish if a new title failed, history sources failed or a fatal 401/429 stopped the scan.
+if(result.audit.interrupted||result.audit.historySourcesFailed||result.audit.unpreservedFailures)throw Error('微软同步未完整完成。');
+if(result.audit.failed)console.warn('微软同步部分降级：'+result.audit.failed+' 个旧游戏保留上次数据，其他游戏继续发布；不会将不一致的明细写入档案。');
 const artworkStarted=Date.now();
 const artwork=await australianArtwork(result.record,fetch,previous[0]);
 console.log('澳区英文封面覆盖：'+JSON.stringify({...artwork,seconds:Math.round((Date.now()-artworkStarted)/1000)}));
@@ -131,9 +134,9 @@ logMythicScreenshotCache(result.record.games);
 auditReportedRotation(result.record.games,previous[0]?.games||[]);
 console.log('图片缓存耗时（秒）：'+Math.round((Date.now()-mediaStarted)/1000));
 writeState(root+'/candidate.json',{...result,record:{...result.record,games:allScannedGames},
- lastFullCatalogAt:result.audit.fullRefresh?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);
+ lastFullCatalogAt:result.audit.fullRefresh&&!result.audit.failed?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);
 session.save();
 const daily=appendPlaytimeSamples(ledger,result.statsSamples);
 await publishSnapshot(result.record,previous.slice(0,29),target,daily,fixedPcMetascores(result.record.games.map(g=>g.id),key));
 console.log('每日时长采样：'+JSON.stringify({freshSamples:result.statsSamples.length,observedGames:Object.keys(daily.latest).length,dates:Object.keys(daily.days).length,crossDayIntervals:Object.keys(daily.crossDay).length}));
-console.log('微软正式同步完成：'+JSON.stringify({games:result.record.games.length,achievementsWithRarity:result.audit.rarityAchievements,baseGroups:result.audit.officialBaseGroups,dlcGroups:result.audit.officialAddonGroups,artwork,seconds:Math.round((Date.now()-began)/1000)}));
+console.log('微软正式同步完成：'+JSON.stringify({games:result.record.games.length,achievementsWithRarity:result.audit.rarityAchievements,baseGroups:result.audit.officialBaseGroups,dlcGroups:result.audit.officialAddonGroups,degradedGames:result.audit.failed,artwork,seconds:Math.round((Date.now()-began)/1000)}));
