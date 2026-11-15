@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {achievement,officialAchievementProgress,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue,countVisibleUnknownGroups,refreshGroupingWarnings} from '../scripts/microsoft-library.ts';
+import {achievement,officialAchievementProgress,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue,countVisibleUnknownGroups,refreshGroupingWarnings,isXboxEntitlementOnlyTitle} from '../scripts/microsoft-library.ts';
 import {officialGameVisible} from '../src/data.ts';
 import type {Achievement,Game,RecordData} from '../src/data.ts';
 const config={clientId:'11111111-1111-1111-1111-111111111111',refreshToken:'PRIVATE-REFRESH'};
@@ -509,4 +509,34 @@ test('a single existing Xbox summary mismatch preserves old awards and is explic
  assert.deepEqual(result.games[0],{...old,officialHidden:false});
  assert.ok(result.warnings.some(w=>w.includes('1 个游戏')));
  assert.ok(result.warnings.some(w=>w.includes('同步异常游戏：PRIVATE-GAME')),'Failed title names appear only in authenticated encrypted history warnings');
+});
+
+test('League of Legends linked Game Pass entitlement never enters a played Xbox archive',async()=>{
+ assert.equal(isXboxEntitlementOnlyTitle('League of Legends'),true);
+ assert.equal(isXboxEntitlementOnlyTitle('League of Legends: Wild Rift'),false);
+ assert.equal(isXboxEntitlementOnlyTitle('Legends of Runeterra'),false);
+ const previous=record([
+  {...game('10'),name:'League of Legends',total:5,earned:0,score:0,maxScore:500,achievements:[]},
+  game('1')
+ ]);
+ const queried:string[]=[];
+ const request:typeof fetch=async input=>{
+  const u=new URL(String(input));
+  if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});
+  if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
+  if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:[
+   {titleId:'10',name:'League of Legends',titleHistory:{visible:true},achievement:{totalAchievements:5,currentAchievements:0,totalGamerscore:500}},
+   {titleId:'1',name:'PRIVATE-GAME',titleHistory:{visible:true},achievement:{totalAchievements:2,currentAchievements:1,currentGamerscore:10,totalGamerscore:20}}
+  ]});
+  if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});
+  queried.push(u.toString());throw Error('Unexpected game detail lookup');
+ };
+ const result=await scanMicrosoft(config,{request,pause:async()=>{},previous});
+ assert.deepEqual(result.record.games.map(g=>g.id),['1']);
+ assert.equal(result.audit.titles,1);
+ assert.equal(result.audit.failed,0);
+ assert.equal(result.record.warnings.some(w=>w.includes('League of Legends')),false);
+ assert.equal(queried.length,0,'Entitlement game must not trigger Xbox achievement or playtime calls');
 });
