@@ -482,3 +482,30 @@ test('Manual recent-achievement verification detects a newly unlocked achievemen
  assert.equal(verified.record.games[0].achievements?.find(a=>a.id==='2')?.unlocked,true);
  assert.ok(detailCalls>0);
 });
+
+// A previously known title with an inconsistent Xbox summary must not overwrite its cached awards.
+// A scheduler can safely publish other games while reporting this title as degraded.
+test('a single existing Xbox summary mismatch preserves old awards and is explicitly recoverable',async()=>{
+ const old={...game(),achievements:[award('1',true)]};
+ const request:typeof fetch=async(input)=>{
+  const url=new URL(String(input));
+  if(url.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  if(url.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});
+  if(url.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
+  if(url.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(url.hostname==='titlehub.xboxlive.com')return Response.json({titles:[{titleId:'1',name:'PRIVATE-GAME',type:'Game',titleHistory:{visible:true},achievement:{totalAchievements:3,currentAchievements:1,currentGamerscore:10,totalGamerscore:30}}]});
+  if(url.pathname.includes('/history/titles'))return Response.json({titles:[]});
+  if(url.hostname==='achievements.xboxlive.com')return Response.json({achievements:[
+   {id:'1',name:'Award 1',progressState:'Achieved',rewards:[{type:'Gamerscore',value:10}]},
+   {id:'2',name:'Award 2',progressState:'NotStarted',rewards:[{type:'Gamerscore',value:10}]}
+  ]});
+  throw Error('Unexpected external request');
+ };
+ const {record:result,audit}=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old])});
+ assert.equal(audit.failed,1);
+ assert.equal(audit.unpreservedFailures,0);
+ assert.equal(audit.interrupted,false);
+ assert.equal(audit.summaryMismatches,1);
+ assert.deepEqual(result.games[0],{...old,officialHidden:false});
+ assert.ok(result.warnings.some(w=>w.includes('1 个游戏')));
+});
