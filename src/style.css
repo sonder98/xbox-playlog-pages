@@ -4551,3 +4551,10 @@ footer .dot {
   width:28%;min-width:25px;max-width:34px;margin-bottom:0;
  }
 }
+
+/* Library game-list metrics: keep achievement counts at their existing start
+   position while pinning the lifetime playtime to the far right of the row. */
+.library-games-panel .game-card .game-achievement > .game-playtime {
+  margin-left: auto;
+  text-align: right;
+}
