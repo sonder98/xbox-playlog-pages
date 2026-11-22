@@ -533,7 +533,9 @@ test('League of Legends linked Game Pass entitlement never enters a played Xbox 
   if(u.pathname.includes('/history/titles'))return Response.json({titles:[]});
   queried.push(u.toString());throw Error('Unexpected game detail lookup');
  };
- const result=await scanMicrosoft(config,{request,pause:async()=>{},previous});
+ // Freeze the scan outside daily and midnight refresh windows. This test
+ // verifies exclusion of the entitlement, not forced refreshing of another game.
+ const result=await scanMicrosoft(config,{request,pause:async()=>{},previous,now:'2026-11-14T03:00:00Z',lastFullCatalogAt:'2026-11-14T00:00:00Z'});
  assert.deepEqual(result.record.games.map(g=>g.id),['1']);
  assert.equal(result.audit.titles,1);
  assert.equal(result.audit.failed,0);
