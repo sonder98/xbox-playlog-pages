@@ -4191,6 +4191,24 @@ footer .dot {
 :root[data-theme="light"] .pull-refresh-install {color:var(--on-accent);}
 
 
+/* The detail Mythic launch badge is dark by default. In light mode it
+   should follow the ivory-and-gold collectible palette, at both desktop
+   and compact phone widths, without changing the badge's dimensions. */
+:root[data-theme="light"] .game-detail .detail-mythic-trigger {
+  background:linear-gradient(120deg,#FFF9EA,#F1E5C9);
+  border-color:#B99457;
+  color:#74531F;
+}
+:root[data-theme="light"] .game-detail .detail-mythic-trigger:hover,
+:root[data-theme="light"] .game-detail .detail-mythic-trigger:focus-visible {
+  background:linear-gradient(120deg,#FFF4D5,#EBD6A9);
+  border-color:#9C7235;
+  box-shadow:0 0 0 2px rgba(165,121,53,.14);
+}
+:root[data-theme="light"] .game-detail .detail-mythic-trigger svg {
+  color:#8B672C;
+}
+
 /* Light-theme surfaces that were missed by the first pass.
    The game detail is a modal, not a dark full-screen destination: keep the
    surrounding page visible through a gentle shadow instead of a black scrim. */
