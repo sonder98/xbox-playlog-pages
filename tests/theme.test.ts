@@ -30,6 +30,9 @@ test('light-mode detail Mythic trigger overrides the shared dark background with
   assert.match(scoped[1],/background:linear-gradient\(120deg,#FFF9EA,#F1E5C9\)/);
   assert.match(scoped[1],/color:#74531F/);
   assert.match(css,/:root\[data-theme="light"\] \.game-detail \.detail-mythic-trigger:hover,/);
-  assert.match(css,/\.game-detail \.detail-summary \.detail-mythic-trigger\{[^}]*width:31px/,'mobile icon-only size remains unchanged');
+  assert.match(css,/\.game-detail \.detail-summary \.mythic-badge-art\.is-compact\{[^}]*transform:translateX\(1px\)/,'desktop and mobile correct the icon optical center');
+  assert.match(css,/\.game-detail \.detail-summary \.detail-mythic-trigger\{[^}]*width:32px;height:32px;min-height:32px;padding:0;gap:0;[^}]*display:grid;place-items:center/,'phone ring and icon use integer-centered geometry');
+  assert.match(css,/\.game-detail \.detail-summary \.mythic-badge-art\.is-compact\{width:24px;height:24px\}/,'phone art has symmetrical 4px inset');
+  assert.match(css,/\.game-detail \.detail-summary \.detail-mythic-trigger\{[^}]*min-height:31px;padding:3px 9px/,'desktop icon-plus-text badge remains unchanged');
   assert.match(css,/\.game-detail \.detail-summary \.detail-mythic-label\{display:none\}/,'mobile badge keeps icon-only layout');
 });
