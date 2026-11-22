@@ -1876,8 +1876,17 @@ try{
     if(posterFrame.fontLoading)assert.equal(posterFrame.titleVisibility,'hidden',
       'Do not show a fallback title that will shift after the web font arrives');
     const galleryFooterHeight=await posterWall.locator('.mythic-wall-controls').evaluate(el=>el.getBoundingClientRect().height);
-    assert.ok(await posterWall.locator('.mythic-poster-emblem .mythic-badge-placeholder').first().isVisible(),
-      'Mythic badge keeps its fallback while the local file decodes');
+    const decodedMedal=posterWall.locator('.mythic-poster-emblem .mythic-badge-art').first();
+    await decodedMedal.locator('img.is-ready').waitFor({state:'visible'});
+    assert.equal(await decodedMedal.locator('.mythic-badge-placeholder').count(),0,
+      'The gold Gem fallback must unmount once the decoded badge PNG is visible');
+    const badgeCenter=await decodedMedal.evaluate(el=>{
+      const bounds=el.getBoundingClientRect(),png=el.querySelector('img').getBoundingClientRect();
+      return {x:Math.abs(bounds.left+bounds.width/2-png.left-png.width/2),
+        y:Math.abs(bounds.top+bounds.height/2-png.top-png.height/2)};
+    });
+    assert.ok(badgeCenter.x<0.5&&badgeCenter.y<0.5,
+      'The Mythic PNG must be concentric with its container: '+JSON.stringify(badgeCenter));
     const badgeSource=await posterWall.locator('.mythic-poster-emblem .mythic-badge-art img').first().evaluate(el=>({
       src:el.getAttribute('src'),width:el.naturalWidth,height:el.naturalHeight,complete:el.complete
     }));
