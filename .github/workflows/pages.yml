@@ -24,6 +24,7 @@ on:
         type: string
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 concurrency:
@@ -67,6 +68,24 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+      # GitHub's artifact upload can finish before deploy-pages can see it via
+      # the Actions artifacts API. Verify indexing before starting deployment.
+      - name: Wait for Pages artifact indexing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 24); do
+            count=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" --jq '[.artifacts[] | select(.name == "github-pages" and .expired == false)] | length')
+            if [ "$count" -gt 0 ]; then
+              echo "Pages artifact indexed (attempt $attempt)"
+              sleep 10
+              exit 0
+            fi
+            echo "Waiting for Pages artifact to appear in Actions API ($attempt/24)"
+            sleep 5
+          done
+          echo "::error::Uploaded github-pages artifact is not visible to deployment"
+          exit 1
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

@@ -46,3 +46,10 @@ test('PWA icons are generated from local SVG via existing Sharp dependency',()=>
  const sphere=readFileSync('src/xbox-brand-path.ts','utf8');
  assert.ok(sphere.includes("export const XBOX_SPHERE_PATH="));
 });
+
+test('Pages deploy waits for artifact indexing with read permission',()=>{
+ const workflow=readFileSync('.github/workflows/pages.yml','utf8');
+ assert.match(workflow,/permissions:\s*\n\s*contents: read\s*\n\s*actions: read/);
+ assert.match(workflow,/Wait for Pages artifact indexing/);
+ assert.match(workflow,/actions\/runs\/\$\{GITHUB_RUN_ID\}\/artifacts/);
+});
