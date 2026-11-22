@@ -1876,8 +1876,17 @@ try{
     if(posterFrame.fontLoading)assert.equal(posterFrame.titleVisibility,'hidden',
       'Do not show a fallback title that will shift after the web font arrives');
     const galleryFooterHeight=await posterWall.locator('.mythic-wall-controls').evaluate(el=>el.getBoundingClientRect().height);
-    assert.ok(await posterWall.locator('.mythic-poster-emblem .mythic-badge-placeholder').first().isVisible(),
-      'Mythic badge keeps its fallback while the local file decodes');
+    const decodedMedal=posterWall.locator('.mythic-poster-emblem .mythic-badge-art').first();
+    await decodedMedal.locator('img.is-ready').waitFor({state:'visible'});
+    assert.equal(await decodedMedal.locator('.mythic-badge-placeholder').count(),0,
+      'The gold Gem fallback must unmount once the decoded badge PNG is visible');
+    const badgeCenter=await decodedMedal.evaluate(el=>{
+      const bounds=el.getBoundingClientRect(),png=el.querySelector('img').getBoundingClientRect();
+      return {x:Math.abs(bounds.left+bounds.width/2-png.left-png.width/2),
+        y:Math.abs(bounds.top+bounds.height/2-png.top-png.height/2)};
+    });
+    assert.ok(badgeCenter.x<0.5&&badgeCenter.y<0.5,
+      'The Mythic PNG must be concentric with its container: '+JSON.stringify(badgeCenter));
     const badgeSource=await posterWall.locator('.mythic-poster-emblem .mythic-badge-art img').first().evaluate(el=>({
       src:el.getAttribute('src'),width:el.naturalWidth,height:el.naturalHeight,complete:el.complete
     }));
@@ -2503,8 +2512,16 @@ try{
       'Mythic medal is vertically aligned with the summary metrics');
     assert.equal(await page.locator('.game-detail .detail-summary .detail-mythic-trigger').count(),1,
       'The single-game Mythic entry is placed at the right end of the metric row');
-    assert.ok(await medal.locator('.mythic-badge-placeholder').isVisible(),
-      'Detail action renders a fallback emblem without waiting for a network image');
+    await medal.locator('.mythic-badge-art img.is-ready').waitFor({state:'visible'});
+    assert.equal(await medal.locator('.mythic-badge-placeholder').count(),0,
+      'A decoded Mythic badge must not have the old Gem rendering behind its transparent PNG');
+    const detailEmblemCenter=await medal.evaluate(el=>{
+      const ring=el.getBoundingClientRect(),art=el.querySelector('.mythic-badge-art img').getBoundingClientRect();
+      return {x:Math.abs((ring.left+ring.right-art.left-art.right)/2),
+        y:Math.abs((ring.top+ring.bottom-art.top-art.bottom)/2)};
+    });
+    assert.ok(detailEmblemCenter.x<0.6&&detailEmblemCenter.y<0.6,
+      'Phone emblem must align with the center of its gold ring: '+JSON.stringify(detailEmblemCenter));
     const stressedStats=await medal.evaluate(el=>{
       const summary=el.closest('.detail-summary'),metrics=summary.querySelector('.detail-metrics');
       const labels=[...metrics.querySelectorAll('.detail-stat > span')];
