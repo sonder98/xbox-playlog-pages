@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {normalizeThemePreference,readThemePreference,saveThemePreference,THEME_BAR_COLORS,THEME_STORAGE_KEY} from '../src/theme.ts';
 
 test('theme defaults to dark on unset, invalid, or unavailable storage',()=>{
@@ -19,4 +20,16 @@ test('theme persists without writing Xbox records or other user preferences',()=
   assert.equal(readThemePreference(store),'dark');
   assert.deepEqual(THEME_BAR_COLORS,{dark:'#0F0F0F',light:'#F4F6F3'});
   assert.doesNotThrow(()=>saveThemePreference('light',{setItem:()=>{throw new Error('blocked');}}));
+});
+
+test('light-mode detail Mythic trigger overrides the shared dark background without changing compact layout',()=>{
+  const css=readFileSync(new URL('../src/style.css',import.meta.url),'utf8');
+  assert.match(css,/\.mythic-wall-entry,\.detail-mythic-trigger\{[^}]*background:linear-gradient\(120deg,#332819,#171c1a\)/);
+  const scoped=css.match(/:root\[data-theme="light"\] \.game-detail \.detail-mythic-trigger \{([^}]+)\}/);
+  assert.ok(scoped,'light theme must override the detail badge specifically');
+  assert.match(scoped[1],/background:linear-gradient\(120deg,#FFF9EA,#F1E5C9\)/);
+  assert.match(scoped[1],/color:#74531F/);
+  assert.match(css,/:root\[data-theme="light"\] \.game-detail \.detail-mythic-trigger:hover,/);
+  assert.match(css,/\.game-detail \.detail-summary \.detail-mythic-trigger\{[^}]*width:31px/,'mobile icon-only size remains unchanged');
+  assert.match(css,/\.game-detail \.detail-summary \.detail-mythic-label\{display:none\}/,'mobile badge keeps icon-only layout');
 });
