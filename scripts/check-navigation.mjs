@@ -2516,12 +2516,17 @@ try{
     assert.equal(await medal.locator('.mythic-badge-placeholder').count(),0,
       'A decoded Mythic badge must not have the old Gem rendering behind its transparent PNG');
     const detailEmblemCenter=await medal.evaluate(el=>{
-      const ring=el.getBoundingClientRect(),art=el.querySelector('.mythic-badge-art img').getBoundingClientRect();
-      return {x:Math.abs((ring.left+ring.right-art.left-art.right)/2),
-        y:Math.abs((ring.top+ring.bottom-art.top-art.bottom)/2)};
+      const frame=el.querySelector('.mythic-badge-art').getBoundingClientRect();
+      const image=el.querySelector('.mythic-badge-art img').getBoundingClientRect();
+      const compact=getComputedStyle(el.querySelector('.detail-mythic-label')).display==='none';
+      const ring=compact?el.getBoundingClientRect():frame;
+      // On desktop the button is a long icon+text pill, so compare the art
+      // with its own frame. On phones the whole button is the round gold ring.
+      return {compact,x:Math.abs((ring.left+ring.right-image.left-image.right)/2),
+        y:Math.abs((ring.top+ring.bottom-image.top-image.bottom)/2)};
     });
     assert.ok(detailEmblemCenter.x<0.6&&detailEmblemCenter.y<0.6,
-      'Phone emblem must align with the center of its gold ring: '+JSON.stringify(detailEmblemCenter));
+      'Emblem must be centered inside the gold icon frame at every breakpoint: '+JSON.stringify(detailEmblemCenter));
     const stressedStats=await medal.evaluate(el=>{
       const summary=el.closest('.detail-summary'),metrics=summary.querySelector('.detail-metrics');
       const labels=[...metrics.querySelectorAll('.detail-stat > span')];
