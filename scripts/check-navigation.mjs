@@ -2512,8 +2512,16 @@ try{
       'Mythic medal is vertically aligned with the summary metrics');
     assert.equal(await page.locator('.game-detail .detail-summary .detail-mythic-trigger').count(),1,
       'The single-game Mythic entry is placed at the right end of the metric row');
-    assert.ok(await medal.locator('.mythic-badge-placeholder').isVisible(),
-      'Detail action renders a fallback emblem without waiting for a network image');
+    await medal.locator('.mythic-badge-art img.is-ready').waitFor({state:'visible'});
+    assert.equal(await medal.locator('.mythic-badge-placeholder').count(),0,
+      'A decoded Mythic badge must not have the old Gem rendering behind its transparent PNG');
+    const detailEmblemCenter=await medal.evaluate(el=>{
+      const ring=el.getBoundingClientRect(),art=el.querySelector('.mythic-badge-art img').getBoundingClientRect();
+      return {x:Math.abs((ring.left+ring.right-art.left-art.right)/2),
+        y:Math.abs((ring.top+ring.bottom-art.top-art.bottom)/2)};
+    });
+    assert.ok(detailEmblemCenter.x<0.6&&detailEmblemCenter.y<0.6,
+      'Phone emblem must align with the center of its gold ring: '+JSON.stringify(detailEmblemCenter));
     const stressedStats=await medal.evaluate(el=>{
       const summary=el.closest('.detail-summary'),metrics=summary.querySelector('.detail-metrics');
       const labels=[...metrics.querySelectorAll('.detail-stat > span')];
