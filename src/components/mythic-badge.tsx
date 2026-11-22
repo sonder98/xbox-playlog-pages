@@ -21,7 +21,7 @@ export function MythicBadgeArt({compact=false}:{compact?:boolean}){
  }
  useEffect(()=>{revealWhenDecoded();},[]);
  return <span className={'mythic-badge-art'+(compact?' is-compact':'')} aria-hidden="true">
-  <Gem size={compact?15:38} strokeWidth={1.5} className="mythic-badge-placeholder"/>
+  {!ready&&<Gem size={compact?15:38} strokeWidth={1.5} className="mythic-badge-placeholder"/>}
   <img ref={imageRef} src={MYTHIC_BADGE_URL} alt="" loading="eager" fetchPriority="high"
    decoding="async" className={ready?'is-ready':''}
    onLoad={revealWhenDecoded} onError={()=>setReady(false)}/>

@@ -3587,16 +3587,17 @@ footer .dot {
  object-fit:contain;object-position:50% 50%;
  opacity:0;transition:opacity .16s ease-in;
 }
-.mythic-badge-art img.is-ready{opacity:1}
+.mythic-badge-art img.is-ready{opacity:1;transition:none}
 .game-detail .detail-summary .detail-mythic-trigger{
  justify-self:end;align-self:center;margin:0;
  min-height:31px;padding:3px 9px;
  gap:5px;font-size:11px;line-height:1;flex:0 0 auto;
 }
-/* The raster crest has a subtle optical left bias. Keep the gold ring fixed
-   and shift only the interior icon toward its visual center. */
+/* Show the emblem centered in its gold ring; the previous 1px shift
+   masked the underlying problem of a Gem fallback remaining beneath the PNG. */
 .game-detail .detail-summary .mythic-badge-art.is-compact{
- width:23px;height:23px;transform:translateX(1px);
+ display:grid;place-items:center;gap:0;
+ width:23px;height:23px;transform:none;
 }
 .game-detail .achievement-progress-actions{margin-left:auto}
 @media(max-width:700px){
