@@ -3593,7 +3593,11 @@ footer .dot {
  min-height:31px;padding:3px 9px;
  gap:5px;font-size:11px;line-height:1;flex:0 0 auto;
 }
-.game-detail .detail-summary .mythic-badge-art.is-compact{width:23px;height:23px}
+/* The raster crest has a subtle optical left bias. Keep the gold ring fixed
+   and shift only the interior icon toward its visual center. */
+.game-detail .detail-summary .mythic-badge-art.is-compact{
+ width:23px;height:23px;transform:translateX(1px);
+}
 .game-detail .achievement-progress-actions{margin-left:auto}
 @media(max-width:700px){
  .game-detail .detail-summary{column-gap:clamp(5px,1.5vw,9px);overflow:visible}
@@ -3601,9 +3605,10 @@ footer .dot {
  .game-detail .detail-summary .detail-stat{gap:4px;font-size:clamp(10px,3vw,12px)}
  .game-detail .detail-summary .detail-stat svg{width:15px;height:15px}
  .game-detail .detail-summary .detail-mythic-trigger{
-  min-height:31px;width:31px;padding:3px;gap:0;
+  width:32px;height:32px;min-height:32px;padding:0;gap:0;
+  display:grid;place-items:center;
  }
- .game-detail .detail-summary .mythic-badge-art.is-compact{width:23px;height:23px}
+ .game-detail .detail-summary .mythic-badge-art.is-compact{width:24px;height:24px}
  .game-detail .detail-summary .detail-mythic-label{display:none}
 }
 @media(max-width:370px){
