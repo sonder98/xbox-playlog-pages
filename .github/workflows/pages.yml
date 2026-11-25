@@ -55,6 +55,12 @@ jobs:
           path: public/media
           key: artwork-webp-v1-${{ runner.os }}-${{ github.run_id }}
           restore-keys: artwork-webp-v1-${{ runner.os }}-
+      - name: Restore independent encrypted checkpoint
+        uses: actions/cache/restore@v4
+        with:
+          path: .snapshot-backup
+          key: playlog-checkpoint-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: playlog-checkpoint-v2-
       - name: Restore newest encrypted snapshot and verify durable media coverage
         env:
           GH_TOKEN: ${{ github.token }}
