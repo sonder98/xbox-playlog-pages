@@ -11,6 +11,31 @@ const run=(command,args,options={})=>execFileSync(command,args,{encoding:'utf8',
 const available=()=>{try{run('gh',['release','view',tag]);return true;}catch{return false;}};
 const temp=()=>fs.mkdtempSync(path.join(os.tmpdir(),'playlog-assets-'));
 const cleanup=dir=>fs.rmSync(dir,{recursive:true,force:true});
+// Releases can return HTTP 5xx while replacing an existing asset. Retry
+// without touching the previous encrypted snapshot on disk.
+async function releaseUpload(files){
+ for(let attempt=1;attempt<=4;attempt++){
+  try{return run('gh',['release','upload',tag,...files,'--clobber']);}
+  catch(error){
+   if(attempt===4)throw error;
+   console.warn('Transient GitHub Release upload failure; retry '+attempt+'/3');
+   await new Promise(resolve=>setTimeout(resolve,attempt*3500));
+  }
+ }
+}
+// The already-deployed Pages copy is a last-resort encrypted backup. This is
+// recovery only for a genuinely missing Release asset (not a network timeout).
+async function recoverMissingVaultFromPages(){
+ const base='https://sonder98.github.io/xbox-playlog-pages/';
+ const responses=await Promise.all(['vault.json','status.json'].map(name=>fetch(base+name,{cache:'no-store'})));
+ if(responses.some(r=>!r.ok))throw Error('Live Release incomplete and Pages encrypted backup unavailable.');
+ const texts=await Promise.all(responses.map(r=>r.text()));
+ const [vault,status]=texts.map(JSON.parse);
+ if(vault.algorithm!=='AES-GCM'||typeof vault.ciphertext!=='string'||!status.initialized)
+  throw Error('Pages encrypted backup is invalid; refusing unsafe recovery.');
+ for(let i=0;i<2;i++)fs.writeFileSync('public/'+['vault.json','status.json'][i],texts[i]);
+ console.warn('RECOVERY: used previously deployed encrypted Pages archive because live Release lost an asset. Current Microsoft data will be rescanned before publication.');
+}
 function download(name,dir){
  try{run('gh',['release','download',tag,'--pattern',name,'--dir',dir,'--clobber']);return fs.existsSync(path.join(dir,name));}
  catch{return false;}
@@ -36,7 +61,13 @@ if(mode==='restore-snapshot'){
  if(!available()){console.log('Live release not created yet; keeping bundled encrypted bootstrap snapshot.');process.exit(0);}
  const dir=temp();
  try{
-  if(!download('vault.json',dir)||!download('status.json',dir))throw Error('Live release is incomplete; cannot use a stale encrypted snapshot.');
+  const names=new Set(JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name));
+  if(!names.has('vault.json')||!names.has('status.json')){
+   await recoverMissingVaultFromPages();
+   process.exit(0);
+  }
+  if(!download('vault.json',dir)||!download('status.json',dir))
+   throw Error('Live release assets exist but cannot be downloaded; do not substitute older data for a transient error.');
   const vault=JSON.parse(fs.readFileSync(path.join(dir,'vault.json'),'utf8'));
   const status=JSON.parse(fs.readFileSync(path.join(dir,'status.json'),'utf8'));
   if(vault.algorithm!=='AES-GCM'||typeof vault.ciphertext!=='string'||!status.initialized)throw Error('Invalid published encrypted snapshot');
@@ -65,7 +96,7 @@ if(mode==='publish'){
  const dir=temp();
  try{
   // The vault is encrypted on the runner before it is uploaded. No plaintext is published.
-  run('gh',['release','upload',tag,'public/vault.json','public/status.json','--clobber']);
+  await releaseUpload(['public/vault.json','public/status.json']);
   const current=manifest(),indexFile=path.join(dir,'media-index.txt');
   let previous='';
   if(download('media-index.txt',dir))previous=fs.readFileSync(indexFile,'utf8');
@@ -73,7 +104,7 @@ if(mode==='publish'){
    fs.writeFileSync(indexFile,current);
    const archive=path.join(dir,'playlog-media.tar.gz');
    run('tar',['-czf',archive,'-C','public','media']);
-   run('gh',['release','upload',tag,archive,indexFile,'--clobber']);
+   await releaseUpload([archive,indexFile]);
    console.log('Published durable artwork archive and integrity index.');
   }else console.log('Durable artwork archive unchanged, skipping image reupload.');
   console.log('Published encrypted snapshot without rewriting Git history.');
