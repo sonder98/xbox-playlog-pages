@@ -5,6 +5,7 @@ import {parseCatalogBundle} from './catalog-cache.ts';
 import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
 import {encryptVault,decryptVault} from '../src/crypto.ts';
+const FIXTURE_TIME='2026-11-14T12:00:00.000Z';
 const password='navigation-test-only';
 const games=Array.from({length:12},(_,i)=>({id:String(100+i),name:'Test Game '+i,image:'https://covers.example.test/square.svg',image2x:'https://covers.example.test/medium.svg',image3x:'https://covers.example.test/original.svg',devices:['Xbox'],lastPlayed:'2026-10-30T00:00:00Z',minutes:60,earned:1,total:10,score:10,maxScore:100}));
 games[0].posterImage='https://covers.example.test/landscape.svg';
@@ -432,7 +433,7 @@ try{
   {
     const pollContext=await browser.newContext({viewport:{width:1440,height:900}});
     const pollPage=await pollContext.newPage();
-    await pollPage.clock.install({time:new Date('2026-11-14T12:00:00.000Z')});
+    await pollPage.clock.install({time:new Date(FIXTURE_TIME)});
     let pollEnvelope=envelope,pollStatusAt='2026-10-30T00:00:00Z';
     await pollPage.route('**/status.json*',route=>route.fulfill({json:{initialized:true,latestAt:pollStatusAt}}));
     await pollPage.route('**/vault.json*',route=>route.fulfill({json:pollEnvelope}));
@@ -463,6 +464,7 @@ try{
   {
     const cacheContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
     const cachePage=await cacheContext.newPage();
+    await cachePage.clock.setFixedTime(new Date(FIXTURE_TIME));
     let cloudEnvelope=envelope;
     await cachePage.route('**/status.json*',route=>route.fulfill({
       json:{initialized:true,latestAt:'2026-10-30T00:00:00Z'}}));
@@ -505,7 +507,7 @@ try{
     const page=await context.newPage();
     // Keep fixed October 2026 achievement fixtures inside the recent 30-day calendar.
     // Date-only mocking preserves the application's real timers and polling behavior.
-    await page.clock.setFixedTime(new Date('2026-11-14T12:00:00.000Z'));
+    await page.clock.setFixedTime(new Date(FIXTURE_TIME));
     let activeEnvelope=envelope;
     let simulatedStatusAt=null;
     const errors=[];
@@ -735,7 +737,7 @@ try{
       }
       assert.equal(req.headers().authorization,'Bearer github_pat_fixture_only',
         'Manual sync status polling uses the existing Actions token instead of anonymous requests');
-      return route.fulfill({json:{workflow_runs:requestedId?[{id:123,display_title:'Xbox sync (workflow_dispatch · '+requestedId+')',name:'Sync Xbox records',event:'workflow_dispatch',status:'queued',conclusion:null,html_url:'https://github.com/sonder98/xbox-playlog-pages/actions/runs/123',created_at:'2026-11-14T12:00:00.000Z',updated_at:'2026-11-14T12:00:00.000Z'}]:[]}});
+      return route.fulfill({json:{workflow_runs:requestedId?[{id:123,display_title:'Xbox sync (workflow_dispatch · '+requestedId+')',name:'Sync Xbox records',event:'workflow_dispatch',status:'queued',conclusion:null,html_url:'https://github.com/sonder98/xbox-playlog-pages/actions/runs/123',created_at:FIXTURE_TIME,updated_at:FIXTURE_TIME}]:[]}});
     });
     await page.locator('.title-row .overview-refresh').click();
     const syncDialog=page.getByRole('dialog',{name:'手动同步 Xbox 游戏记录'});
