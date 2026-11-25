@@ -1,0 +1,48 @@
+name: Monitor Playlog sync health
+on:
+  schedule:
+    - cron: '37 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: playlog-health-monitor
+  cancel-in-progress: true
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check actually published data and boundary coverage
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --experimental-strip-types --input-type=module <<'JS' > /tmp/playlog-health.json
+          import {syncHealth} from './scripts/sync-health.ts';
+          let status=null;
+          try{
+            const response=await fetch('https://sonder98.github.io/xbox-playlog-pages/status.json?health='+Date.now(),{signal:AbortSignal.timeout(20000),cache:'no-store'});
+            if(response.ok)status=await response.json();
+          }catch{}
+          console.log(JSON.stringify(syncHealth(status)));
+          JS
+          level=$(jq -r .level /tmp/playlog-health.json)
+          message=$(jq -r .message /tmp/playlog-health.json)
+          echo "$message" >> "$GITHUB_STEP_SUMMARY"
+          title='Playlog automatic sync health alert'
+          issue=$(gh issue list --state open --search "$title in:title" --json number,title --jq 'map(select(.title == "Playlog automatic sync health alert")) | .[0].number // empty')
+          if [ "$level" = healthy ]; then
+            if [ -n "$issue" ]; then gh issue close "$issue" --comment "Published snapshot and monitored boundary windows are healthy again."; fi
+          elif [ "$level" = error ] || [ "$level" = critical ] || [ "$(jq '.missing|length' /tmp/playlog-health.json)" -gt 0 ]; then
+            echo "::warning::$message"
+            if [ -z "$issue" ]; then
+              gh issue create --title "$title" --body "$message" --assignee sonder98
+            fi
+          else
+            echo "::warning::$message"
+          fi

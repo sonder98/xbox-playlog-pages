@@ -8,7 +8,7 @@ export const PLAYTIME_SINCE='2026-11-01';
 export type PlaytimeSample={id:string;minutes:number;at:string};
 export type DailyPlaytimeLedger={
  version:1;timeZone:typeof PLAYTIME_TIME_ZONE;since:typeof PLAYTIME_SINCE;
- latest:Record<string,{at:string;minutes:number}>;
+ latest:Record<string,{at:string;minutes:number;creditedMinutes?:number}>;
  days:Record<string,Record<string,number>>;
  crossDay:Record<string,Record<string,number>>;
  corrections:Record<string,number>;
@@ -60,15 +60,18 @@ export function appendPlaytimeSamples(existing:unknown,samples:PlaytimeSample[])
   if(date<PLAYTIME_SINCE)continue;
   const previous=ledger.latest[id];
   if(previous&&ms<=Date.parse(previous.at))continue;
+  const highWater=previous?Math.max(previous.minutes,previous.creditedMinutes??previous.minutes):minutes;
   if(previous){
-   const delta=minutes-previous.minutes;
+   const delta=minutes-highWater;
    if(delta>0){
     const oldDate=shanghaiDate(previous.at);
     const target=ledger.days[oldDate]??={};
     target[id]=(target[id]??0)+delta;
-   }else if(delta<0)ledger.corrections[key(date,id)]=(ledger.corrections[key(date,id)]??0)+1;
+   }
+   if(minutes<previous.minutes)ledger.corrections[key(date,id)]=(ledger.corrections[key(date,id)]??0)+1;
   }
-  ledger.latest[id]={minutes,at:new Date(ms).toISOString()};
+  // Record the actual observation, but never count recovery to an already credited value.
+  ledger.latest[id]={minutes,at:new Date(ms).toISOString(),...(minutes<highWater?{creditedMinutes:highWater}:{})};
   ledger.days[date]??={};
  }
  return ledger;

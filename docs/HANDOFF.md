@@ -183,3 +183,10 @@ npm run build
 ### 2026-11-06 旧素材回填任务解除自动触发
 - `.github/workflows/refresh-au-artwork.yml` 曾在 `scripts/microsoft-artwork.ts` 发生变化时自动运行，并把旧的 `public/vault.json` 重新加密写入 Git。该历史流程与正式的 Release 发布架构不一致，还会额外触发 Pages 部署、在同一并发队列内挤掉等待执行的 Xbox 同步。
 - 因此旧任务改为**仅手动保留**，不再监听 push。日常海报截图升级、素材 WebP 缓存和最新 Xbox 数据应走 `.github/workflows/sync.yml` → Release → Pages。新增 `src/data.ts` 到正式 sync push 路径，使加密快照字段变更也能触发同步。
+
+
+### 2026-11-26 可靠性整改（覆盖上面较旧的同步说明）
+- Cloudflare 每小时 :17、北京 23:42 / 00:02 派发；GitHub sync、Pages、Microsoft shadow 使用同一最大等待队列，正式同步与部署不得并发覆盖。健康检查另用独立队列。
+- 正式同步只恢复最新有效 Release 检查点/独立加密缓存/必要时已发布 Pages；`snapshot-a.json`、`snapshot-b.json` 交替上传，校验后兼容更新旧 `vault.json` / `status.json`。拒绝初始化快照回退和缺少既有时长账本的覆盖。旧缓存路径保留迁移读取。旧 Exophase 发布和独立 AU 回填写入器已退役，AU 手动入口转派正式同步。
+- PR 必须三组浏览器回归均成功；Pages 日常仅运行单测与构建，避免日期敏感 E2E 阻塞数据发布。健康监测查看已发布状态和日界覆盖，告警 Issue 仅包含运行元数据。
+- 时长计数回退使用实际采样与已入账高水位分别记录；不删除历史天数。永久向下修正可能暂时少计，避免重复入账。

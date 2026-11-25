@@ -27,12 +27,12 @@ Cloudflare Worker 更新和控制台切换说明见 [每小时同步操作指南
 | 文件 | 职责 | 触发 |
 | --- | --- | --- |
 | `.github/workflows/sync.yml` | Xbox 正式同步、加密快照、素材缓存 | Cloudflare 每小时 :17 分派发，23:42 和 00:02 北京时间每日采样；同步代码变化或手动触发 |
-| `.github/workflows/pages.yml` | 测试、构建、浏览器导航检查、GitHub Pages 部署 | 前端／工作流修改，或正式同步完成后的手动派发 |
+| `.github/workflows/pages.yml` | 单元测试、构建、GitHub Pages 部署 | 前端／工作流修改，或正式同步完成后的手动派发 |
 | `.github/workflows/microsoft-shadow.yml` | 人工授权、compare 与 repair 工具 | 仅手动触发 |
 
 同步任务运行 `scripts/microsoft-sync.ts`：恢复 **GitHub Actions 加密私有缓存**，续期 Microsoft OAuth → Xbox 用户令牌 → XSTS，读取游戏历史、成就及必要时长；查询澳大利亚区商店素材，缓存 WebP 并在 runner 上加密记录。
 
-`scripts/live-assets.mjs` 将 **已加密** 的 `vault.json`、`status.json` 发布到 GitHub Release `playlog-live`，同时维护公共 WebP 素材归档和文件大小校验清单。正式同步不再向 Git 提交随机密文；Pages 构建从 Release 恢复最新数据，素材缓存丢失时从归档恢复。首次启用 Release 前，仓库中旧的加密快照保留为迁移兜底；不要在新发布链路验证成功前删除该文件。所有授权凭证仍只放在加密私有缓存中，绝不进入 Release、Git 或 Pages。
+`scripts/live-assets.mjs` 将 **已加密** 的 `vault.json`、带 SHA-256 的 `status.json` 打包为 `snapshot-a.json` / `snapshot-b.json` 交替发布到 GitHub Release `playlog-live`，验证新档案后兼容更新旧的两个资产，同时维护公共 WebP 素材归档和文件大小校验清单。正式同步不再向 Git 提交随机密文；Pages 构建从 Release 恢复最新数据，素材缓存丢失时从归档恢复。正式同步恢复时不再使用 Git 中过期的初始化快照。所有授权凭证仍只放在加密私有缓存中，绝不进入 Release、Git 或 Pages。
 
 增量策略（2026-11-01 更新）：
 
@@ -119,3 +119,11 @@ npm run dev
 - 概览「间隔最久成就」后显示「吃灰游戏」TOP 5；`#dusty` 打开完整排名。卡片只显示**一个** PC Metacritic 专业媒体综合分，缺失显示 `M —`。
 - 31 款候选中人工核对 29 款 PC 媒体综合分，另 2 款仍为 tbd。对重制版、增强版单独核对，有沿用原版评分时在加密档案中保留版本说明。评分属于 2026-11-01 的**固定人工核验版本**，不会在日常 Xbox 同步中自动刷新。
 - 为避免公开代码泄露非展示游戏清单，`scripts/fixed-pc-metascores.ts` **仅包含私有密钥派生的游戏 ID 摘要和分数**，真正的 Xbox Title ID 与分数映射仅在 GitHub Actions 内通过 `MICROSOFT_STATE_KEY` 生成；分数写入原有 AES-GCM 加密快照，并参与完整 JSON 备份。不要把隐藏游戏名称、Xbox ID 或密钥加入公开仓库、测试日志和 CI 输出。后续改分需按相同 HMAC 键生成摘要；如果迁移私有密钥，须重新校准固定映射。
+
+### 可靠性维护（2026-11-26）
+
+- 同步及部署使用 `queue: max` 保留等待中的任务；Cloudflare 调度规则未变。
+- 恢复时选择最新有效 Release 检查点、独立 Actions 缓存，必要时核对已发布 Pages；不得回退至 Git 初始化档案。旧版缓存仍可恢复。新档案和状态标记使用 SHA-256 绑定；生产同步另外核对解密后的最新时间与账本。
+- `sync-health.yml` 每小时检查已发布快照时间，超过 180 分钟或遗漏日界采样窗口时创建单一公开故障 Issue（只含运行元数据），恢复后关闭；90 分钟仅警告。健康监测不代替 Cloudflare 调度。
+- 新游戏明细异常则暂缓收录，既有游戏保留有效旧记录；全局授权、限流、历史接口失败仍中止。累计时长回退后只计入超过已累计高水位的分钟，不追溯修改历史；若官方永久下调计数，在重新超过高水位前可能少计，避免虚构重复时长。
+- 浏览器回归拆为共享入口、辅助场景和主导航场景，CI 独立运行辅助/手机/桌面三组；固定测试时钟，保留所有原断言。旧 Exophase 写入器与旧 AU 回填不再写快照。

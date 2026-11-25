@@ -1,4 +1,4 @@
-import {createHash,randomUUID} from 'node:crypto';
+import {randomUUID} from 'node:crypto';
 import fs from 'node:fs';
 import {credentials} from './microsoft-credentials.ts';
 import {scanMicrosoft,refreshGroupingWarnings} from './microsoft-library.ts';
@@ -11,7 +11,7 @@ import {appendPlaytimeSamples,boundaryPlaytimeSweep} from '../src/playtime-ledge
 import {shouldReuseRecentXboxSnapshot} from './microsoft-sync-policy.ts';
 import {fixedPcMetascores} from './fixed-pc-metascores.ts';
 import {completion} from '../src/completion.ts';
-import {distinctScreenshotIndices,normalizeSyncMechanism,type Game} from '../src/data.ts';
+import {normalizeSyncMechanism,type Game} from '../src/data.ts';
 /** Aggregate only. Never log the private game's name, ID or snapshot. */
 function logMythicArtworkCoverage(games:Game[]){
  const mythic=games.filter(g=>completion(g).mythic);
@@ -35,44 +35,6 @@ function logMythicScreenshotCache(games:Game[]){
   total,full,previews,missingFull:total-full,missingPreviews:total-previews
  }));
 }
-/** Temporary aggregate-only audit for a reported screenshot-rotation regression.
- * Never print user IDs, game IDs, raw image URLs or Xbox profile data. */
-function auditReportedRotation(games:Game[],prior:Game[]){
- const cases=[
-  {label:'Way of the Sword',matches:(name:string)=>/way of the sword/i.test(name)},
-  {label:'Black Ops 6 Launcher',matches:(name:string)=>/black\s*ops\s*6.*launcher/i.test(name)}
- ];
- for(const sample of cases){
-  const game=games.find(g=>sample.matches(g.name)),old=prior.find(g=>sample.matches(g.name));
-  if(!game){console.log('Mythic 轮换核验（'+sample.label+'）：notInSnapshot');continue;}
-  const shots=game.posterScreenshots||[],indices=distinctScreenshotIndices(shots);
-  const today=Math.floor((Date.now()+8*3600_000)/86400_000);
-  const start=game.posterRotationStartDay?Date.parse(game.posterRotationStartDay+'T00:00:00Z')/86400_000:NaN;
-  const selected=(day:number)=>indices.length&&Number.isFinite(start)?indices[Math.max(0,day-start)%indices.length]:-1;
-  const yesterdayIndex=selected(today-1),todayIndex=selected(today);
-  const cached=game.cachedPosterScreenshotsSmall||[];
-  const file=(i:number)=>{
-   const name=cached[i]?.split('/').at(-1)||'';
-   return /^[a-f0-9]{32}-480\.webp$/.test(name)?'public/media/'+name:null;
-  };
-  const bytes=(i:number)=>{const filename=file(i);return filename&&fs.existsSync(filename)?fs.readFileSync(filename):null;};
-  const yesterday=bytes(yesterdayIndex),todayArt=bytes(todayIndex);
-  const imageFingerprints=indices.flatMap(i=>{
-   const art=bytes(i);
-   return art?[createHash('sha256').update(art).digest('hex')]:[];
-  });
-  console.log('Mythic 轮换核验（'+sample.label+'）：'+JSON.stringify({
-   priorScreenshots:old?.posterScreenshots?.length??0,
-   priorDistinct:distinctScreenshotIndices(old?.posterScreenshots||[]).length,
-   screenshots:shots.length,distinct:indices.length,startDay:game.posterRotationStartDay||null,
-   yesterdayIndex,todayIndex,cachedYesterday:!!yesterday,cachedToday:!!todayArt,
-   identicalCachedPictures:!!(yesterday&&todayArt&&yesterday.equals(todayArt)),
-   cachedSlots:imageFingerprints.length,uniqueCachedPictures:new Set(imageFingerprints).size,
-   posterPurpose:game.posterImagePurpose||null,posterVersion:game.posterSelectionVersion||null
-  }));
- }
-}
-
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
 const syncMechanism=normalizeSyncMechanism(process.env.PLAYLOG_SYNC_MECHANISM);
 const root=process.env.MICROSOFT_STATE_DIR||'.private/microsoft',key=process.env.MICROSOFT_STATE_KEY!;
@@ -80,6 +42,11 @@ const saved=readState(root+'/candidate.json',key);
 const existing=fs.existsSync('public/vault.json')?await readVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),old,target):{records:[]};
 const previous=existing.records;
 const ledger=existing.playtimeLedger;
+if(previous[0]&&previous[0].source==='Xbox'&&Date.parse(previous[0].at)>=Date.parse('2026-11-02T00:00:00Z')&&!ledger)throw Error('Existing Xbox snapshot lacks its historical playtime ledger; refusing overwrite.');
+if(previous[0]&&fs.existsSync('public/status.json')){
+ const marker=JSON.parse(fs.readFileSync('public/status.json','utf8'));
+ if(marker.latestAt&&Date.parse(marker.latestAt)!==Date.parse(previous[0].at))throw Error('Encrypted snapshot and public status timestamp disagree.');
+}
 const recentCandidate=saved?.record?.games?.some((g:any)=>g.cachedImage)&&Date.now()-Date.parse(saved.record.at)<20*60_000?saved.record:null;
 // Private candidates may include zero-result titles; those never enter the public snapshot.
 const freshSource=recentCandidate||previous[0];
@@ -97,7 +64,6 @@ if(fresh&&fresh.id===previous[0]?.id&&shouldReuseRecentXboxSnapshot({
  logMythicArtworkCoverage(reused.games);
  await cacheRecordImages(reused);
  logMythicScreenshotCache(reused.games);
- auditReportedRotation(reused.games,previous[0]?.games||[]);
  await publishSnapshot(reused,previous.slice(0,29),target,ledger,fixedPcMetascores(reused.games.map((g:any)=>String(g.id)),key));
  console.log('Cloudflare 近五分钟内复用先前手动同步数据；已单独记录触发时间，未执行微软扫描。');process.exit(0);
 }
@@ -116,9 +82,9 @@ if(syncMechanism)result.record.syncMechanism=syncMechanism;
 // Only aggregate counts: no XUID, game names, credentials, private snapshots or timestamps.
 console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,emptySkipped:result.audit.emptySkipped,emptyCached:result.emptyTitles.length,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed,unpreservedFailures:result.audit.unpreservedFailures}));
 // An isolated previously seen title can preserve its last data without blocking other games.
-// Never publish if a new title failed, history sources failed or a fatal 401/429 stopped the scan.
-if(result.audit.interrupted||result.audit.historySourcesFailed||result.audit.unpreservedFailures)throw Error('微软同步未完整完成。');
-if(result.audit.failed)console.warn('微软同步部分降级：'+result.audit.failed+' 个旧游戏保留上次数据，其他游戏继续发布；不会将不一致的明细写入档案。');
+// New titles with incomplete data are deferred; global history or fatal errors still stop publication.
+if(result.audit.interrupted||result.audit.historySourcesFailed||(result.audit.titles>0&&result.audit.unpreservedFailures===result.audit.titles))throw Error('微软同步未完整完成。');
+if(result.audit.failed)console.warn('微软同步部分降级：'+result.audit.failed+' 个游戏异常，旧游戏保留原数据、新游戏暂缓收录，其余继续发布。');
 const artworkStarted=Date.now();
 const artwork=await australianArtwork(result.record,fetch,previous[0]);
 console.log('澳区英文封面覆盖：'+JSON.stringify({...artwork,seconds:Math.round((Date.now()-artworkStarted)/1000)}));
@@ -131,12 +97,11 @@ result.record=refreshGroupingWarnings(result.record);
 const mediaStarted=Date.now();
 await cacheRecordImages(result.record);
 logMythicScreenshotCache(result.record.games);
-auditReportedRotation(result.record.games,previous[0]?.games||[]);
 console.log('图片缓存耗时（秒）：'+Math.round((Date.now()-mediaStarted)/1000));
 writeState(root+'/candidate.json',{...result,record:{...result.record,games:allScannedGames},
  lastFullCatalogAt:result.audit.fullRefresh&&!result.audit.failed?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);
 session.save();
 const daily=appendPlaytimeSamples(ledger,result.statsSamples);
-await publishSnapshot(result.record,previous.slice(0,29),target,daily,fixedPcMetascores(result.record.games.map(g=>g.id),key));
+await publishSnapshot(result.record,previous.slice(0,29),target,daily,fixedPcMetascores(result.record.games.map(g=>g.id),key),result.statsSamples.length>0&&!result.audit.failed&&(process.env.PLAYTIME_FORCE_SWEEP==='true'||boundaryPlaytimeSweep(result.record.at)));
 console.log('每日时长采样：'+JSON.stringify({freshSamples:result.statsSamples.length,observedGames:Object.keys(daily.latest).length,dates:Object.keys(daily.days).length,crossDayIntervals:Object.keys(daily.crossDay).length}));
 console.log('微软正式同步完成：'+JSON.stringify({games:result.record.games.length,achievementsWithRarity:result.audit.rarityAchievements,baseGroups:result.audit.officialBaseGroups,dlcGroups:result.audit.officialAddonGroups,degradedGames:result.audit.failed,artwork,seconds:Math.round((Date.now()-began)/1000)}));

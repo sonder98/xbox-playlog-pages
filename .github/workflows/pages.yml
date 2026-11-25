@@ -30,6 +30,7 @@ permissions:
 concurrency:
   group: playlog-live-publish
   cancel-in-progress: false
+  queue: max
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -44,9 +45,6 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      # TypeScript still imports playwright from scripts/sync.ts, even though
-      # Pages no longer executes browser E2E on hourly data-only publishes.
-      - run: npm install --no-save --ignore-scripts playwright
       # Browser E2E checks run in ci.yml on every PR; hourly data publication
       # must not be blocked by date-sensitive UI test fixtures.
       - name: Restore public artwork cache
@@ -55,6 +53,26 @@ jobs:
           path: public/media
           key: artwork-webp-v1-${{ runner.os }}-${{ github.run_id }}
           restore-keys: artwork-webp-v1-${{ runner.os }}-
+      - name: Restore legacy encrypted checkpoint (one-time compatibility)
+        id: legacy_checkpoint
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            public/vault.json
+            public/status.json
+          key: playlog-encrypted-vault-v1-main-${{ github.run_id }}
+          restore-keys: playlog-encrypted-vault-v1-main-
+      - name: Stage legacy checkpoint if found
+        if: steps.legacy_checkpoint.outputs.cache-matched-key != ''
+        run: |
+          mkdir -p .snapshot-backup-legacy
+          cp public/vault.json public/status.json .snapshot-backup-legacy/
+      - name: Restore independent encrypted checkpoint
+        uses: actions/cache/restore@v4
+        with:
+          path: .snapshot-backup
+          key: playlog-checkpoint-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: playlog-checkpoint-v2-
       - name: Restore newest encrypted snapshot and verify durable media coverage
         env:
           GH_TOKEN: ${{ github.token }}

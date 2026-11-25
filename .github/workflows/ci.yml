@@ -17,6 +17,10 @@ permissions:
   contents: read
 jobs:
   verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [aux, mobile, desktop]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -31,7 +35,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - name: Verify desktop and mobile navigation and Mythic cover geometry
-        run: node --experimental-strip-types scripts/check-navigation.mjs
+        run: node --experimental-strip-types scripts/check-navigation.mjs ${{ matrix.suite }}
       - name: Check release and EdgeOne publishing script syntax without credentials
         run: |
           node --check scripts/live-assets.mjs

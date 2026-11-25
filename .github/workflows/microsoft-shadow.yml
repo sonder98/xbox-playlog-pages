@@ -19,8 +19,9 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: pages
+  group: playlog-live-publish
   cancel-in-progress: false
+  queue: max
 jobs:
   sync:
     if: github.ref == 'refs/heads/main'
@@ -49,6 +50,10 @@ jobs:
           path: .private/microsoft
           key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-start
           restore-keys: microsoft-private-v1-main-
+      - name: Restore current encrypted snapshot for read-only comparison
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/live-assets.mjs restore-snapshot
       - name: Authorize or renew Microsoft account
         run: node --experimental-strip-types scripts/microsoft-shadow.ts authorize
       - name: Checkpoint encrypted authorization before scanning

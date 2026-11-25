@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/generate-journey-art.mjs && vite --host 0.0.0.0",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test": "node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs",
     "build": "node --experimental-strip-types scripts/generate-pwa-icons.ts && node scripts/generate-journey-art.mjs && tsc --noEmit && vite build",
     "sync": "node --experimental-strip-types scripts/microsoft-sync.ts"
   },

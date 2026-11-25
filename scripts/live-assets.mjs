@@ -2,13 +2,42 @@
 // It replaces per-sync Git commits, so randomized ciphertext no longer bloats Git history.
 // Authorization state remains in encrypted GitHub Actions cache, NEVER in this release.
 import fs from 'node:fs';
+import {createHash} from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
+import {pathToFileURL} from 'node:url';
 
 const tag='playlog-live',mediaDir='public/media';
 const run=(command,args,options={})=>execFileSync(command,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],...options});
-const available=()=>{try{run('gh',['release','view',tag]);return true;}catch{return false;}};
+const available=()=>{try{run('gh',['release','view',tag]);return true;}catch(error){if(/release not found/i.test(String(error.stderr||'')))return false;throw error;}};
+export function validateSnapshot(vaultText,statusText){
+ const vault=JSON.parse(vaultText),status=JSON.parse(statusText);
+ if(vault.algorithm!=='AES-GCM'||typeof vault.ciphertext!=='string'||!status.initialized||!Number.isFinite(Date.parse(status.latestAt)))throw Error('Invalid encrypted snapshot pair');
+ if(status.vaultSha256!==undefined&&status.vaultSha256!==createHash('sha256').update(vaultText).digest('hex'))throw Error('Snapshot checksum mismatch');
+ return Date.parse(status.latestAt);
+}
+function pairAt(dir){
+ const vault=fs.readFileSync(path.join(dir,'vault.json'),'utf8'),status=fs.readFileSync(path.join(dir,'status.json'),'utf8');
+ return {vault,status,at:validateSnapshot(vault,status)};
+}
+export function decodePair(text){
+ const bundle=JSON.parse(text);
+ return {vault:bundle.vault,status:bundle.status,at:validateSnapshot(bundle.vault,bundle.status)};
+}
+export function newestPair(pairs){
+ const valid=pairs.filter(Boolean).sort((a,b)=>b.at-a.at);
+ if(!valid.length)throw Error('No valid encrypted snapshot; refusing rollback.');
+ return valid[0];
+}
+function cachePair(dir){
+ try{return pairAt(dir);}catch{return null;}
+}
+function installPair(pair){
+ fs.writeFileSync('public/vault.json',pair.vault);
+ fs.writeFileSync('public/status.json',pair.status);
+}
+
 const temp=()=>fs.mkdtempSync(path.join(os.tmpdir(),'playlog-assets-'));
 const cleanup=dir=>fs.rmSync(dir,{recursive:true,force:true});
 // Releases can return HTTP 5xx while replacing an existing asset. Retry
@@ -25,16 +54,13 @@ async function releaseUpload(files){
 }
 // The already-deployed Pages copy is a last-resort encrypted backup. This is
 // recovery only for a genuinely missing Release asset (not a network timeout).
-async function recoverMissingVaultFromPages(){
+async function pagesPair(){
  const base='https://sonder98.github.io/xbox-playlog-pages/';
  const responses=await Promise.all(['vault.json','status.json'].map(name=>fetch(base+name,{cache:'no-store'})));
  if(responses.some(r=>!r.ok))throw Error('Live Release incomplete and Pages encrypted backup unavailable.');
  const texts=await Promise.all(responses.map(r=>r.text()));
- const [vault,status]=texts.map(JSON.parse);
- if(vault.algorithm!=='AES-GCM'||typeof vault.ciphertext!=='string'||!status.initialized)
-  throw Error('Pages encrypted backup is invalid; refusing unsafe recovery.');
- for(let i=0;i<2;i++)fs.writeFileSync('public/'+['vault.json','status.json'][i],texts[i]);
- console.warn('RECOVERY: used previously deployed encrypted Pages archive because live Release lost an asset. Current Microsoft data will be rescanned before publication.');
+ const pages={vault:texts[0],status:texts[1],at:validateSnapshot(...texts)};
+ return pages;
 }
 function download(name,dir){
  try{run('gh',['release','download',tag,'--pattern',name,'--dir',dir,'--clobber']);return fs.existsSync(path.join(dir,name));}
@@ -55,24 +81,31 @@ function allPresent(index){
  return true;
 }
 const mode=process.argv[2];
+if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
 if(!process.env.GH_TOKEN)throw Error('GH_TOKEN is required for live asset operations.');
 if(!['restore-snapshot','restore-media','publish'].includes(mode))throw Error('Unknown live-assets mode');
 if(mode==='restore-snapshot'){
- if(!available()){console.log('Live release not created yet; keeping bundled encrypted bootstrap snapshot.');process.exit(0);}
  const dir=temp();
  try{
-  const names=new Set(JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name));
-  if(!names.has('vault.json')||!names.has('status.json')){
-   await recoverMissingVaultFromPages();
-   process.exit(0);
+  const names=available()?new Set(JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name)):new Set();
+  const candidates=[cachePair('.snapshot-backup'),cachePair('.snapshot-backup-legacy')];
+  let durableCount=0;
+  for(const name of ['snapshot-a.json','snapshot-b.json']){
+   if(!names.has(name))continue;
+   if(!download(name,dir))throw Error('Cannot read existing durable checkpoint.');
+   try{candidates.push(decodePair(fs.readFileSync(path.join(dir,name),'utf8')));durableCount++;}catch{console.warn('::warning::Invalid durable checkpoint '+name);}
   }
-  if(!download('vault.json',dir)||!download('status.json',dir))
-   throw Error('Live release assets exist but cannot be downloaded; do not substitute older data for a transient error.');
-  const vault=JSON.parse(fs.readFileSync(path.join(dir,'vault.json'),'utf8'));
-  const status=JSON.parse(fs.readFileSync(path.join(dir,'status.json'),'utf8'));
-  if(vault.algorithm!=='AES-GCM'||typeof vault.ciphertext!=='string'||!status.initialized)throw Error('Invalid published encrypted snapshot');
-  for(const name of ['vault.json','status.json'])fs.copyFileSync(path.join(dir,name),'public/'+name);
-  console.log('Restored current encrypted snapshot from GitHub Release.');
+  if(names.has('vault.json')&&names.has('status.json')){
+   if(download('vault.json',dir)&&download('status.json',dir)){
+    try{candidates.push(pairAt(dir));}catch{console.warn('::warning::Invalid legacy Release pair.');}
+   }else if(!durableCount)throw Error('Cannot read existing Release snapshot.');
+  }
+  // Pages can be newer than a restored cache. Compare it during recovery only.
+  if(!candidates.some(Boolean)||!names.has('vault.json')||!names.has('status.json')||!durableCount){
+   try{candidates.push(await pagesPair());}catch{console.warn('::warning::Published Pages backup unavailable.');}
+  }
+  installPair(newestPair(candidates));
+  console.log('Restored newest validated encrypted checkpoint.');
  }finally{cleanup(dir);}
 }
 if(mode==='restore-media'){
@@ -90,13 +123,33 @@ if(mode==='restore-media'){
  }finally{cleanup(dir);}
 }
 if(mode==='publish'){
- const vault=JSON.parse(fs.readFileSync('public/vault.json','utf8'));
- if(vault.algorithm!=='AES-GCM'||typeof vault.ciphertext!=='string')throw Error('Cannot release an invalid encrypted snapshot.');
+ pairAt('public');
  if(!available())run('gh',['release','create',tag,'--target','main','--title','XBOX Playlog live assets','--notes','Machine-managed encrypted public snapshot and public WebP media. Never put tokens or plaintext here.','--latest=false']);
  const dir=temp();
  try{
   // The vault is encrypted on the runner before it is uploaded. No plaintext is published.
-  await releaseUpload(['public/vault.json','public/status.json']);
+  // Upload a complete, self-contained checkpoint before replacing legacy assets.
+  // Alternate slots based on the actual remote checkpoint timestamps, not clock parity.
+  const names=new Set(JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name));
+  const slots=['snapshot-a.json','snapshot-b.json'];
+  const ages=slots.map(name=>{
+   if(!names.has(name))return -Infinity;
+   if(!download(name,dir))throw Error('Cannot inspect existing checkpoint before publish.');
+   try{return decodePair(fs.readFileSync(path.join(dir,name),'utf8')).at;}catch{return -Infinity;}
+  });
+  const checkpoint=path.join(dir,slots[ages[0]<=ages[1]?0:1]);
+  const pair=pairAt('public');
+  if(pair.at<Math.max(...ages))throw Error('Refusing to publish an older snapshot.');
+  fs.writeFileSync(checkpoint,JSON.stringify({vault:pair.vault,status:pair.status}));
+  await releaseUpload([checkpoint]);
+  const verify=temp();
+  try{
+   if(!download(path.basename(checkpoint),verify))throw Error('Checkpoint verification download failed.');
+   const recovered=decodePair(fs.readFileSync(path.join(verify,path.basename(checkpoint)),'utf8'));
+   if(recovered.vault!==pair.vault||recovered.status!==pair.status)throw Error('Checkpoint verification failed.');
+  }finally{cleanup(verify);}
+  // The verified checkpoint is authoritative. Legacy assets are a compatibility mirror.
+  try{await releaseUpload(['public/vault.json','public/status.json']);}catch{console.warn('::warning::Legacy Release mirror update failed; the verified checkpoint remains available.');}
   const current=manifest(),indexFile=path.join(dir,'media-index.txt');
   let previous='';
   if(download('media-index.txt',dir))previous=fs.readFileSync(indexFile,'utf8');
@@ -109,4 +162,5 @@ if(mode==='publish'){
   }else console.log('Durable artwork archive unchanged, skipping image reupload.');
   console.log('Published encrypted snapshot without rewriting Git history.');
  }finally{cleanup(dir);}
+}
 }

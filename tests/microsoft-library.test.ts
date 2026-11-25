@@ -509,6 +509,11 @@ test('a single existing Xbox summary mismatch preserves old awards and is explic
  assert.deepEqual(result.games[0],{...old,officialHidden:false});
  assert.ok(result.warnings.some(w=>w.includes('1 个游戏')));
  assert.ok(result.warnings.some(w=>w.includes('同步异常游戏：PRIVATE-GAME')),'Failed title names appear only in authenticated encrypted history warnings');
+ const deferred=await scanMicrosoft(config,{request,pause:async()=>{}});
+ assert.equal(deferred.audit.unpreservedFailures,1);
+ assert.equal(deferred.record.games.length,0);
+ assert.equal(deferred.emptyTitles.length,0);
+ assert.ok(deferred.record.warnings.some(w=>w.includes('暂缓收录')));
 });
 
 test('League of Legends linked Game Pass entitlement never enters a played Xbox archive',async()=>{
