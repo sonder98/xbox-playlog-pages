@@ -83,3 +83,11 @@ test('first recorded play day is the earliest positive daily increase, including
  assert.equal(firstRecordedPlayDate(ledger,'12'),null);
  assert.equal(firstRecordedPlayDate(ledger,'bad'),null);
 });
+
+test('a counter regression followed by recovery cannot count the same minutes twice',()=>{
+ let ledger=appendPlaytimeSamples(undefined,[{id:'10',minutes:100,at:first}]);
+ for(const [minutes,at] of [[110,next],[100,'2026-11-01T12:00:00Z'],[110,'2026-11-01T12:30:00Z'],[115,'2026-11-01T13:00:00Z']] as const)
+  ledger=appendPlaytimeSamples(ledger,[{id:'10',minutes,at}]);
+ assert.equal(dailyGameMinutes(ledger,'2026-11-01','10'),15);
+ assert.equal(ledger.corrections['2026-11-01|10'],1);
+});
