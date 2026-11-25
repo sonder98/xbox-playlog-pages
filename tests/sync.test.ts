@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,readFileSync,rmSync} from 'node:fs';
@@ -15,7 +16,10 @@ test('snapshot is ciphertext, retains history, wrong password fails before repla
   await publishSnapshot({...record,syncMechanism:'cloudflare'},[],password);
   const before=readFileSync('public/vault.json','utf8');assert.ok(!before.includes('PRIVATE-TEST'));
   const publicStatus=JSON.parse(readFileSync('public/status.json','utf8'));
-  assert.deepEqual(publicStatus,{initialized:true,latestAt:record.at});
+  assert.equal(publicStatus.initialized,true);
+  assert.equal(publicStatus.latestAt,record.at);
+  assert.equal(publicStatus.vaultSha256,createHash('sha256').update(before).digest('hex'));
+  assert.deepEqual(publicStatus.boundaryCoverage,{trackingSince:record.at,observed:[]});
   assert.ok(!JSON.stringify(publicStatus).includes('PRIVATE-TEST'));
   await assert.rejects(readVault(JSON.parse(before),'incorrect','incorrect'));
   assert.equal(readFileSync('public/vault.json','utf8'),before);
