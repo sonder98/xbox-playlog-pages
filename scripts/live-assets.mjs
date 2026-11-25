@@ -89,17 +89,19 @@ if(mode==='restore-snapshot'){
  try{
   const names=available()?new Set(JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name)):new Set();
   const candidates=[cachePair()];
+  let durableCount=0;
   for(const name of ['snapshot-a.json','snapshot-b.json']){
    if(!names.has(name))continue;
    if(!download(name,dir))throw Error('Cannot read existing durable checkpoint.');
-   try{candidates.push(decodePair(fs.readFileSync(path.join(dir,name),'utf8')));}catch{console.warn('::warning::Invalid durable checkpoint '+name);}
+   try{candidates.push(decodePair(fs.readFileSync(path.join(dir,name),'utf8')));durableCount++;}catch{console.warn('::warning::Invalid durable checkpoint '+name);}
   }
   if(names.has('vault.json')&&names.has('status.json')){
-   if(!download('vault.json',dir)||!download('status.json',dir))throw Error('Cannot read existing Release snapshot.');
-   try{candidates.push(pairAt(dir));}catch{console.warn('::warning::Invalid legacy Release pair.');}
+   if(download('vault.json',dir)&&download('status.json',dir)){
+    try{candidates.push(pairAt(dir));}catch{console.warn('::warning::Invalid legacy Release pair.');}
+   }else if(!durableCount)throw Error('Cannot read existing Release snapshot.');
   }
   // Pages can be newer than a restored cache. Compare it during recovery only.
-  if(!candidates.some(Boolean)||!names.has('vault.json')||!names.has('status.json')||!names.has('snapshot-a.json')&&!names.has('snapshot-b.json')){
+  if(!candidates.some(Boolean)||!names.has('vault.json')||!names.has('status.json')||!durableCount){
    try{candidates.push(await pagesPair());}catch{console.warn('::warning::Published Pages backup unavailable.');}
   }
   installPair(newestPair(candidates));
