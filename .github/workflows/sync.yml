@@ -62,7 +62,13 @@ jobs:
           path: .private/microsoft
           key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-sync-start
           restore-keys: microsoft-private-v1-main-
-      - name: Restore newest published encrypted snapshot and durable artwork
+      - name: Restore independent encrypted checkpoint
+        uses: actions/cache/restore@v4
+        with:
+          path: .snapshot-backup
+          key: playlog-checkpoint-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: playlog-checkpoint-v2-
+      - name: Restore newest encrypted snapshot and verify durable media coverage
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -93,13 +99,15 @@ jobs:
           key: artwork-webp-v1-${{ runner.os }}-${{ github.run_id }}
       # Keep the latest encrypted snapshot independent of GitHub Releases.
       # A failed --clobber upload must not destroy the only current copy.
+      - name: Prepare independent encrypted checkpoint
+        run: |
+          mkdir -p .snapshot-backup
+          cp public/vault.json public/status.json .snapshot-backup/
       - name: Preserve encrypted snapshot backup before Release upload
         uses: actions/cache/save@v4
         with:
-          path: |
-            public/vault.json
-            public/status.json
-          key: playlog-encrypted-vault-v1-main-${{ github.run_id }}
+          path: .snapshot-backup
+          key: playlog-checkpoint-v2-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Publish encrypted snapshot and durable artwork without Git commits
         env:
           GH_TOKEN: ${{ github.token }}
