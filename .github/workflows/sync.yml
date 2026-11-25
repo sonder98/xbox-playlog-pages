@@ -24,6 +24,10 @@ on:
       - 'scripts/microsoft-*.ts'
       - 'scripts/image-cache.ts'
       - 'scripts/snapshot.ts'
+      - 'scripts/live-assets.mjs'
+      - 'scripts/sync-health.ts'
+      - 'src/playtime-ledger.ts'
+      - 'src/crypto.ts'
       - 'scripts/password.ts'
       # Schema changes (including posterSelectionVersion) must update the
       # encrypted live Release as well as the static frontend.
