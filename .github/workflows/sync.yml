@@ -91,6 +91,15 @@ jobs:
         with:
           path: public/media
           key: artwork-webp-v1-${{ runner.os }}-${{ github.run_id }}
+      # Keep the latest encrypted snapshot independent of GitHub Releases.
+      # A failed --clobber upload must not destroy the only current copy.
+      - name: Preserve encrypted snapshot backup before Release upload
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            public/vault.json
+            public/status.json
+          key: playlog-encrypted-vault-v1-main-${{ github.run_id }}
       - name: Publish encrypted snapshot and durable artwork without Git commits
         env:
           GH_TOKEN: ${{ github.token }}
