@@ -6,6 +6,7 @@ import {createHash} from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
+import {pathToFileURL} from 'node:url';
 
 const tag='playlog-live',mediaDir='public/media';
 const run=(command,args,options={})=>execFileSync(command,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],...options});
@@ -80,7 +81,7 @@ function allPresent(index){
  return true;
 }
 const mode=process.argv[2];
-if(import.meta.url===new URL(process.argv[1]||'','file:'+process.cwd()+'/').href){
+if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
 if(!process.env.GH_TOKEN)throw Error('GH_TOKEN is required for live asset operations.');
 if(!['restore-snapshot','restore-media','publish'].includes(mode))throw Error('Unknown live-assets mode');
 if(mode==='restore-snapshot'){
@@ -98,7 +99,7 @@ if(mode==='restore-snapshot'){
    try{candidates.push(pairAt(dir));}catch{console.warn('::warning::Invalid legacy Release pair.');}
   }
   // Pages can be newer than a restored cache. Compare it during recovery only.
-  if(!candidates.some(Boolean)||!names.has('vault.json')||!names.has('status.json')){
+  if(!candidates.some(Boolean)||!names.has('vault.json')||!names.has('status.json')||!names.has('snapshot-a.json')&&!names.has('snapshot-b.json')){
    try{candidates.push(await pagesPair());}catch{console.warn('::warning::Published Pages backup unavailable.');}
   }
   installPair(newestPair(candidates));
