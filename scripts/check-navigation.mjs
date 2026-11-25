@@ -6,6 +6,8 @@ import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
 import {encryptVault,decryptVault} from '../src/crypto.ts';
 const FIXTURE_TIME='2026-11-14T12:00:00.000Z';
+const suite=process.argv[2]||'all';
+assert.ok(['all','aux','mobile','desktop'].includes(suite),'Unknown browser test suite');
 const password='navigation-test-only';
 const games=Array.from({length:12},(_,i)=>({id:String(100+i),name:'Test Game '+i,image:'https://covers.example.test/square.svg',image2x:'https://covers.example.test/medium.svg',image3x:'https://covers.example.test/original.svg',devices:['Xbox'],lastPlayed:'2026-10-30T00:00:00Z',minutes:60,earned:1,total:10,score:10,maxScore:100}));
 games[0].posterImage='https://covers.example.test/landscape.svg';
@@ -31,6 +33,7 @@ try{
     await new Promise(resolve=>setTimeout(resolve,300));
   }
   browser=await chromium.launch();
+  if(suite==='all'||suite==='aux'){
   const catalogPage=await browser.newPage();
   const catalog=await catalogPage.evaluate(readAchievementPage,await readFile(new URL('../tests/fixtures/cyberpunk-catalog.html',import.meta.url),'utf8'));
   assert.deepEqual(catalog.groups.map(g=>[g.kind,g.total]),[['base',44],['dlc',13]]);
@@ -502,7 +505,8 @@ try{
     await cacheContext.close();
     console.log('Cached startup freshness test: PASS stale marker bypass, automatic update and durable offline reopening');
   }
-  for(const mobile of [true,false]){
+  }
+  for(const mobile of suite==='aux'?[]:suite==='mobile'?[true]:suite==='desktop'?[false]:[true,false]){
     const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1000},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:2});
     const page=await context.newPage();
     // Keep fixed October 2026 achievement fixtures inside the recent 30-day calendar.
