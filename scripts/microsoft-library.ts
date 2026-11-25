@@ -403,6 +403,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    // Keep prior hidden awards, and don't let a restricted title block public data.
    if(game.officialHidden!==false&&error instanceof XboxReadError&&[403,404].includes(error.status)){
     if(old){games[i]={...old,officialHidden:game.officialHidden};audit.preserved++;}
+    else deferredIds.add(game.id);
    }else{
     // Only emit controlled error categories. Raw messages can carry private data.
     const knownErrors:Record<string,string>={
