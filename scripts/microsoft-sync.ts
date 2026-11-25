@@ -78,7 +78,7 @@ if(syncMechanism)result.record.syncMechanism=syncMechanism;
 console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,emptySkipped:result.audit.emptySkipped,emptyCached:result.emptyTitles.length,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed,unpreservedFailures:result.audit.unpreservedFailures}));
 // An isolated previously seen title can preserve its last data without blocking other games.
 // New titles with incomplete data are deferred; global history or fatal errors still stop publication.
-if(result.audit.interrupted||result.audit.historySourcesFailed||result.audit.unpreservedFailures===result.audit.titles)throw Error('微软同步未完整完成。');
+if(result.audit.interrupted||result.audit.historySourcesFailed||(result.audit.titles>0&&result.audit.unpreservedFailures===result.audit.titles))throw Error('微软同步未完整完成。');
 if(result.audit.failed)console.warn('微软同步部分降级：'+result.audit.failed+' 个游戏异常，旧游戏保留原数据、新游戏暂缓收录，其余继续发布。');
 const artworkStarted=Date.now();
 const artwork=await australianArtwork(result.record,fetch,previous[0]);
