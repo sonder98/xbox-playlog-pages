@@ -245,7 +245,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  };
  const fatal=(error:unknown)=>error instanceof XboxReadError&&[401,429].includes(error.status);
  // These titles are written only inside the encrypted vault, never printed in public Actions logs.
- const failedTitleNames:string[]=[];
+ const failedTitleNames:string[]=[],deferredIds=new Set<string>();
  for(let i=0;i<games.length;i++){
   const game=games[i],old=prior.get(game.id);let complete=false;
   // Diagnostic breadcrumbs never include gamer data, title IDs, or endpoint URLs.
@@ -422,9 +422,9 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
      error instanceof Error?(knownErrors[error.message]||'other'):'other';
     console.error('微软单游戏失败诊断：'+JSON.stringify({kind:old?'existing':'new',stage:failureStage,decision:failureDecision,reason}));
     audit.failed++;
-    failedTitleNames.push((old?.name||game.name).slice(0,150));
+    failedTitleNames.push((old?.name||game.name).slice(0,150)+(old?'（保留原记录）':'（暂缓收录，下次重试）'));
     if(old){games[i]=complete?{...game,minutes:old.minutes,officialHidden:game.officialHidden}:{...old,officialHidden:game.officialHidden};audit.preserved++;}
-    else audit.unpreservedFailures++;
+    else {audit.unpreservedFailures++;deferredIds.add(game.id);}
     if(fatal(error)){audit.interrupted=true;break;}
    }
   }
@@ -435,9 +435,9 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  let aliases=new Map<string,string[]>();if(options.baseline)aliases=await titleAliases(p=>provider.call(p));
  audit.comparison=compareLibrary(games,options.baseline,aliases);
  audit.unknownGroups=countVisibleUnknownGroups(games);
- const record:RecordData=refreshGroupingWarnings({id:crypto.randomUUID(),at:audit.at,source:'Xbox',profile:{xuid:provider.xuid,gamertag:setting('Gamertag')||'Xbox 玩家',avatar:safeImage(setting('GameDisplayPicRaw'))},games,warnings:[...(audit.failed?[`${audit.failed} 个游戏的官方数据尚未完整核对。`,...failedTitleNames.slice(0,20).map(name=>`同步异常游戏：${name}（保留原记录）`)]:[])]});
+ const record:RecordData=refreshGroupingWarnings({id:crypto.randomUUID(),at:audit.at,source:'Xbox',profile:{xuid:provider.xuid,gamertag:setting('Gamertag')||'Xbox 玩家',avatar:safeImage(setting('GameDisplayPicRaw'))},games:games.filter(g=>!deferredIds.has(g.id)),warnings:[...(audit.failed?[`${audit.failed} 个游戏的官方数据尚未完整核对。`,...failedTitleNames.slice(0,20).map(name=>`同步异常游戏：${name}`)]:[])]});
  // Only the MICROSOFT_STATE_KEY-encrypted candidate cache stores zero-result titles.
- const emptyTitles:EmptyTitleCache[]=games.filter(g=>g.officialHidden===false&&g.total===0&&g.earned===0&&
+ const emptyTitles:EmptyTitleCache[]=games.filter(g=>!deferredIds.has(g.id)&&g.officialHidden===false&&g.total===0&&g.earned===0&&
   g.score===0&&g.maxScore===0&&g.minutes===null&&!(g.achievements?.length))
   .map(g=>({id:g.id,lastPlayed:g.lastPlayed,total:0,earned:0,score:0,maxScore:0,
    devices:g.devices,checkedAt:skippedEmpty.has(g.id)?knownEmpty.get(g.id)!.checkedAt:audit.at}));
