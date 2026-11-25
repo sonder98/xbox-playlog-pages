@@ -42,6 +42,11 @@ const saved=readState(root+'/candidate.json',key);
 const existing=fs.existsSync('public/vault.json')?await readVault(JSON.parse(fs.readFileSync('public/vault.json','utf8')),old,target):{records:[]};
 const previous=existing.records;
 const ledger=existing.playtimeLedger;
+if(previous[0]&&previous[0].source==='Xbox'&&Date.parse(previous[0].at)>=Date.parse('2026-11-02T00:00:00Z')&&!ledger)throw Error('Existing Xbox snapshot lacks its historical playtime ledger; refusing overwrite.');
+if(previous[0]&&fs.existsSync('public/status.json')){
+ const marker=JSON.parse(fs.readFileSync('public/status.json','utf8'));
+ if(marker.latestAt&&Date.parse(marker.latestAt)!==Date.parse(previous[0].at))throw Error('Encrypted snapshot and public status timestamp disagree.');
+}
 const recentCandidate=saved?.record?.games?.some((g:any)=>g.cachedImage)&&Date.now()-Date.parse(saved.record.at)<20*60_000?saved.record:null;
 // Private candidates may include zero-result titles; those never enter the public snapshot.
 const freshSource=recentCandidate||previous[0];
@@ -97,6 +102,6 @@ writeState(root+'/candidate.json',{...result,record:{...result.record,games:allS
  lastFullCatalogAt:result.audit.fullRefresh&&!result.audit.failed?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);
 session.save();
 const daily=appendPlaytimeSamples(ledger,result.statsSamples);
-await publishSnapshot(result.record,previous.slice(0,29),target,daily,fixedPcMetascores(result.record.games.map(g=>g.id),key));
+await publishSnapshot(result.record,previous.slice(0,29),target,daily,fixedPcMetascores(result.record.games.map(g=>g.id),key),result.statsSamples.length>0&&!result.audit.failed&&(process.env.PLAYTIME_FORCE_SWEEP==='true'||boundaryPlaytimeSweep(result.record.at)));
 console.log('每日时长采样：'+JSON.stringify({freshSamples:result.statsSamples.length,observedGames:Object.keys(daily.latest).length,dates:Object.keys(daily.days).length,crossDayIntervals:Object.keys(daily.crossDay).length}));
 console.log('微软正式同步完成：'+JSON.stringify({games:result.record.games.length,achievementsWithRarity:result.audit.rarityAchievements,baseGroups:result.audit.officialBaseGroups,dlcGroups:result.audit.officialAddonGroups,degradedGames:result.audit.failed,artwork,seconds:Math.round((Date.now()-began)/1000)}));
