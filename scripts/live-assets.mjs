@@ -2,13 +2,32 @@
 // It replaces per-sync Git commits, so randomized ciphertext no longer bloats Git history.
 // Authorization state remains in encrypted GitHub Actions cache, NEVER in this release.
 import fs from 'node:fs';
+import {createHash} from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 
 const tag='playlog-live',mediaDir='public/media';
 const run=(command,args,options={})=>execFileSync(command,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],...options});
-const available=()=>{try{run('gh',['release','view',tag]);return true;}catch{return false;}};
+const available=()=>{try{run('gh',['release','view',tag]);return true;}catch(error){if(/release not found/i.test(String(error.stderr||'')))return false;throw error;}};
+export function validateSnapshot(vaultText,statusText){
+ const vault=JSON.parse(vaultText),status=JSON.parse(statusText);
+ if(vault.algorithm!=='AES-GCM'||typeof vault.ciphertext!=='string'||!status.initialized||!Number.isFinite(Date.parse(status.latestAt)))throw Error('Invalid encrypted snapshot pair');
+ if(status.vaultSha256!==undefined&&status.vaultSha256!==createHash('sha256').update(vaultText).digest('hex'))throw Error('Snapshot checksum mismatch');
+ return Date.parse(status.latestAt);
+}
+function pairAt(dir){
+ const vault=fs.readFileSync(path.join(dir,'vault.json'),'utf8'),status=fs.readFileSync(path.join(dir,'status.json'),'utf8');
+ return {vault,status,at:validateSnapshot(vault,status)};
+}
+function cachePair(){
+ try{return pairAt('.snapshot-backup');}catch{return null;}
+}
+function installPair(pair){
+ fs.writeFileSync('public/vault.json',pair.vault);
+ fs.writeFileSync('public/status.json',pair.status);
+}
+
 const temp=()=>fs.mkdtempSync(path.join(os.tmpdir(),'playlog-assets-'));
 const cleanup=dir=>fs.rmSync(dir,{recursive:true,force:true});
 // Releases can return HTTP 5xx while replacing an existing asset. Retry
@@ -30,10 +49,9 @@ async function recoverMissingVaultFromPages(){
  const responses=await Promise.all(['vault.json','status.json'].map(name=>fetch(base+name,{cache:'no-store'})));
  if(responses.some(r=>!r.ok))throw Error('Live Release incomplete and Pages encrypted backup unavailable.');
  const texts=await Promise.all(responses.map(r=>r.text()));
- const [vault,status]=texts.map(JSON.parse);
- if(vault.algorithm!=='AES-GCM'||typeof vault.ciphertext!=='string'||!status.initialized)
-  throw Error('Pages encrypted backup is invalid; refusing unsafe recovery.');
- for(let i=0;i<2;i++)fs.writeFileSync('public/'+['vault.json','status.json'][i],texts[i]);
+ const pages={vault:texts[0],status:texts[1],at:validateSnapshot(...texts)};
+ const cached=cachePair();
+ installPair(cached&&cached.at>=pages.at?cached:pages);
  console.warn('RECOVERY: used previously deployed encrypted Pages archive because live Release lost an asset. Current Microsoft data will be rescanned before publication.');
 }
 function download(name,dir){
@@ -58,20 +76,19 @@ const mode=process.argv[2];
 if(!process.env.GH_TOKEN)throw Error('GH_TOKEN is required for live asset operations.');
 if(!['restore-snapshot','restore-media','publish'].includes(mode))throw Error('Unknown live-assets mode');
 if(mode==='restore-snapshot'){
- if(!available()){console.log('Live release not created yet; keeping bundled encrypted bootstrap snapshot.');process.exit(0);}
+ if(!available())throw Error('Live release missing; refusing bootstrap rollback.');
  const dir=temp();
  try{
   const names=new Set(JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name));
   if(!names.has('vault.json')||!names.has('status.json')){
-   await recoverMissingVaultFromPages();
+   const cached=cachePair();
+   if(cached)installPair(cached);else await recoverMissingVaultFromPages();
    process.exit(0);
   }
   if(!download('vault.json',dir)||!download('status.json',dir))
    throw Error('Live release assets exist but cannot be downloaded; do not substitute older data for a transient error.');
-  const vault=JSON.parse(fs.readFileSync(path.join(dir,'vault.json'),'utf8'));
-  const status=JSON.parse(fs.readFileSync(path.join(dir,'status.json'),'utf8'));
-  if(vault.algorithm!=='AES-GCM'||typeof vault.ciphertext!=='string'||!status.initialized)throw Error('Invalid published encrypted snapshot');
-  for(const name of ['vault.json','status.json'])fs.copyFileSync(path.join(dir,name),'public/'+name);
+  const remote=pairAt(dir),cached=cachePair();
+  installPair(cached&&cached.at>remote.at?cached:remote);
   console.log('Restored current encrypted snapshot from GitHub Release.');
  }finally{cleanup(dir);}
 }
@@ -90,8 +107,7 @@ if(mode==='restore-media'){
  }finally{cleanup(dir);}
 }
 if(mode==='publish'){
- const vault=JSON.parse(fs.readFileSync('public/vault.json','utf8'));
- if(vault.algorithm!=='AES-GCM'||typeof vault.ciphertext!=='string')throw Error('Cannot release an invalid encrypted snapshot.');
+ pairAt('public');
  if(!available())run('gh',['release','create',tag,'--target','main','--title','XBOX Playlog live assets','--notes','Machine-managed encrypted public snapshot and public WebP media. Never put tokens or plaintext here.','--latest=false']);
  const dir=temp();
  try{
