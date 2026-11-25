@@ -68,7 +68,8 @@ export function appendPlaytimeSamples(existing:unknown,samples:PlaytimeSample[])
     target[id]=(target[id]??0)+delta;
    }else if(delta<0)ledger.corrections[key(date,id)]=(ledger.corrections[key(date,id)]??0)+1;
   }
-  ledger.latest[id]={minutes,at:new Date(ms).toISOString()};
+  // Keep the counted high-water mark across transient Xbox counter regressions.
+   ledger.latest[id]={minutes:Math.max(minutes,previous?.minutes??0),at:new Date(ms).toISOString()};
   ledger.days[date]??={};
  }
  return ledger;
