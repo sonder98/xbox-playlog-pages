@@ -20,6 +20,15 @@ function pairAt(dir){
  const vault=fs.readFileSync(path.join(dir,'vault.json'),'utf8'),status=fs.readFileSync(path.join(dir,'status.json'),'utf8');
  return {vault,status,at:validateSnapshot(vault,status)};
 }
+export function decodePair(text){
+ const bundle=JSON.parse(text);
+ return {vault:bundle.vault,status:bundle.status,at:validateSnapshot(bundle.vault,bundle.status)};
+}
+export function newestPair(pairs){
+ const valid=pairs.filter(Boolean).sort((a,b)=>b.at-a.at);
+ if(!valid.length)throw Error('No valid encrypted snapshot; refusing rollback.');
+ return valid[0];
+}
 function cachePair(){
  try{return pairAt('.snapshot-backup');}catch{return null;}
 }
@@ -44,15 +53,13 @@ async function releaseUpload(files){
 }
 // The already-deployed Pages copy is a last-resort encrypted backup. This is
 // recovery only for a genuinely missing Release asset (not a network timeout).
-async function recoverMissingVaultFromPages(){
+async function pagesPair(){
  const base='https://sonder98.github.io/xbox-playlog-pages/';
  const responses=await Promise.all(['vault.json','status.json'].map(name=>fetch(base+name,{cache:'no-store'})));
  if(responses.some(r=>!r.ok))throw Error('Live Release incomplete and Pages encrypted backup unavailable.');
  const texts=await Promise.all(responses.map(r=>r.text()));
  const pages={vault:texts[0],status:texts[1],at:validateSnapshot(...texts)};
- const cached=cachePair();
- installPair(cached&&cached.at>=pages.at?cached:pages);
- console.warn('RECOVERY: used previously deployed encrypted Pages archive because live Release lost an asset. Current Microsoft data will be rescanned before publication.');
+ return pages;
 }
 function download(name,dir){
  try{run('gh',['release','download',tag,'--pattern',name,'--dir',dir,'--clobber']);return fs.existsSync(path.join(dir,name));}
@@ -73,23 +80,29 @@ function allPresent(index){
  return true;
 }
 const mode=process.argv[2];
+if(import.meta.url===new URL(process.argv[1]||'','file:'+process.cwd()+'/').href){
 if(!process.env.GH_TOKEN)throw Error('GH_TOKEN is required for live asset operations.');
 if(!['restore-snapshot','restore-media','publish'].includes(mode))throw Error('Unknown live-assets mode');
 if(mode==='restore-snapshot'){
- if(!available())throw Error('Live release missing; refusing bootstrap rollback.');
  const dir=temp();
  try{
-  const names=new Set(JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name));
-  if(!names.has('vault.json')||!names.has('status.json')){
-   const cached=cachePair();
-   if(cached)installPair(cached);else await recoverMissingVaultFromPages();
-   process.exit(0);
+  const names=available()?new Set(JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name)):new Set();
+  const candidates=[cachePair()];
+  for(const name of ['snapshot-a.json','snapshot-b.json']){
+   if(!names.has(name))continue;
+   if(!download(name,dir))throw Error('Cannot read existing durable checkpoint.');
+   try{candidates.push(decodePair(fs.readFileSync(path.join(dir,name),'utf8')));}catch{console.warn('::warning::Invalid durable checkpoint '+name);}
   }
-  if(!download('vault.json',dir)||!download('status.json',dir))
-   throw Error('Live release assets exist but cannot be downloaded; do not substitute older data for a transient error.');
-  const remote=pairAt(dir),cached=cachePair();
-  installPair(cached&&cached.at>remote.at?cached:remote);
-  console.log('Restored current encrypted snapshot from GitHub Release.');
+  if(names.has('vault.json')&&names.has('status.json')){
+   if(!download('vault.json',dir)||!download('status.json',dir))throw Error('Cannot read existing Release snapshot.');
+   try{candidates.push(pairAt(dir));}catch{console.warn('::warning::Invalid legacy Release pair.');}
+  }
+  // Pages can be newer than a restored cache. Compare it during recovery only.
+  if(!candidates.some(Boolean)||!names.has('vault.json')||!names.has('status.json')){
+   try{candidates.push(await pagesPair());}catch{console.warn('::warning::Published Pages backup unavailable.');}
+  }
+  installPair(newestPair(candidates));
+  console.log('Restored newest validated encrypted checkpoint.');
  }finally{cleanup(dir);}
 }
 if(mode==='restore-media'){
@@ -112,6 +125,26 @@ if(mode==='publish'){
  const dir=temp();
  try{
   // The vault is encrypted on the runner before it is uploaded. No plaintext is published.
+  // Upload a complete, self-contained checkpoint before replacing legacy assets.
+  // Alternate slots based on the actual remote checkpoint timestamps, not clock parity.
+  const names=new Set(JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name));
+  const slots=['snapshot-a.json','snapshot-b.json'];
+  const ages=slots.map(name=>{
+   if(!names.has(name))return -Infinity;
+   if(!download(name,dir))throw Error('Cannot inspect existing checkpoint before publish.');
+   try{return decodePair(fs.readFileSync(path.join(dir,name),'utf8')).at;}catch{return -Infinity;}
+  });
+  const checkpoint=path.join(dir,slots[ages[0]<=ages[1]?0:1]);
+  const pair=pairAt('public');
+  if(pair.at<Math.max(...ages))throw Error('Refusing to publish an older snapshot.');
+  fs.writeFileSync(checkpoint,JSON.stringify({vault:pair.vault,status:pair.status}));
+  await releaseUpload([checkpoint]);
+  const verify=temp();
+  try{
+   if(!download(path.basename(checkpoint),verify))throw Error('Checkpoint verification download failed.');
+   const recovered=decodePair(fs.readFileSync(path.join(verify,path.basename(checkpoint)),'utf8'));
+   if(recovered.vault!==pair.vault||recovered.status!==pair.status)throw Error('Checkpoint verification failed.');
+  }finally{cleanup(verify);}
   await releaseUpload(['public/vault.json','public/status.json']);
   const current=manifest(),indexFile=path.join(dir,'media-index.txt');
   let previous='';
@@ -125,4 +158,5 @@ if(mode==='publish'){
   }else console.log('Durable artwork archive unchanged, skipping image reupload.');
   console.log('Published encrypted snapshot without rewriting Git history.');
  }finally{cleanup(dir);}
+}
 }
