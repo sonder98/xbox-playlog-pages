@@ -21,6 +21,7 @@ permissions:
 concurrency:
   group: playlog-live-publish
   cancel-in-progress: false
+  queue: max
 jobs:
   sync:
     if: github.ref == 'refs/heads/main'
