@@ -1,4 +1,4 @@
-import {createHash,randomUUID} from 'node:crypto';
+import {randomUUID} from 'node:crypto';
 import fs from 'node:fs';
 import {credentials} from './microsoft-credentials.ts';
 import {scanMicrosoft,refreshGroupingWarnings} from './microsoft-library.ts';
@@ -11,7 +11,7 @@ import {appendPlaytimeSamples,boundaryPlaytimeSweep} from '../src/playtime-ledge
 import {shouldReuseRecentXboxSnapshot} from './microsoft-sync-policy.ts';
 import {fixedPcMetascores} from './fixed-pc-metascores.ts';
 import {completion} from '../src/completion.ts';
-import {distinctScreenshotIndices,normalizeSyncMechanism,type Game} from '../src/data.ts';
+import {normalizeSyncMechanism,type Game} from '../src/data.ts';
 /** Aggregate only. Never log the private game's name, ID or snapshot. */
 function logMythicArtworkCoverage(games:Game[]){
  const mythic=games.filter(g=>completion(g).mythic);
@@ -35,44 +35,6 @@ function logMythicScreenshotCache(games:Game[]){
   total,full,previews,missingFull:total-full,missingPreviews:total-previews
  }));
 }
-/** Temporary aggregate-only audit for a reported screenshot-rotation regression.
- * Never print user IDs, game IDs, raw image URLs or Xbox profile data. */
-function auditReportedRotation(games:Game[],prior:Game[]){
- const cases=[
-  {label:'Way of the Sword',matches:(name:string)=>/way of the sword/i.test(name)},
-  {label:'Black Ops 6 Launcher',matches:(name:string)=>/black\s*ops\s*6.*launcher/i.test(name)}
- ];
- for(const sample of cases){
-  const game=games.find(g=>sample.matches(g.name)),old=prior.find(g=>sample.matches(g.name));
-  if(!game){console.log('Mythic 轮换核验（'+sample.label+'）：notInSnapshot');continue;}
-  const shots=game.posterScreenshots||[],indices=distinctScreenshotIndices(shots);
-  const today=Math.floor((Date.now()+8*3600_000)/86400_000);
-  const start=game.posterRotationStartDay?Date.parse(game.posterRotationStartDay+'T00:00:00Z')/86400_000:NaN;
-  const selected=(day:number)=>indices.length&&Number.isFinite(start)?indices[Math.max(0,day-start)%indices.length]:-1;
-  const yesterdayIndex=selected(today-1),todayIndex=selected(today);
-  const cached=game.cachedPosterScreenshotsSmall||[];
-  const file=(i:number)=>{
-   const name=cached[i]?.split('/').at(-1)||'';
-   return /^[a-f0-9]{32}-480\.webp$/.test(name)?'public/media/'+name:null;
-  };
-  const bytes=(i:number)=>{const filename=file(i);return filename&&fs.existsSync(filename)?fs.readFileSync(filename):null;};
-  const yesterday=bytes(yesterdayIndex),todayArt=bytes(todayIndex);
-  const imageFingerprints=indices.flatMap(i=>{
-   const art=bytes(i);
-   return art?[createHash('sha256').update(art).digest('hex')]:[];
-  });
-  console.log('Mythic 轮换核验（'+sample.label+'）：'+JSON.stringify({
-   priorScreenshots:old?.posterScreenshots?.length??0,
-   priorDistinct:distinctScreenshotIndices(old?.posterScreenshots||[]).length,
-   screenshots:shots.length,distinct:indices.length,startDay:game.posterRotationStartDay||null,
-   yesterdayIndex,todayIndex,cachedYesterday:!!yesterday,cachedToday:!!todayArt,
-   identicalCachedPictures:!!(yesterday&&todayArt&&yesterday.equals(todayArt)),
-   cachedSlots:imageFingerprints.length,uniqueCachedPictures:new Set(imageFingerprints).size,
-   posterPurpose:game.posterImagePurpose||null,posterVersion:game.posterSelectionVersion||null
-  }));
- }
-}
-
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
 const syncMechanism=normalizeSyncMechanism(process.env.PLAYLOG_SYNC_MECHANISM);
 const root=process.env.MICROSOFT_STATE_DIR||'.private/microsoft',key=process.env.MICROSOFT_STATE_KEY!;
@@ -97,7 +59,6 @@ if(fresh&&fresh.id===previous[0]?.id&&shouldReuseRecentXboxSnapshot({
  logMythicArtworkCoverage(reused.games);
  await cacheRecordImages(reused);
  logMythicScreenshotCache(reused.games);
- auditReportedRotation(reused.games,previous[0]?.games||[]);
  await publishSnapshot(reused,previous.slice(0,29),target,ledger,fixedPcMetascores(reused.games.map((g:any)=>String(g.id)),key));
  console.log('Cloudflare 近五分钟内复用先前手动同步数据；已单独记录触发时间，未执行微软扫描。');process.exit(0);
 }
@@ -131,7 +92,6 @@ result.record=refreshGroupingWarnings(result.record);
 const mediaStarted=Date.now();
 await cacheRecordImages(result.record);
 logMythicScreenshotCache(result.record.games);
-auditReportedRotation(result.record.games,previous[0]?.games||[]);
 console.log('图片缓存耗时（秒）：'+Math.round((Date.now()-mediaStarted)/1000));
 writeState(root+'/candidate.json',{...result,record:{...result.record,games:allScannedGames},
  lastFullCatalogAt:result.audit.fullRefresh&&!result.audit.failed?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);
