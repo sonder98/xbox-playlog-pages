@@ -503,6 +503,9 @@ try{
   for(const mobile of [true,false]){
     const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1000},isMobile:mobile,hasTouch:mobile,deviceScaleFactor:mobile?3:2});
     const page=await context.newPage();
+    // Keep fixed October 2026 achievement fixtures inside the recent 30-day calendar.
+    // Date-only mocking preserves the application's real timers and polling behavior.
+    await page.clock.setFixedTime(new Date('2026-11-14T12:00:00.000Z'));
     let activeEnvelope=envelope;
     let simulatedStatusAt=null;
     const errors=[];
@@ -3082,7 +3085,8 @@ try{
     }));
     assert.equal(savedInfo.extractable,false);
     assert.equal(savedInfo.encrypted,true);
-    assert.ok(savedInfo.expires>Date.now()+29*24*60*60*1000);
+    const browserNow=await page.evaluate(()=>Date.now());
+    assert.ok(savedInfo.expires>browserNow+29*24*60*60*1000);
     activeEnvelope=await encryptVault(await decryptVault(envelope,password),password);
     await page.reload();
     await page.getByRole('button',{name:'锁定档案',exact:true}).waitFor();
