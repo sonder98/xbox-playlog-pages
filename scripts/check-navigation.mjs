@@ -432,7 +432,7 @@ try{
   {
     const pollContext=await browser.newContext({viewport:{width:1440,height:900}});
     const pollPage=await pollContext.newPage();
-    await pollPage.clock.install();
+    await pollPage.clock.install({time:new Date('2026-11-14T12:00:00.000Z')});
     let pollEnvelope=envelope,pollStatusAt='2026-10-30T00:00:00Z';
     await pollPage.route('**/status.json*',route=>route.fulfill({json:{initialized:true,latestAt:pollStatusAt}}));
     await pollPage.route('**/vault.json*',route=>route.fulfill({json:pollEnvelope}));
@@ -735,7 +735,7 @@ try{
       }
       assert.equal(req.headers().authorization,'Bearer github_pat_fixture_only',
         'Manual sync status polling uses the existing Actions token instead of anonymous requests');
-      return route.fulfill({json:{workflow_runs:requestedId?[{id:123,display_title:'Xbox sync (workflow_dispatch · '+requestedId+')',name:'Sync Xbox records',event:'workflow_dispatch',status:'queued',conclusion:null,html_url:'https://github.com/sonder98/xbox-playlog-pages/actions/runs/123',created_at:new Date().toISOString(),updated_at:new Date().toISOString()}]:[]}});
+      return route.fulfill({json:{workflow_runs:requestedId?[{id:123,display_title:'Xbox sync (workflow_dispatch · '+requestedId+')',name:'Sync Xbox records',event:'workflow_dispatch',status:'queued',conclusion:null,html_url:'https://github.com/sonder98/xbox-playlog-pages/actions/runs/123',created_at:'2026-11-14T12:00:00.000Z',updated_at:'2026-11-14T12:00:00.000Z'}]:[]}});
     });
     await page.locator('.title-row .overview-refresh').click();
     const syncDialog=page.getByRole('dialog',{name:'手动同步 Xbox 游戏记录'});
