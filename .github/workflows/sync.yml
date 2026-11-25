@@ -66,6 +66,20 @@ jobs:
           path: .private/microsoft
           key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-sync-start
           restore-keys: microsoft-private-v1-main-
+      - name: Restore legacy encrypted checkpoint (one-time compatibility)
+        id: legacy_checkpoint
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            public/vault.json
+            public/status.json
+          key: playlog-encrypted-vault-v1-main-${{ github.run_id }}
+          restore-keys: playlog-encrypted-vault-v1-main-
+      - name: Stage legacy checkpoint if found
+        if: steps.legacy_checkpoint.outputs.cache-matched-key != ''
+        run: |
+          mkdir -p .snapshot-backup-legacy
+          cp public/vault.json public/status.json .snapshot-backup-legacy/
       - name: Restore independent encrypted checkpoint
         uses: actions/cache/restore@v4
         with:

@@ -30,8 +30,8 @@ export function newestPair(pairs){
  if(!valid.length)throw Error('No valid encrypted snapshot; refusing rollback.');
  return valid[0];
 }
-function cachePair(){
- try{return pairAt('.snapshot-backup');}catch{return null;}
+function cachePair(dir){
+ try{return pairAt(dir);}catch{return null;}
 }
 function installPair(pair){
  fs.writeFileSync('public/vault.json',pair.vault);
@@ -88,7 +88,7 @@ if(mode==='restore-snapshot'){
  const dir=temp();
  try{
   const names=available()?new Set(JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name)):new Set();
-  const candidates=[cachePair()];
+  const candidates=[cachePair('.snapshot-backup'),cachePair('.snapshot-backup-legacy')];
   let durableCount=0;
   for(const name of ['snapshot-a.json','snapshot-b.json']){
    if(!names.has(name))continue;
@@ -148,7 +148,8 @@ if(mode==='publish'){
    const recovered=decodePair(fs.readFileSync(path.join(verify,path.basename(checkpoint)),'utf8'));
    if(recovered.vault!==pair.vault||recovered.status!==pair.status)throw Error('Checkpoint verification failed.');
   }finally{cleanup(verify);}
-  await releaseUpload(['public/vault.json','public/status.json']);
+  // The verified checkpoint is authoritative. Legacy assets are a compatibility mirror.
+  try{await releaseUpload(['public/vault.json','public/status.json']);}catch{console.warn('::warning::Legacy Release mirror update failed; the verified checkpoint remains available.');}
   const current=manifest(),indexFile=path.join(dir,'media-index.txt');
   let previous='';
   if(download('media-index.txt',dir))previous=fs.readFileSync(indexFile,'utf8');
