@@ -83,7 +83,7 @@ function allPresent(index){
 const mode=process.argv[2];
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
 if(!process.env.GH_TOKEN)throw Error('GH_TOKEN is required for live asset operations.');
-if(!['restore-snapshot','restore-media','publish'].includes(mode))throw Error('Unknown live-assets mode');
+if(!['restore-snapshot','restore-media','publish','publish-media','release-status'].includes(mode))throw Error('Unknown live-assets mode');
 if(mode==='restore-snapshot'){
  const dir=temp();
  try{
@@ -108,11 +108,26 @@ if(mode==='restore-snapshot'){
   console.log('Restored newest validated encrypted checkpoint.');
  }finally{cleanup(dir);}
 }
+if(mode==='release-status'){
+ const dir=temp();
+ try{
+  const names=new Set(JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name));
+  const slots=[];
+  for(const name of ['snapshot-a.json','snapshot-b.json']){
+   if(!names.has(name))continue;
+   if(!download(name,dir))throw Error('Cannot verify Release freshness.');
+   try{slots.push(decodePair(fs.readFileSync(path.join(dir,name),'utf8')));}catch{}
+  }
+  console.log(newestPair(slots).status);
+ }finally{cleanup(dir);}
+}
 if(mode==='restore-media'){
  if(!available()){console.log('Live artwork release not created yet; using Actions image cache.');process.exit(0);}
  const dir=temp();
  try{
-  if(!download('media-index.txt',dir)){console.log('No durable media index yet; using Actions image cache.');process.exit(0);}
+  const names=JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name);
+  if(!names.includes('media-index.txt')&&!names.includes('playlog-media.tar.gz'))process.exit(0);
+  if(!download('media-index.txt',dir))throw Error('Existing artwork index unavailable.');
   const index=fs.readFileSync(path.join(dir,'media-index.txt'),'utf8');
   if(allPresent(index)){console.log('Actions media cache matches durable artwork index.');process.exit(0);}
   if(!download('playlog-media.tar.gz',dir))throw Error('Durable media archive missing, cannot rebuild artwork cache.');
@@ -150,14 +165,26 @@ if(mode==='publish'){
   }finally{cleanup(verify);}
   // The verified checkpoint is authoritative. Legacy assets are a compatibility mirror.
   try{await releaseUpload(['public/vault.json','public/status.json']);}catch{console.warn('::warning::Legacy Release mirror update failed; the verified checkpoint remains available.');}
+  console.log('Published verified encrypted snapshot.');
+ }finally{cleanup(dir);}
+}
+if(mode==='publish-media'){
+ const dir=temp();
+ try{
+  const names=JSON.parse(run('gh',['release','view',tag,'--json','assets'])).assets.map(a=>a.name);
   const current=manifest(),indexFile=path.join(dir,'media-index.txt');
   let previous='';
-  if(download('media-index.txt',dir))previous=fs.readFileSync(indexFile,'utf8');
+  if(names.includes('media-index.txt')||names.includes('playlog-media.tar.gz')){
+   if(!download('media-index.txt',dir))throw Error('Artwork index unavailable; preserving remote archive.');
+   previous=fs.readFileSync(indexFile,'utf8');
+   if(!allPresent(previous))throw Error('Partial artwork cache; preserving remote archive.');
+  }
   if(current!==previous&&current.trim()){
    fs.writeFileSync(indexFile,current);
    const archive=path.join(dir,'playlog-media.tar.gz');
    run('tar',['-czf',archive,'-C','public','media']);
-   await releaseUpload([archive,indexFile]);
+   await releaseUpload([archive]);
+   await releaseUpload([indexFile]);
    console.log('Published durable artwork archive and integrity index.');
   }else console.log('Durable artwork archive unchanged, skipping image reupload.');
   console.log('Published encrypted snapshot without rewriting Git history.');

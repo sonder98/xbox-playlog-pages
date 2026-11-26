@@ -35,6 +35,14 @@ function logMythicScreenshotCache(games:Game[]){
   total,full,previews,missingFull:total-full,missingPreviews:total-previews
  }));
 }
+async function optionalArtwork(record:Parameters<typeof australianArtwork>[0]){
+ try{return await australianArtwork(record,fetch,previous[0]);}
+ catch{console.warn('::warning::Store artwork unavailable; retaining official image sources.');}
+}
+async function optionalImageCache(record:Parameters<typeof cacheRecordImages>[0]){
+ try{await cacheRecordImages(record,{budgetMs:60000});logMythicScreenshotCache(record.games);}
+ catch{console.warn('::warning::Artwork cache unavailable for this scan.');}
+}
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
 const syncMechanism=normalizeSyncMechanism(process.env.PLAYLOG_SYNC_MECHANISM);
 const root=process.env.MICROSOFT_STATE_DIR||'.private/microsoft',key=process.env.MICROSOFT_STATE_KEY!;
@@ -59,11 +67,10 @@ if(fresh&&fresh.id===previous[0]?.id&&shouldReuseRecentXboxSnapshot({
  forceSweep:process.env.PLAYTIME_FORCE_SWEEP==='true'
 })){
  const reused:typeof fresh={...fresh,id:randomUUID(),at:syncStartedAt,syncMechanism:'cloudflare',syncReusedFromAt:fresh.at};
- const artwork=await australianArtwork(reused,fetch,previous[0]);
+ const artwork=await optionalArtwork(reused);
  console.log('快速快照澳区横幅覆盖：'+JSON.stringify(artwork));
  logMythicArtworkCoverage(reused.games);
- await cacheRecordImages(reused);
- logMythicScreenshotCache(reused.games);
+ await optionalImageCache(reused);
  await publishSnapshot(reused,previous.slice(0,29),target,ledger,fixedPcMetascores(reused.games.map((g:any)=>String(g.id)),key));
  console.log('Cloudflare 近五分钟内复用先前手动同步数据；已单独记录触发时间，未执行微软扫描。');process.exit(0);
 }
@@ -74,7 +81,7 @@ console.log('微软增量缓存基线：'+JSON.stringify({source:saved?.record?'
 const began=Date.now();
 if(syncMechanism==='manual')console.log('手动同步：完整执行微软增量扫描，优先重新核验近期游玩游戏的成就。');
 if(syncMechanism==='cloudflare')console.log('Cloudflare 定时同步：非允许的五分钟复用窗口，执行新的微软增量扫描。');
-const result=await scanMicrosoft(session.config,{previous:cacheBaseline,emptyTitles:saved?.emptyTitles,lastFullCatalogAt:saved?.lastFullCatalogAt??cacheBaseline?.at,expectedOwner:session.state.owner,forcePlaytimeSweep:process.env.PLAYTIME_FORCE_SWEEP==='true',recentAchievementLookbackDays:syncMechanism==='manual'||syncMechanism==='code-update'?14:syncMechanism==='cloudflare'?3:0,progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
+const result=await scanMicrosoft(session.config,{previous:cacheBaseline,retryTitles:saved?.retryTitles,emptyTitles:saved?.emptyTitles,lastFullCatalogAt:saved?.lastFullCatalogAt??cacheBaseline?.at,expectedOwner:session.state.owner,forcePlaytimeSweep:process.env.PLAYTIME_FORCE_SWEEP==='true',recentAchievementLookbackDays:syncMechanism==='manual'||syncMechanism==='code-update'?14:syncMechanism==='cloudflare'?3:0,progress:(n,total)=>{if(n%20===0||n===total)console.log(`微软同步 ${n}/${total}`);}});
 const scanSeconds=Math.round((Date.now()-began)/1000);
 // The workflow injects explicit provenance. Old snapshots remain unlabelled rather
 // than being guessed from their timestamps.
@@ -83,23 +90,17 @@ if(syncMechanism)result.record.syncMechanism=syncMechanism;
 console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,emptySkipped:result.audit.emptySkipped,emptyCached:result.emptyTitles.length,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed,unpreservedFailures:result.audit.unpreservedFailures}));
 // An isolated previously seen title can preserve its last data without blocking other games.
 // New titles with incomplete data are deferred; global history or fatal errors still stop publication.
-if(result.audit.interrupted||result.audit.historySourcesFailed||(result.audit.titles>0&&result.audit.unpreservedFailures===result.audit.titles))throw Error('微软同步未完整完成。');
+if(result.audit.interrupted||(result.audit.titles>0&&result.audit.unpreservedFailures===result.audit.titles))throw Error('微软同步未完整完成。');
 if(result.audit.failed)console.warn('微软同步部分降级：'+result.audit.failed+' 个游戏异常，旧游戏保留原数据、新游戏暂缓收录，其余继续发布。');
-const artworkStarted=Date.now();
-const artwork=await australianArtwork(result.record,fetch,previous[0]);
-console.log('澳区英文封面覆盖：'+JSON.stringify({...artwork,seconds:Math.round((Date.now()-artworkStarted)/1000)}));
-logMythicArtworkCoverage(result.record.games);
+const artwork=await optionalArtwork(result.record);
 // Retain zero-result metadata ONLY in the existing encrypted private candidate
 // so the next run can avoid re-reading 30+ unpublishable titles.
 const allScannedGames=result.record.games;
 result.record.games=result.record.games.filter(g=>g.total>0||g.minutes!==null);
 result.record=refreshGroupingWarnings(result.record);
-const mediaStarted=Date.now();
-await cacheRecordImages(result.record);
-logMythicScreenshotCache(result.record.games);
-console.log('图片缓存耗时（秒）：'+Math.round((Date.now()-mediaStarted)/1000));
+await optionalImageCache(result.record);
 writeState(root+'/candidate.json',{...result,record:{...result.record,games:allScannedGames},
- lastFullCatalogAt:result.audit.fullRefresh&&!result.audit.failed?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);
+ lastFullCatalogAt:result.audit.fullRefresh?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);
 session.save();
 const daily=appendPlaytimeSamples(ledger,result.statsSamples);
 await publishSnapshot(result.record,previous.slice(0,29),target,daily,fixedPcMetascores(result.record.games.map(g=>g.id),key),result.statsSamples.length>0&&!result.audit.failed&&(process.env.PLAYTIME_FORCE_SWEEP==='true'||boundaryPlaytimeSweep(result.record.at)));

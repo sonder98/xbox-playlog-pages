@@ -245,3 +245,13 @@ test('weekly AU lookup missing data preserves old cover and remains retryable',a
  assert.equal(fresh.games[0].detailImage,old.games[0].detailImage);
  assert.equal(fresh.games[0].artworkCheckedAt,old.games[0].artworkCheckedAt);
 });
+
+test('Store outage retains artwork on every old game and bounds requests',async()=>{
+ const games=['1','2'].map(id=>({id,name:id,image:'https://example.org/'+id}));
+ const previous={games} as RecordData;
+ const current={games:games.map(g=>({...g,image:''}))} as RecordData;
+ let calls=0;
+ await australianArtwork(current,async()=>{calls++;return new Response(null,{status:503});},previous);
+ assert.equal(calls,1);
+ assert.deepEqual(current.games.map(g=>g.image),games.map(g=>g.image));
+});

@@ -194,7 +194,7 @@ export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:st
  if(typeof summary.currentGamerscore==='number'&&summary.currentGamerscore!==old.score)return 'scoreChanged';
  return 'reused';
 }
-export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;emptyTitles?:EmptyTitleCache[];lastFullCatalogAt?:string;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string;forcePlaytimeSweep?:boolean;recentAchievementLookbackDays?:number}={}){
+export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;emptyTitles?:EmptyTitleCache[];lastFullCatalogAt?:string;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string;forcePlaytimeSweep?:boolean;retryTitles?:Record<string,{attempts:number;after:number;lastPlayed:string|null}>;recentAchievementLookbackDays?:number}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
  // Sustained pacing, no retries against permissions/security errors. 429 stops this scan.
  const request:typeof fetch=async(input,init)=>{await pause(1050);return (options.request||fetch)(input,init);};
@@ -203,6 +203,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  const settings=rawProfile.profileUsers[0].settings||[],setting=(id:string)=>settings.find((s:any)=>s.id===id)?.value||'';
  const history=await collectPages(t=>provider.call('/player/titleHistory?locale=en-AU'+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');
  let titles=[...new Map(history.values.filter(g=>g.type!=='App'&&/^\d{1,10}$/.test(String(g.titleId))).map(g=>[String(g.titleId),g])).values()];
+ if(!titles.length)throw Error('Xbox 主游戏历史为空；保留当前快照。');
  let historyFailures=0,achievementPages=0;const extra:any[][]=[];
  for(const version of ['2','1']){
   try{const list=await collectPages(t=>provider.call('/player/achievementHistory?locale=en-AU&contractVersion='+version+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');extra.push(list.values);achievementPages+=list.pages;}catch(error){if(error instanceof XboxReadError&&[401,429].includes(error.status))throw error;historyFailures++;extra.push([]);}
@@ -246,8 +247,16 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  const fatal=(error:unknown)=>error instanceof XboxReadError&&[401,429].includes(error.status);
  // These titles are written only inside the encrypted vault, never printed in public Actions logs.
  const failedTitleNames:string[]=[],deferredIds=new Set<string>();
+ const retryTitles={...options.retryTitles};
  for(let i=0;i<games.length;i++){
   const game=games[i],old=prior.get(game.id);let complete=false;
+  const retry=retryTitles[game.id];
+  if(retry && retry.after>Date.parse(audit.at) && retry.lastPlayed===game.lastPlayed && !(old && (old.earned<game.earned || old.score<game.score)) && !sweepPlaytime && !options.onlyIds?.has(game.id)){
+   if(old)games[i]={...old,officialHidden:game.officialHidden};
+   else deferredIds.add(game.id);
+   audit.processed++;continue;
+  }
+  delete retryTitles[game.id];
   // Diagnostic breadcrumbs never include gamer data, title IDs, or endpoint URLs.
   let failureStage='before-detail',failureDecision='not-classified';
   // Xbox visibility controls the game library and recent lists, not achievement
@@ -269,7 +278,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
     skippedEmpty.add(game.id);audit.emptySkipped++;audit.reuseReasons.emptyCache=(audit.reuseReasons.emptyCache||0)+1;
     audit.processed++;options.progress?.(audit.processed,games.length,audit);continue;
    }
-   let decision=detailCacheDecision(old,summary,lastPlayed,audit.fullRefresh);
+   let decision=detailCacheDecision(old,summary,lastPlayed,audit.fullRefresh||!!retry);
    failureDecision=decision;
    // The official achievement detail endpoint can reflect new unlocks before
    // Xbox title-history summary counters update. Re-read recent games even
@@ -422,6 +431,10 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
     const reason=error instanceof XboxReadError?'http-'+error.status:
      error instanceof Error?(knownErrors[error.message]||'other'):'other';
     console.error('微软单游戏失败诊断：'+JSON.stringify({kind:old?'existing':'new',stage:failureStage,decision:failureDecision,reason}));
+    if(!fatal(error)){
+     const attempts=Math.min(5,(retry?.attempts||0)+1);
+     retryTitles[game.id]={attempts,after:Date.parse(audit.at)+Math.min(12,2**(attempts-1))*3600_000,lastPlayed:game.lastPlayed};
+    }
     audit.failed++;
     failedTitleNames.push((old?.name||game.name).slice(0,150)+(old?'（保留原记录）':'（暂缓收录，下次重试）'));
     if(old){games[i]=complete?{...game,minutes:old.minutes,officialHidden:game.officialHidden}:{...old,officialHidden:game.officialHidden};audit.preserved++;}
@@ -436,11 +449,11 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  let aliases=new Map<string,string[]>();if(options.baseline)aliases=await titleAliases(p=>provider.call(p));
  audit.comparison=compareLibrary(games,options.baseline,aliases);
  audit.unknownGroups=countVisibleUnknownGroups(games);
- const record:RecordData=refreshGroupingWarnings({id:crypto.randomUUID(),at:audit.at,source:'Xbox',profile:{xuid:provider.xuid,gamertag:setting('Gamertag')||'Xbox 玩家',avatar:safeImage(setting('GameDisplayPicRaw'))},games:games.filter(g=>!deferredIds.has(g.id)),warnings:[...(audit.failed?[`${audit.failed} 个游戏的官方数据尚未完整核对。`,...failedTitleNames.slice(0,20).map(name=>`同步异常游戏：${name}`)]:[])]});
+ const record:RecordData=refreshGroupingWarnings({id:crypto.randomUUID(),at:audit.at,source:'Xbox',profile:{xuid:provider.xuid,gamertag:setting('Gamertag')||'Xbox 玩家',avatar:safeImage(setting('GameDisplayPicRaw'))},games:games.filter(g=>!deferredIds.has(g.id)),warnings:[...(historyFailures?['部分补充成就历史暂不可用，已保留既有游戏记录。']:[]),...(audit.failed?[`${audit.failed} 个游戏的官方数据尚未完整核对。`,...failedTitleNames.slice(0,20).map(name=>`同步异常游戏：${name}`)]:[])]});
  // Only the MICROSOFT_STATE_KEY-encrypted candidate cache stores zero-result titles.
  const emptyTitles:EmptyTitleCache[]=games.filter(g=>!deferredIds.has(g.id)&&g.officialHidden===false&&g.total===0&&g.earned===0&&
   g.score===0&&g.maxScore===0&&g.minutes===null&&!(g.achievements?.length))
   .map(g=>({id:g.id,lastPlayed:g.lastPlayed,total:0,earned:0,score:0,maxScore:0,
    devices:g.devices,checkedAt:skippedEmpty.has(g.id)?knownEmpty.get(g.id)!.checkedAt:audit.at}));
- return {record,audit,statsSamples,emptyTitles};
+ return {record,audit,statsSamples,emptyTitles,retryTitles};
 }

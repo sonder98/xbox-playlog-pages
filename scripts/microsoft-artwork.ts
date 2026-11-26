@@ -22,6 +22,8 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
   if(old.posterRotationStartDay)game.posterRotationStartDay=old.posterRotationStartDay;
   if(old.artworkCheckedAt)game.artworkCheckedAt=old.artworkCheckedAt;
  };
+ const deadline=Date.now()+60_000;
+ let unavailable=false;
  for(const game of record.games){
   const old=oldById.get(game.id);
   const reusable=old?.detailImagePurpose==='TitledHeroArt'&&old.detailImage&&old.posterImage&&
@@ -34,13 +36,21 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
   }
   // Legacy snapshots have no artworkCheckedAt: audit them once on the next sync.
   // Only the image metadata is re-read; unchanged WebP files stay in cache.
+  if(unavailable||Date.now()>deadline){if(old)reuseOld(game,old);continue;}
   queried++;
   const url=new URL('https://displaycatalog.mp.microsoft.com/v7.0/products/lookup');
   url.search=new URLSearchParams({alternateId:'XboxTitleId',Value:game.id,market:'AU',languages:'en-AU,en,neutral',fieldsTemplate:'Details'}).toString();
-  const response=await request(url,{redirect:'error',signal:AbortSignal.timeout(20000)});
+  let response:Response;
+  try{response=await request(url,{redirect:'error',signal:AbortSignal.timeout(12000)});}
+  catch{unavailable=true;if(old)reuseOld(game,old);continue;}
   if(response.status===404){if(old)reuseOld(game,old);continue;}
-  if(!response.ok)throw Error('微软澳区游戏资料读取失败；保留线上记录。');
-  const data=await response.json();
+  if(!response.ok){
+   unavailable=response.status===429||response.status>=500;
+   if(old)reuseOld(game,old);
+   continue;
+  }
+  let data;
+  try{data=await response.json();}catch{if(old)reuseOld(game,old);continue;}
   const normalize=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]+/g,'');
   const wanted=normalize(game.name);
   const candidates=(data.Products||[]).map((product:any)=>{

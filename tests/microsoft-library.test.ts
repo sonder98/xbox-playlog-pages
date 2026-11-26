@@ -501,7 +501,11 @@ test('a single existing Xbox summary mismatch preserves old awards and is explic
   ]});
   throw Error('Unexpected external request');
  };
- const {record:result,audit}=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old])});
+ const {record:result,audit,retryTitles}=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old]),now:'2026-11-26T05:00:00Z'});
+ const retry=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old]),retryTitles,
+  now:'2026-11-26T05:30:00Z'});
+ assert.equal(retry.audit.failed,0);
+ assert.deepEqual(retry.retryTitles,retryTitles);
  assert.equal(audit.failed,1);
  assert.equal(audit.unpreservedFailures,0);
  assert.equal(audit.interrupted,false);
@@ -546,4 +550,29 @@ test('League of Legends linked Game Pass entitlement never enters a played Xbox 
  assert.equal(result.audit.failed,0);
  assert.equal(result.record.warnings.some(w=>w.includes('League of Legends')),false);
  assert.equal(queried.length,0,'Entitlement game must not trigger Xbox achievement or playtime calls');
+});
+
+test('an unrelated broken title and unavailable supplemental history do not hide a current Xbox update',async()=>{
+ const request:typeof fetch=async(input,init)=>{
+  const u=new URL(String(input));
+  if(u.hostname==='login.microsoftonline.com')return Response.json({access_token:'a'});
+  if(u.hostname==='user.auth.xboxlive.com')return Response.json({Token:'u'});
+  if(u.hostname==='xsts.auth.xboxlive.com')return Response.json({Token:'x',DisplayClaims:{xui:[{uhs:'h'}]}});
+  if(u.hostname==='profile.xboxlive.com')return Response.json({profileUsers:[{id:'2530000000000000',settings:[]}]});
+  if(u.hostname==='titlehub.xboxlive.com')return Response.json({titles:['1','2'].map(titleId=>({
+   titleId,name:'Fixture '+titleId,type:'Game',titleHistory:{visible:true},achievement:{totalAchievements:titleId==='1'?1:3,currentAchievements:1,currentGamerscore:10}
+  }))});
+  if(u.pathname.includes('/history/titles'))return new Response(null,{status:503});
+  if(u.hostname==='userstats.xboxlive.com')return Response.json({statlistscollection:[{stats:[{name:'MinutesPlayed',value:'81'}]}]});
+  if(u.hostname==='achievements.xboxlive.com')return Response.json({achievements:[{id:'1',name:'Unlocked',progressState:'Achieved',rarity:{currentPercentage:50},rewards:[{type:'Gamerscore',value:10}]}]});
+  throw Error('Unexpected request '+init?.method);
+ };
+ const result=await scanMicrosoft(config,{request,previous:record([game('9')]),now:'2026-11-26T05:00:00Z',pause:async()=>{}});
+ assert.equal(result.audit.historySourcesFailed,2);
+ assert.equal(result.audit.interrupted,false);
+ assert.equal(result.record.games.find(g=>g.id==='1')?.minutes,81);
+ assert.equal(result.record.games.find(g=>g.id==='1')?.earned,1);
+ assert.ok(result.retryTitles['2']);
+ assert.equal(result.record.games.some(g=>g.id==='2'),false);
+ assert.equal(result.record.games.find(g=>g.id==='9')?.minutes,42);
 });

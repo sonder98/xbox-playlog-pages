@@ -18,12 +18,16 @@ on:
       - 'package-lock.json'
   workflow_dispatch:
     inputs:
+      data_only:
+        type: boolean
+        default: false
+        description: Reuse the tested frontend package
       request_id:
         description: 'Optional originating manual sync request ID'
         required: false
         type: string
 permissions:
-  contents: read
+  contents: write
   actions: read
   pages: write
   id-token: write
@@ -33,6 +37,7 @@ concurrency:
   queue: max
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
@@ -44,10 +49,12 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: npm ci --ignore-scripts
+      - if: inputs.data_only != true
+        run: npm ci --ignore-scripts
       # Browser E2E checks run in ci.yml on every PR; hourly data publication
       # must not be blocked by date-sensitive UI test fixtures.
       - name: Restore public artwork cache
+        continue-on-error: true
         uses: actions/cache/restore@v4
         with:
           path: public/media
@@ -78,9 +85,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           node scripts/live-assets.mjs restore-snapshot
-          node scripts/live-assets.mjs restore-media
-      - run: npm test
-      - run: npm run build
+      - name: Restore best available artwork
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/live-assets.mjs restore-media
+      - name: Validate and package changed frontend
+        if: inputs.data_only != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npm test
+          npm run build
+          node scripts/pages-shell.mjs save
+      - name: Assemble hourly site from verified frontend and fresh snapshot
+        if: inputs.data_only == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/pages-shell.mjs restore
+          cp public/{vault,status}.json dist/
+          if [ -d public/media ]; then cp -a public/media dist/; fi
       - uses: actions/configure-pages@v5
         with:
           enablement: true
@@ -108,3 +133,13 @@ jobs:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify published snapshot
+        run: |
+          expected=$(jq -r .vaultSha256 dist/status.json)
+          for attempt in $(seq 1 12); do
+            actual=$(curl -fsS --max-time 12 "https://sonder98.github.io/xbox-playlog-pages/status.json?verify=$GITHUB_RUN_ID-$attempt" | jq -r .vaultSha256) || actual=''
+            if [ -n "$expected" ] && [ "$expected" != null ] && [ "$actual" = "$expected" ]; then exit 0; fi
+            sleep 5
+          done
+          exit 1

@@ -49,7 +49,7 @@ test('PWA icons are generated from local SVG via existing Sharp dependency',()=>
 
 test('Pages deploy waits for artifact indexing with read permission',()=>{
  const workflow=readFileSync('.github/workflows/pages.yml','utf8');
- assert.match(workflow,/permissions:\s*\n\s*contents: read\s*\n\s*actions: read/);
+ assert.match(workflow,/permissions:\s*\n\s*contents: write\s*\n\s*actions: read/);
  assert.match(workflow,/Wait for Pages artifact indexing/);
  assert.match(workflow,/actions\/runs\/\$\{GITHUB_RUN_ID\}\/artifacts/);
 });
