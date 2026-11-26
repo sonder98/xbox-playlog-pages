@@ -1173,13 +1173,22 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     const all=page.getByRole('button',{name:'全部游戏',exact:true});
     await all.scrollIntoViewIfNeeded();
     const originalScroll=await page.evaluate(()=>window.scrollY);
+    const tabHistoryLength=await page.evaluate(()=>history.length);
     await all.click();
     await page.waitForURL('**/#library');
     await page.getByRole('heading',{name:'我的游戏库',exact:true}).waitFor();
-    await page.goBack();
+    assert.equal(await page.evaluate(()=>history.length),tabHistoryLength,
+      'Opening the game library from overview replaces the tab entry instead of adding browser history');
+    await switchMainTab('管理');
+    await page.locator('[data-page="manage"]').waitFor();
+    await switchMainTab('游戏库');
+    await page.getByRole('heading',{name:'我的游戏库',exact:true}).waitFor();
+    await switchMainTab('概览');
     await page.getByRole('heading',{name:'我的游戏档案',exact:true}).waitFor();
+    assert.equal(await page.evaluate(()=>history.length),tabHistoryLength,
+      'Repeated Manage → Library → Overview tab switches never accumulate Back entries');
     await page.waitForFunction(y=>Math.abs(window.scrollY-y)<5,originalScroll);
-    await page.goForward();
+    await switchMainTab('游戏库');
     await page.getByRole('heading',{name:'我的游戏库',exact:true}).waitFor();
     const wallEntry=page.getByRole('button',{name:'打开Mythic纪念墙'});
     await wallEntry.click();
@@ -1987,9 +1996,14 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     await page.keyboard.press('Escape');
     assert.equal(await gameSort.getAttribute('aria-expanded'),'false');
     const beforeDetail=await page.evaluate(()=>window.scrollY);
+    const detailHistoryLength=await page.evaluate(()=>history.length);
     const chosenMythicId=await page.locator('.game-card').first().getAttribute('data-game-id');
     await page.locator('.game-card').first().click();
     await page.getByRole('dialog').waitFor();
+    assert.equal(await page.evaluate(()=>history.length),detailHistoryLength+1,
+      'Opening a game detail adds one nested history entry so Back can close the detail');
+    assert.ok(page.url().endsWith('#library/game/'+chosenMythicId),
+      'Game detail remains represented by a nested route');
     const medal=page.locator('.game-detail .detail-mythic-trigger');
     assert.equal(await medal.count(),1,'Completed Mythic details display the medal action');
     const medalPlacement=await medal.evaluate(el=>{
@@ -2395,6 +2409,21 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     await restoredSearch.click();
     await page.getByRole('button',{name:'清空游戏搜索',exact:true}).click();
     assert.equal(await page.getByRole('searchbox',{name:'搜索游戏名称'}).inputValue(),'');
+    // Switching tabs from an open detail first unwinds the detail stack, then
+    // replaces the base tab. Back must not reopen the abandoned game detail.
+    await page.locator('.game-card').first().click();
+    await page.getByRole('dialog').waitFor();
+    const nestedDepth=await page.evaluate(()=>history.state.depth);
+    assert.ok(nestedDepth>0,'Game detail is a nested history entry');
+    await page.locator(mobile?'.mobile-nav':'.sidebar').getByRole('button',{name:'管理',exact:true}).evaluate(el=>el.click());
+    await page.locator('[data-page="manage"]').waitFor();
+    assert.equal(page.url().split('#')[1],'manage','Selecting another tab closes the detail and switches directly to the target tab');
+    assert.equal(await page.evaluate(()=>history.state.depth),0,'A tab switch resets the nested route depth');
+    assert.equal(await page.getByRole('dialog').count(),0,'The old game detail is not left open behind the new tab');
+    await switchMainTab('游戏库');
+    await page.getByRole('heading',{name:'我的游戏库',exact:true}).waitFor();
+    assert.equal(await page.evaluate(()=>history.state.depth),0,'Returning to another tab still stays at the app root');
+    await restoredSearch.click();
     await page.getByRole('searchbox',{name:'搜索游戏名称'}).fill('Test Game 1');
     await page.locator('.game-library-sort .achievement-sort-toggle').click();
     assert.equal(await restoredSearch.getAttribute('aria-expanded'),'false',
