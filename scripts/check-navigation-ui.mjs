@@ -96,7 +96,7 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
         request.onerror=()=>resolve(false);
       });
     });
-    assert.deepEqual(await savedEncrypted(),{version:1,algorithm:'AES-GCM',hasCiphertext:true,exposedRecords:false,hasGameName:false},
+    assert.deepEqual(await savedEncrypted(),{version:envelope.version,algorithm:'AES-GCM',hasCiphertext:true,exposedRecords:false,hasGameName:false},
       'Only the encrypted envelope, never decrypted records, is saved for offline use');
     // The app now opens historic records even when both cloud endpoints are unreachable.
     await page.route('**/vault.json*',simulatedOutage);

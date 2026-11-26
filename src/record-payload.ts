@@ -1,3 +1,4 @@
+import {expandPayloadV2} from './record-payload-v2.ts';
 /** Lossless detail deduplication inside the encrypted payload; old vaults remain readable. */
 const marker='playlog-detail-table-v1';
 const detailKeys=['achievements','groups','groupStatus','catalogAt','posterScreenshots','cachedPosterScreenshots','posterRotationStartDay'] as const;
@@ -18,7 +19,7 @@ export function compactPayload(payload:any):any{
  return {...payload,records,recordFormat:marker,detailTable:details};
 }
 export function expandPayload(payload:any):any{
- if(payload?.recordFormat!==marker)return payload;
+ if(payload?.recordFormat!==marker)return expandPayloadV2(payload);
  if(!Array.isArray(payload.records)||!Array.isArray(payload.detailTable))throw Error('成就明细索引无效。');
  const {recordFormat:_,detailTable,...rest}=payload;
  return {...rest,records:payload.records.map((record:any)=>{

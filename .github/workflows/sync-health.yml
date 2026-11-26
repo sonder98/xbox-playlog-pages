@@ -38,7 +38,7 @@ jobs:
           issue=$(gh issue list --state open --search "$title in:title" --json number,title --jq 'map(select(.title == "Playlog automatic sync health alert")) | .[0].number // empty')
           if [ "$level" = healthy ]; then
             if [ -n "$issue" ]; then gh issue close "$issue" --comment "Published snapshot and monitored boundary windows are healthy again."; fi
-          elif [ "$level" = error ] || [ "$level" = critical ] || [ "$(jq '.missing|length' /tmp/playlog-health.json)" -gt 0 ]; then
+          elif [ "$level" = error ] || [ "$level" = critical ] || [ "$(jq '.missing|length' /tmp/playlog-health.json)" -gt 0 ] || [ "$(jq -r .capacityWarning /tmp/playlog-health.json)" = true ]; then
             echo "::warning::$message"
             if [ -z "$issue" ]; then
               gh issue create --title "$title" --body "$message" --assignee sonder98
