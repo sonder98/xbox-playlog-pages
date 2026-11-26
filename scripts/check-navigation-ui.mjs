@@ -223,7 +223,7 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     await page.locator('.recent-game-card').first().waitFor();
     console.log((mobile?'Mobile':'Desktop')+': PASS hidden/unknown Xbox achievements in heatmap and daily detail, without exposure in recent/all games, plus dusty game detail navigation');
     // Manual sync is fully client-side, and the scoped Actions credential never reaches Playlog hosting.
-    let manualDispatches=0,requestedId='';
+    let manualDispatches=0,requestedId='',forceArtwork=false,manualComplete=false;
     await page.route('https://api.github.com/repos/sonder98/xbox-playlog-pages/actions/workflows/**',route=>{
       const req=route.request();
       if(req.method()==='POST'){
@@ -231,12 +231,12 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
         assert.equal(req.headers().authorization,'Bearer github_pat_fixture_only');
         const body=req.postDataJSON();
         assert.equal(body.ref,'main');
-        requestedId=body.inputs.request_id;
+        requestedId=body.inputs.request_id;forceArtwork=body.inputs.force_artwork==='true';
         return route.fulfill({status:204,body:''});
       }
       assert.equal(req.headers().authorization,'Bearer github_pat_fixture_only',
         'Manual sync status polling uses the existing Actions token instead of anonymous requests');
-      return route.fulfill({json:{workflow_runs:requestedId?[{id:123,display_title:'Xbox sync (workflow_dispatch · '+requestedId+')',name:'Sync Xbox records',event:'workflow_dispatch',status:'queued',conclusion:null,html_url:'https://github.com/sonder98/xbox-playlog-pages/actions/runs/123',created_at:FIXTURE_TIME,updated_at:FIXTURE_TIME}]:[]}});
+      return route.fulfill({json:{workflow_runs:requestedId?[{id:123,display_title:'Xbox sync (workflow_dispatch · '+requestedId+')',name:'Sync Xbox records',event:'workflow_dispatch',status:manualComplete?'completed':'queued',conclusion:manualComplete?'success':null,html_url:'https://github.com/sonder98/xbox-playlog-pages/actions/runs/123',created_at:FIXTURE_TIME,updated_at:FIXTURE_TIME}]:[]}});
     });
     await page.locator('.title-row .overview-refresh').click();
     const syncDialog=page.getByRole('dialog',{name:'手动同步 Xbox 游戏记录'});
@@ -251,9 +251,39 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     await page.locator('.title-row .overview-refresh').click();
     await syncDialog.waitFor();
     assert.equal(manualDispatches,1,'Reopening an unfinished sync never dispatches a duplicate run');
-    await syncDialog.getByRole('button',{name:'移除此设备授权'}).click();
-    assert.equal(await page.evaluate(()=>localStorage.getItem('xbox-playlog-manual-sync-token-v1')),null,'Disconnect removes the local token');
     await syncDialog.getByRole('button',{name:'关闭详情'}).click();
+    await switchMainTab('管理');
+    const artworkButton=page.locator('.artwork-panel').getByRole('button',{name:'刷新游戏封面',exact:true});
+    await artworkButton.click();
+    await syncDialog.waitFor();
+    assert.equal(manualDispatches,1,'An active data sync is resumed, not duplicated by the artwork entry');
+    await syncDialog.getByRole('button',{name:'关闭详情'}).click();
+    // Simulate the previous job having finished; the token remains authorized.
+    await page.evaluate(()=>sessionStorage.removeItem('playlog-manual-sync-session-v1'));
+    await artworkButton.click();
+    const artworkDialog=page.getByRole('dialog',{name:'手动刷新游戏封面'});
+    await artworkDialog.getByText('已提交，等待 GitHub 排队').waitFor();
+    assert.equal(manualDispatches,2);assert.equal(forceArtwork,true,'Artwork button dispatches the forced refresh input');
+    assert.equal(await artworkDialog.locator('input[aria-label="GitHub fine-grained token"]').count(),0,'Artwork refresh uses existing authorization');
+    await artworkDialog.getByRole('button',{name:'关闭详情'}).click();
+    await artworkButton.click();
+    await artworkDialog.getByText('已提交，等待 GitHub 排队').waitFor();
+    assert.equal(manualDispatches,2,'Reopening a pending artwork refresh never dispatches again');
+    await artworkDialog.getByRole('button',{name:'关闭详情'}).click();
+    const artPayload=await decryptVault(envelope,password);
+    artPayload.records[0].at=FIXTURE_TIME;
+    artPayload.records[0].artworkRefresh={at:FIXTURE_TIME,requestId:requestedId,catalogResolved:11,catalogTotal:12,pendingImages:1};
+    activeEnvelope=await encryptVault(artPayload,password);manualComplete=true;
+    await artworkButton.click();
+    await artworkDialog.getByText('封面刷新任务已完成').waitFor();
+    await artworkDialog.getByText('部分图片未能重新获取',{exact:false}).waitFor();
+    assert.equal(manualDispatches,2);
+    await artworkDialog.getByRole('button',{name:'移除此设备授权'}).click();
+    assert.equal(await page.evaluate(()=>localStorage.getItem('xbox-playlog-manual-sync-token-v1')),null,'Disconnect removes the local token');
+    await artworkDialog.getByRole('button',{name:'关闭详情'}).click();
+    activeEnvelope=envelope;
+    await unlock();
+    await page.locator('.recent-game-card').first().waitFor();
     console.log((mobile?'Mobile':'Desktop')+': PASS scoped one-click Xbox sync, encrypted credentials, job resume and disconnect');
     const pwa=await page.evaluate(async()=>{
       const link=document.querySelector('link[rel="manifest"]');
@@ -292,10 +322,12 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
       await page.waitForFunction(()=>document.querySelector('.mobile-nav')?.classList.contains('is-visible'));
       assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).pointerEvents),'auto',
         'Vertical page movement reveals the navigation for tapping');
+      assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).transitionDuration.split(',')[0]),'0.25s','Showing the bar stays responsive');
       await page.waitForFunction(()=>!document.querySelector('.mobile-nav')?.classList.contains('is-visible'),
         {timeout:4000});
       assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).pointerEvents),'none',
         'Navigation automatically hides again when scrolling stops');
+      assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).transitionDuration.split(',')[0]),'0.45s','Only the idle exit animation is slower');
       await switchMainTab('游戏库');
       await page.locator('.toolbar').waitFor();
       assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
@@ -371,8 +403,8 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
       'Sync methodology is not displayed as a permanent paragraph');
     assert.equal(await page.locator('.title-row p').count(),0,
       'Manage heading no longer has a repetitive subtitle');
-    assert.deepEqual(await page.locator('.manage-section-heading h2').allTextContents(),['游戏展示','同步历史'],
-      'Management contains game visibility and sync history only');
+    assert.deepEqual(await page.locator('.manage-section-heading h2').allTextContents(),['游戏展示','游戏封面','同步历史'],
+      'Management contains game visibility, artwork refresh and sync history');
     assert.equal(await page.locator('.visibility-panel').count(),1,'One visibility card replaces the old three management cards');
     assert.equal(await page.locator('.manage-page').getByRole('button',{name:'管理展示',exact:true}).count(),1,
       'Display management is now entered from the Management tab');
@@ -385,7 +417,7 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     assert.equal(await page.locator('#sync-history .history-row').count(),1,
       'Existing snapshot history remains below game visibility');
     const groupOrder=await page.locator('.manage-section').evaluateAll(sections=>sections.map(section=>section.getBoundingClientRect().top));
-    assert.ok(groupOrder[0]<groupOrder[1],'Sync history visually follows the game visibility section');
+    assert.ok(groupOrder[0]<groupOrder[1]&&groupOrder[1]<groupOrder[2],'Artwork refresh appears between game visibility and sync history');
     for(const legacy of ['#settings','#history']){
       await page.evaluate(hash=>{location.hash=hash;},legacy);
       await page.locator('[data-page="manage"]').waitFor();

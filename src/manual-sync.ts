@@ -12,7 +12,8 @@ type RunList={workflow_runs?:WorkflowRun[]};
 const accept='application/vnd.github+json';
 const apiVersion='2022-11-28';
 export const newSyncRequestId=()=>crypto.randomUUID();
-export async function dispatchXboxSync(token:string,requestId:string,request:typeof fetch=fetch):Promise<void>{
+export type ManualSyncMode='sync'|'artwork';
+export async function dispatchXboxSync(token:string,requestId:string,request:typeof fetch=fetch,mode:ManualSyncMode='sync'):Promise<void>{
  if(!/^github_pat_[a-zA-Z0-9_]+$/.test(token))throw Error('请输入 GitHub fine-grained personal access token。');
  if(!/^[a-f0-9-]{36}$/.test(requestId))throw Error('同步请求 ID 无效。');
  let response:Response;
@@ -20,7 +21,7 @@ export async function dispatchXboxSync(token:string,requestId:string,request:typ
   response=await request(api+'/actions/workflows/sync.yml/dispatches',{
    method:'POST',
    headers:{'Accept':accept,'X-GitHub-Api-Version':apiVersion,'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-   body:JSON.stringify({ref:'main',inputs:{request_id:requestId,sync_mechanism:'manual'}}),
+   body:JSON.stringify({ref:'main',inputs:{request_id:requestId,sync_mechanism:'manual',...(mode==='artwork'?{force_artwork:'true'}:{})}}),
    cache:'no-store'
   });
  }catch{throw Error('无法连接 GitHub API，请检查网络或在 GitHub Actions 中手动运行。');}

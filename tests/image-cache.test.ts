@@ -209,3 +209,33 @@ test('failed 30-day refresh falls back to a retained cached cover',async()=>{
   assert.ok(fs.existsSync(path.join(directory,name)));
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });
+
+test('manual artwork refresh fetches identical source URLs with new cache keys, preserves old assets and leaves achievement icons warm',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'playlog-manual-art-'));
+ const at=IMAGE_CACHE_REFRESH_MS*700+1000,manualAt=at+1000;
+ const source=(name:string)=>'https://store-images.s-microsoft.com/image/'+name;
+ const record:RecordData={id:'old',at:new Date(at).toISOString(),profile:{xuid:'12345',gamertag:'test',avatar:''},source:'Xbox',warnings:[],games:[{id:'1',name:'Game',image:source('square'),detailImage:source('hero'),posterImage:source('shot'),posterScreenshots:[source('shot')],devices:[],lastPlayed:null,minutes:1,total:1,earned:1,score:1,maxScore:1,achievements:[{id:'1',name:'Award',image:source('award'),unlocked:true,unlockedAt:null,rarity:null}]}]};
+ const png=await sharp({create:{width:96,height:64,channels:3,background:'#334455'}}).png().toBuffer();
+ try{
+  await cacheRecordImages(record,{directory,now:at,fetchImage:async()=>png});
+  const previous=structuredClone(record),next=structuredClone(record);
+  next.artworkRefresh={at:new Date(manualAt).toISOString(),requestId:'00000000-1111-4444-8888-aaaaaaaaaaaa',catalogResolved:1,catalogTotal:1,pendingImages:null};
+  const requested:string[]=[];
+  const result=await cacheRecordImages(next,{directory,now:manualAt,retainedRecords:[previous],fetchImage:async url=>{requested.push(url);return png;}});
+  assert.deepEqual(requested.sort(),[source('hero'),source('shot'),source('square')]);
+  assert.equal(result.pendingArtwork,0);
+  for(const field of ['cachedImage','cachedImageLarge','cachedDetailImage','cachedPosterImage'] as const){
+   assert.notEqual(next.games[0][field],previous.games[0][field]);
+   assert.ok(fs.existsSync(path.join(directory,previous.games[0][field]!.split('/').at(-1)!)));
+  }
+  assert.notDeepEqual(next.games[0].cachedPosterScreenshots,previous.games[0].cachedPosterScreenshots);
+  assert.notDeepEqual(next.games[0].cachedPosterScreenshotsSmall,previous.games[0].cachedPosterScreenshotsSmall);
+  assert.equal(next.games[0].achievements![0].cachedImage,previous.games[0].achievements![0].cachedImage);
+  assert.deepEqual(validateRecord(next).artworkRefresh,next.artworkRefresh);
+  const warm=await cacheRecordImages(next,{directory,now:manualAt+1000,retainedRecords:[previous],fetchImage:async()=>{throw Error('manual revision should remain warm');}});
+  assert.equal(warm.downloaded,0);assert.equal(warm.pendingArtwork,0);assert.equal(warm.failures,0);
+  const failed=structuredClone(next);failed.artworkRefresh={...next.artworkRefresh,at:new Date(manualAt+2000).toISOString()};
+  const degraded=await cacheRecordImages(failed,{directory,now:manualAt+2000,retainedRecords:[next,previous],fetchImage:async()=>{throw Error('offline');}});
+  assert.equal(degraded.pendingArtwork,3);assert.equal(failed.games[0].cachedImage,next.games[0].cachedImage);assert.equal(failed.games[0].cachedDetailImage,next.games[0].cachedDetailImage);assert.equal(failed.games[0].cachedPosterImage,next.games[0].cachedPosterImage);
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});

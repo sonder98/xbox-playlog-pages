@@ -72,3 +72,15 @@ test('read-only polling 403 is not reported as failed Xbox sync or necessarily a
  await assert.rejects(findWorkflowRun('sync',id,async()=>new Response('',{status:401}),'github_pat_fixture'),
   /查询令牌已失效/);
 });
+
+test('artwork refresh reuses the scoped sync authorization and opts into force_artwork explicitly',async()=>{
+ let requests=0;
+ await dispatchXboxSync('github_pat_fixture',id,async(input,init)=>{
+  requests++;
+  assert.equal(String(input),'https://api.github.com/repos/sonder98/xbox-playlog-pages/actions/workflows/sync.yml/dispatches');
+  assert.equal((init?.headers as Record<string,string>).Authorization,'Bearer github_pat_fixture');
+  assert.deepEqual(JSON.parse(String(init?.body)),{ref:'main',inputs:{request_id:id,sync_mechanism:'manual',force_artwork:'true'}});
+  return new Response(null,{status:204});
+ },'artwork');
+ assert.equal(requests,1);
+});

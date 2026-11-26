@@ -13,6 +13,11 @@ on:
         required: false
         default: 'false'
         type: string
+      force_artwork:
+        description: 'Force refresh of AU game covers, detail art and Mythic backgrounds'
+        required: false
+        default: 'false'
+        type: string
       sync_mechanism:
         description: 'Source: manual, cloudflare or day-boundary; GitHub UI manual runs should enter manual'
         required: false
@@ -106,6 +111,8 @@ jobs:
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
           NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
           MICROSOFT_STATE_KEY: ${{ secrets.MICROSOFT_STATE_KEY }}
+          PLAYLOG_FORCE_ARTWORK: ${{ github.event_name == 'workflow_dispatch' && inputs.force_artwork == 'true' }}
+          PLAYLOG_ARTWORK_REQUEST_ID: ${{ inputs.request_id }}
           PLAYTIME_FORCE_SWEEP: ${{ github.event_name == 'workflow_dispatch' && inputs.force_sweep == 'true' }}
           PLAYLOG_SYNC_MECHANISM: ${{ github.event_name == 'push' && 'code-update' || inputs.sync_mechanism == 'manual' && 'manual' || inputs.sync_mechanism == 'cloudflare' && 'cloudflare' || inputs.sync_mechanism == 'day-boundary' && 'day-boundary' || inputs.request_id != '' && 'manual' || inputs.force_sweep == 'true' && 'day-boundary' || 'cloudflare' }}
         run: node --experimental-strip-types scripts/microsoft-sync.ts
