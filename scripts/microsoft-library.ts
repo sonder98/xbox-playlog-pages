@@ -85,7 +85,7 @@ export function refreshGroupingWarnings(record:RecordData):RecordData{
  if(count)warnings.push(`${count} 个游戏分组未知。`);
  return {...record,warnings};
 }
-export type ScanAudit={version:1;at:string;titlePages:number;achievementHistoryPages:number;historySourcesFailed:number;historyTitlesAdded:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;fullRefresh:boolean;reusedDetails:number;detailedReads:number;statsReads:number;statsSkipped:number;emptySkipped:number;reuseReasons:Partial<Record<DetailDecision,number>>;failed:number;unpreservedFailures:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number;matchedAchievementDates:number};};
+export type ScanAudit={version:1;at:string;titlePages:number;achievementHistoryPages:number;historySourcesFailed:number;historyTitlesAdded:number;titles:number;processed:number;complete:number;preserved:number;legacy:number;rarityTitles:number;rarityAchievements:number;officialBaseGroups:number;officialAddonGroups:number;catalogGroups:number;unknownGroups:number;playtimeTitles:number;images:number;unlockDates:number;fullRefresh:boolean;reusedDetails:number;detailedReads:number;statsReads:number;statsSkipped:number;emptySkipped:number;reuseReasons:Partial<Record<DetailDecision,number>>;failed:number;existingAttempted:number;existingFailed:number;newFailed:number;unpreservedFailures:number;summaryMismatches:number;summaryTotalsDerived:number;diagnostics:{summaryKeys:string[];awardKeys:string[];expectedTotal:number|null;expectedEarned:number|null;returned:number;unlocked:number;expectedScore:number|null;returnedScore:number;rarityKeys:string[];completionShape:string;groupFields:string[]}[];interrupted:boolean;contracts:Record<string,number>;responseFields:{rarity:boolean;groupIds:boolean;completion:boolean};comparison:{matched:number;ambiguous:number;unmatched:number;earnedDifferences:number;totalDifferences:number;playtimeDifferences:number;achievementDateDifferences:number;matchedAchievementDates:number};};
 export function compareLibrary(games:Game[],prior?:RecordData,aliases=new Map<string,string[]>(),awardNames=new Map<string,Map<string,string>>()){
  const out={matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0};
  const choices=new Map(games.map(g=>{const names=new Set([g.name,...(aliases.get(g.id)||[])].map(normalizedName));return [g.id,(prior?.games||[]).filter(p=>names.has(normalizedName(p.name)))];}));
@@ -194,11 +194,16 @@ export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:st
  if(typeof summary.currentGamerscore==='number'&&summary.currentGamerscore!==old.score)return 'scoreChanged';
  return 'reused';
 }
+export function shouldAbortDegradedScan(audit:Pick<ScanAudit,'existingAttempted'|'existingFailed'>):boolean{
+ const attempted=Math.max(0,audit.existingAttempted),failed=Math.max(0,audit.existingFailed);
+ if(!attempted||!failed)return false;
+ return failed===attempted||failed>=Math.max(5,Math.ceil(attempted*0.15));
+}
 export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;emptyTitles?:EmptyTitleCache[];lastFullCatalogAt?:string;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string;forcePlaytimeSweep?:boolean;recentAchievementLookbackDays?:number}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
  // Sustained pacing, no retries against permissions/security errors. 429 stops this scan.
  const request:typeof fetch=async(input,init)=>{await pause(1050);return (options.request||fetch)(input,init);};
- const provider=await microsoftProvider(config,request);const rawProfile=await provider.call('/account');
+ const provider=await microsoftProvider(config,request,{pause});const rawProfile=await provider.call('/account');
  if(options.expectedOwner&&options.expectedOwner!==provider.xuid)throw Error('微软续期账号发生变化；停止同步。');
  const settings=rawProfile.profileUsers[0].settings||[],setting=(id:string)=>settings.find((s:any)=>s.id===id)?.value||'';
  const history=await collectPages(t=>provider.call('/player/titleHistory?locale=en-AU'+(t?'&continuationToken='+encodeURIComponent(t):'')),'titles');
@@ -218,7 +223,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
  // Display policy: explicit visible=true is the only showable Xbox state.
  // Missing flags remain unknown in the archive, but are hidden in UI and on later syncs.
  const games=normalizeTitles({titles:titles.filter(t=>!options.onlyIds||options.onlyIds.has(String(t.titleId))||!prior.has(String(t.titleId)))});
- const audit:ScanAudit={version:1,at:options.now||new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,fullRefresh:false,reusedDetails:0,detailedReads:0,statsReads:0,statsSkipped:0,emptySkipped:0,reuseReasons:{},failed:0,unpreservedFailures:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
+ const audit:ScanAudit={version:1,at:options.now||new Date().toISOString(),titlePages:history.pages,achievementHistoryPages:achievementPages,historySourcesFailed:historyFailures,historyTitlesAdded:titles.length-hubTitles,titles:games.length,processed:0,complete:0,preserved:0,legacy:0,rarityTitles:0,rarityAchievements:0,officialBaseGroups:0,officialAddonGroups:0,catalogGroups:0,unknownGroups:0,playtimeTitles:0,images:0,unlockDates:0,fullRefresh:false,reusedDetails:0,detailedReads:0,statsReads:0,statsSkipped:0,emptySkipped:0,reuseReasons:{},failed:0,existingAttempted:0,existingFailed:0,newFailed:0,unpreservedFailures:0,summaryMismatches:0,summaryTotalsDerived:0,diagnostics:[],interrupted:false,contracts:{},responseFields:{rarity:false,groupIds:false,completion:false},comparison:{matched:0,ambiguous:0,unmatched:0,earnedDifferences:0,totalDifferences:0,playtimeDifferences:0,achievementDateDifferences:0,matchedAchievementDates:0}};
  audit.fullRefresh=catalogRefreshDue(options.previous?.at,options.lastFullCatalogAt,audit.at,
   options.forcePlaytimeSweep===true||boundaryPlaytimeSweep(audit.at));
  const statsSamples:PlaytimeSample[]=[];
@@ -261,6 +266,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
    if(old){games[i]={...old,officialHidden:game.officialHidden};audit.preserved++;}
    audit.processed++;options.progress?.(audit.processed,games.length,audit);continue;
   }
+  if(old)audit.existingAttempted++;
   try{
    const title=titles.find(t=>String(t.titleId)===game.id),summary=title?.achievement;
    const lastPlayed=title?.titleHistory?.lastTimePlayed||null;
@@ -422,7 +428,7 @@ export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof
     const reason=error instanceof XboxReadError?'http-'+error.status:
      error instanceof Error?(knownErrors[error.message]||'other'):'other';
     console.error('微软单游戏失败诊断：'+JSON.stringify({kind:old?'existing':'new',stage:failureStage,decision:failureDecision,reason}));
-    audit.failed++;
+    audit.failed++;if(old)audit.existingFailed++;else audit.newFailed++;
     failedTitleNames.push((old?.name||game.name).slice(0,150)+(old?'（保留原记录）':'（暂缓收录，下次重试）'));
     if(old){games[i]=complete?{...game,minutes:old.minutes,officialHidden:game.officialHidden}:{...old,officialHidden:game.officialHidden};audit.preserved++;}
     else {audit.unpreservedFailures++;deferredIds.add(game.id);}
