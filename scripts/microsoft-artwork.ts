@@ -37,7 +37,7 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
   url.search=new URLSearchParams({alternateId:'XboxTitleId',Value:game.id,market:'AU',languages:'en-AU,en,neutral',fieldsTemplate:'Details'}).toString();
   let response:Response|undefined;
   for(let attempt=1;attempt<=maxAttempts;attempt++){
-   try{response=await request(url,{redirect:'error',signal:AbortSignal.timeout(20000)});
+   try{response=await request(url,{redirect:'error',cache:'no-store',signal:AbortSignal.timeout(20000)});
     if(RETRYABLE_STATUS.has(response.status)&&attempt<maxAttempts){await pause(retryAfter(response,[1000,2500,6000][Math.min(attempt-1,2)]));continue;}break;
    }catch{if(attempt<maxAttempts){await pause([1000,2500,6000][Math.min(attempt-1,2)]);continue;}}
   }
@@ -46,10 +46,11 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
   let data:any;try{data=await response.json();}catch{failures++;unavailable=true;if(old)reuseOld(game,old);continue;}
   const normalize=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]+/g,'');
   const wanted=normalize(game.name);
-  const candidates=(data.Products||[]).map((product:any)=>{
-   const localized=product.LocalizedProperties||[],info=localized.find((p:any)=>p.Language==='en-AU')||localized.find((p:any)=>/^en(?:-|$)/.test(p.Language||''));
-   if(!info?.ProductTitle)return null;
-   const images=(info.Images||[]).filter((i:any)=>i.Width>0&&i.Height>0&&safeImage(i.Uri));
+  if(!Array.isArray(data?.Products)){failures++;unavailable=true;if(old)reuseOld(game,old);continue;}
+  const candidates=data.Products.filter((p:any)=>p&&typeof p==='object').map((product:any)=>{
+   const localized=Array.isArray(product.LocalizedProperties)?product.LocalizedProperties.filter((p:any)=>p&&typeof p==='object'):[],info=localized.find((p:any)=>p.Language==='en-AU')||localized.find((p:any)=>/^en(?:-|$)/.test(p.Language||''));
+   if(typeof info?.ProductTitle!=='string'||!info.ProductTitle)return null;
+   const images=(Array.isArray(info.Images)?info.Images:[]).filter((i:any)=>i&&i.Width>0&&i.Height>0&&safeImage(i.Uri));
    const squares=images.filter((i:any)=>Math.abs(i.Width/i.Height-1)<.04);
    squares.sort((a:any,b:any)=>(Number(b.ImagePurpose==='BoxArt')-Number(a.ImagePurpose==='BoxArt'))||b.Width-a.Width);
    if(!squares.length)return null;

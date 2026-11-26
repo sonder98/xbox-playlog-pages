@@ -263,3 +263,25 @@ test('a new title retains its Xbox image when Store metadata is temporarily unav
  assert.equal(result.failures,1);
  assert.equal(fresh.games[0].image,'https://images-eds-ssl.xboxlive.com/image/original');
 });
+
+test('manual artwork refresh bypasses a fresh seven-day catalog entry and updates square, hero and Mythic gallery',async()=>{
+ const now=new Date().toISOString(),old={at:now,games:[{id:'7',name:'Game',image:'https://store-images.s-microsoft.com/image/old-cover',detailImage:'https://store-images.s-microsoft.com/image/old-hero',detailImagePurpose:'TitledHeroArt',posterImage:'https://store-images.s-microsoft.com/image/old-shot',posterSelectionVersion:3,posterScreenshots:['https://store-images.s-microsoft.com/image/old-shot'],posterRotationStartDay:'2026-11-06',artworkCheckedAt:now,earned:1,total:1}]} as RecordData;
+ const fresh=structuredClone(old);let calls=0;
+ const answer=await australianArtwork(fresh,async()=>{calls++;return Response.json({Products:[{ProductKind:'Game',LocalizedProperties:[{Language:'en-AU',ProductTitle:'Game',Images:[
+ image('BoxArt',1024,1024,'image/new-cover'),image('TitledHeroArt',1920,1080,'image/new-hero'),
+ image('Screenshot',1920,1080,'image/new-shot'),image('Screenshot',1920,1080,'image/new-shot2')
+ ]}]}]});},old,{force:true});
+ assert.equal(calls,1);assert.equal(answer.resolved,1);
+ assert.ok(fresh.games[0].image.endsWith('/new-cover'));
+ assert.ok(fresh.games[0].detailImage?.endsWith('/new-hero'));
+ assert.ok(fresh.games[0].posterImage?.endsWith('/new-shot'));
+ assert.equal(fresh.games[0].posterScreenshots?.length,2);
+ assert.equal(fresh.games[0].posterRotationStartDay,'2026-11-06');
+});
+test('force refresh retains old artwork if Store returns invalid metadata',async()=>{
+ const now=new Date().toISOString(),old={at:now,games:[{id:'8',name:'Game',image:'https://store-images.s-microsoft.com/image/old-cover',detailImage:'https://store-images.s-microsoft.com/image/old-hero',posterImage:'https://store-images.s-microsoft.com/image/old-shot',posterSelectionVersion:3,artworkCheckedAt:now}]} as RecordData;
+ const fresh=structuredClone(old);
+ const result=await australianArtwork(fresh,async()=>Response.json({Products:{bad:'shape'}}),old,{force:true});
+ assert.equal(result.failures,1);assert.equal(result.resolved,0);
+ assert.equal(fresh.games[0].image,old.games[0].image);assert.equal(fresh.games[0].detailImage,old.games[0].detailImage);assert.equal(fresh.games[0].posterImage,old.games[0].posterImage);
+});

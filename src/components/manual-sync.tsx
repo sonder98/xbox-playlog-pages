@@ -124,7 +124,7 @@ export function ManualSyncDialog({onClose,onUpdated,onPhase,lastAt,mode='sync',l
   clearManualSyncToken();token.current=null;setKnown(false);setTokenInput('');
   setError('此设备的授权已清除。如需使令牌失效，请再到 GitHub 删除它。');
  }
- const artworkMode=(job?.mode||mode)==='artwork',requestArtwork=mode==='artwork';
+ const artworkMode=job?job.mode==='artwork':mode==='artwork',requestArtwork=mode==='artwork';
  return <Modal title={artworkMode?'手动刷新游戏封面':'手动同步 Xbox 游戏记录'} onClose={()=>{if(!submittingRef.current)onClose();}} className="manual-sync-dialog">
   <span className="eyebrow">{artworkMode?'GAME ARTWORK':'XBOX LIVE SYNC'}</span>
   <h2>{artworkMode?'刷新游戏封面':'立即同步 Xbox 数据'}</h2>
