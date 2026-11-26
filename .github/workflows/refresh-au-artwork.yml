@@ -15,4 +15,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh workflow run sync.yml --ref main -f sync_mechanism=manual
+        run: gh workflow run sync.yml --ref main -f sync_mechanism=manual -f force_artwork=true

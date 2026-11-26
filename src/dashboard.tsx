@@ -27,7 +27,7 @@ import {applyTheme,readThemePreference,saveThemePreference,type PlaylogTheme} fr
 const fmt=(m:number|null)=>m===null?'暂无数据':(m/60).toLocaleString('zh-CN',{maximumFractionDigits:1})+' 小时';
 const dt=(s:string|null)=>s?new Date(s).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'尚未同步';
 export default function Dashboard({onLock,locking=false,refreshFromCache=false}:{onLock:()=>void;locking?:boolean;refreshFromCache?:boolean}){
- const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState<GameLibrarySort>('recent'),[filter,setFilter]=useState<GameLibraryFilter>('all');
+ const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState<'sync'|'artwork'|null>(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState<GameLibrarySort>('recent'),[filter,setFilter]=useState<GameLibraryFilter>('all');
  const [manualPhase,setManualPhase]=useState<'idle'|'queued'|'running'|'deploying'|'ready'|'error'>('idle');
  const [theme,setTheme]=useState<PlaylogTheme>(()=>readThemePreference());
  const mythicRotationDay=useMythicRotationDay();
@@ -204,7 +204,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   setFilter(next);
   setSort(current=>normalizeGameLibrarySort(next,current));
  }
- function sync(){setModal(true);}
+ function sync(){setModal('sync');}
  function loadAchievements(g:Game){openGame(g.id);}
  const nav=[['overview','概览',LayoutDashboard],['library','游戏库',Library],['achievements','成就',CalendarDays],['manage','管理',Settings]] as const;
  const recent=[...displayGames].filter(g=>g.lastPlayed).sort((a,b)=>Date.parse(b.lastPlayed!)-Date.parse(a.lastPlayed!)||a.name.localeCompare(b.name)).slice(0,10);
@@ -221,7 +221,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  <AchievementPreview games={games} records={records} playtimeLedger={playtimeLedger} onOpen={()=>setTab('achievements')} onOpenDay={openAchievementDay} onOpenGame={openAchievementGame}/>
  <AchievementShowcases games={games} onOpenRare={openAchievementShowcase} onOpenGap={openAchievementGapShowcase}/>
  <DustyPreview items={dusty} onOpen={()=>setTab('dusty')} onGame={openGame}/>
- {!current&&!loading&&<section className="welcome"><div className="welcome-copy"><span className="pill"><span className="dot green"/>为你自己而建</span><h2>下一场冒险之前，<br/>先收藏走过的世界。</h2><p>读取 微软 Xbox 记录，汇集游戏、累计时长和成就。<br/>从今天开始，拥有一份持续生长的游戏档案。</p><button className="primary" onClick={()=>setModal(true)}>开始连接 <ArrowRight size={17}/></button><small>数据来自微软 Xbox 官方接口</small></div><div className="hero-art" aria-hidden="true"><div className="orbit one"/><div className="orbit two"/><div className="orbit three"/><div className="controller"><Gamepad2 size={130} strokeWidth={1.1}/></div><div className="art-tag t1"><Trophy size={19}/>成就收藏</div><div className="art-tag t2"><Clock3 size={18}/>游戏时光</div><div className="spark s1"/><div className="spark s2"/></div></section>}
+ {!current&&!loading&&<section className="welcome"><div className="welcome-copy"><span className="pill"><span className="dot green"/>为你自己而建</span><h2>下一场冒险之前，<br/>先收藏走过的世界。</h2><p>读取 微软 Xbox 记录，汇集游戏、累计时长和成就。<br/>从今天开始，拥有一份持续生长的游戏档案。</p><button className="primary" onClick={()=>setModal('sync')}>开始连接 <ArrowRight size={17}/></button><small>数据来自微软 Xbox 官方接口</small></div><div className="hero-art" aria-hidden="true"><div className="orbit one"/><div className="orbit two"/><div className="orbit three"/><div className="controller"><Gamepad2 size={130} strokeWidth={1.1}/></div><div className="art-tag t1"><Trophy size={19}/>成就收藏</div><div className="art-tag t2"><Clock3 size={18}/>游戏时光</div><div className="spark s1"/><div className="spark s2"/></div></section>}
 <section className="stats" data-overview-section="stats"><Stat label="累计游玩" value={known.length?(totalMinutes/60).toLocaleString('zh-CN',{maximumFractionDigits:1}):'—'} unit="小时" icon={<Clock3 size={19}/>}/><Stat label="玩过的游戏" value={current?String(games.length):'—'} unit="款" icon={<Gamepad2 size={19}/>}/><Stat label="已解锁成就" value={current?totalEarned.toLocaleString():'—'} unit="个" icon={<Trophy size={19}/>}/><Stat label="Mythic" value={current?String(completed):'—'} unit="款" icon={<Trophy size={19}/>}/></section>
 
 </>}
@@ -237,13 +237,22 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
     <button type="button" className="primary" aria-label="管理展示" disabled={!current||loading} onClick={openDisplayManager}><SlidersHorizontal size={17}/>管理展示{hiddenCount>0&&<span className="hidden-count">{hiddenCount}</span>}</button>
    </section>
   </section>
+  <section className="manage-section" aria-labelledby="manage-artwork-title">
+   <div className="manage-section-heading"><div><span className="eyebrow">GAME ARTWORK</span><h2 id="manage-artwork-title">游戏封面</h2></div></div>
+   <section className="panel visibility-panel artwork-panel">
+    <div className="section-title"><h2>刷新游戏封面</h2><RefreshCw size={20}/></div>
+    <p className="muted">更新方形封面、详情横图及 Mythic 纪念卡背景。</p>
+    {current?.artworkRefresh&&<p className="muted artwork-last-refresh">上次手动刷新：{new Date(current.artworkRefresh.at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}</p>}
+    <button type="button" className="primary" disabled={!current||loading} onClick={()=>setModal('artwork')}><RefreshCw size={17}/>刷新游戏封面</button>
+   </section>
+  </section>
   <section className="manage-section" id="sync-history" aria-labelledby="manage-history-title">
    <div className="manage-section-heading"><div><span className="eyebrow">SYNC HISTORY</span><h2 id="manage-history-title">同步历史</h2></div></div>
    <section className="panel"><div className="section-title"><h2>同步快照</h2><span>共 {records.length} 次</span><button type="button" className="text-button" disabled={cloudChecking} onClick={()=>void refreshLatest(true,0,true)}>{cloudChecking?'检查中…':'检查云端更新'}</button></div>{records.length?records.map((r,i)=>{const d=compareRecords(r,records[i+1]);return <div className="history-row" key={r.id}><span className="history-icon"><History size={18}/></span><div><b>{new Date(r.at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}</b><span className="history-sync-mechanism">{syncMechanismLabel(r.syncMechanism)}{r.syncReusedFromAt?' · 复用先前手动同步数据（未重新扫描）':''}</span><small>{r.source} · {r.games.length} 个游戏{r.warnings.length?` · ${r.warnings.join('；')}`:''}</small></div><div className="history-delta"><b>{d.minutes===null?'基线记录':'+'+fmt(d.minutes)}</b><small>{d.achievements===null?'从此刻开始':'+'+d.achievements+' 个成就'}{d.corrections>0?' · 存在时长修正':''}</small></div></div>}):<Empty title="第一份记录，等你开始" text="微软 首次同步会建立统计基线。"/>}</section>
   </section>
  </div>}
  <footer><span><span className="dot green"/>XBOX Playlog</span><span>{current?'最后记录 '+dt(current.at):'连接账号后开始记录'} · 时间显示为北京时间</span></footer></div></main>
- {modal&&<ManualSyncDialog onClose={()=>setModal(false)} lastAt={current?.at||null} onUpdated={setRecords} onPhase={setManualPhase}/>}
+ {modal&&<ManualSyncDialog onClose={()=>setModal(null)} mode={modal} lastArtworkRefresh={current?.artworkRefresh} lastAt={current?.at||null} onUpdated={setRecords} onPhase={setManualPhase}/>}
  {manageDisplay&&<Modal title="游戏库显示管理" onClose={()=>{if(!savingDisplay)setManageDisplay(false);}} className="display-manager">
    <h2>管理游戏展示</h2>
    <label className="search"><Search size={17}/><input aria-label="搜索展示管理中的游戏" placeholder="搜索游戏名称…" value={displayQuery} onChange={e=>setDisplayQuery(e.target.value)}/></label>

@@ -1244,9 +1244,10 @@ footer .dot {
     transform:translate3d(0,110%,0);
     opacity:0;
     pointer-events:none;
-    transition:transform .25s ease,opacity .2s ease
+    transition:transform .45s cubic-bezier(.22,.61,.36,1),opacity .35s ease
   }
   .mobile-nav.is-visible,.mobile-nav:focus-within {
+    transition:transform .25s ease,opacity .2s ease
     transform:translate3d(0,0,0);
     opacity:1;
     pointer-events:auto

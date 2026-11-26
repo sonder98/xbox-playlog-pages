@@ -12,7 +12,7 @@ export function artworkCheckDue(checkedAt:unknown,at:string):boolean{
  const before=typeof checkedAt==='string'?Date.parse(checkedAt):NaN,now=Date.parse(at);
  return !Number.isFinite(before)||!Number.isFinite(now)||now<before||now-before>=AU_ARTWORK_CHECK_MS;
 }
-export async function australianArtwork(record:RecordData,request:typeof fetch=fetch,previous?:RecordData,options:{pause?:(ms:number)=>Promise<void>;maxAttempts?:number}={}){
+export async function australianArtwork(record:RecordData,request:typeof fetch=fetch,previous?:RecordData,options:{pause?:(ms:number)=>Promise<void>;maxAttempts?:number;force?:boolean;budgetMs?:number}={}){
  let resolved=0,landscapes=0,queried=0,reused=0,squareChanged=0,heroChanged=0,failures=0,unavailable=false;
  const pause=options.pause||wait,maxAttempts=Math.max(1,Math.min(4,options.maxAttempts??3));
  const checkedAt=Number.isFinite(Date.parse(record.at))?record.at:new Date().toISOString();
@@ -25,12 +25,12 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
   if(old.posterRotationStartDay)game.posterRotationStartDay=old.posterRotationStartDay;
   if(old.artworkCheckedAt)game.artworkCheckedAt=old.artworkCheckedAt;
  };
- const deadline=Date.now()+60_000;
+ const deadline=Date.now()+(options.budgetMs??60_000);
  for(const game of record.games){
   const old=oldById.get(game.id);
   const reusable=old?.detailImagePurpose==='TitledHeroArt'&&old.detailImage&&old.posterImage&&old.image.includes('store-images.s-microsoft.com/image/')&&
    (old.posterSelectionVersion===3&&(!completion(game).mythic||Array.isArray(old.posterScreenshots))||!completion(game).mythic&&old.posterSelectionVersion===2);
-  if(reusable&&!artworkCheckDue(old.artworkCheckedAt,checkedAt)){reuseOld(game,old);reused++;resolved++;landscapes++;continue;}
+  if(!options.force&&reusable&&!artworkCheckDue(old.artworkCheckedAt,checkedAt)){reuseOld(game,old);reused++;resolved++;landscapes++;continue;}
   if(unavailable||Date.now()>=deadline){if(old)reuseOld(game,old);continue;}
   queried++;
   const url=new URL('https://displaycatalog.mp.microsoft.com/v7.0/products/lookup');

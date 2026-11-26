@@ -35,12 +35,13 @@ function logMythicScreenshotCache(games:Game[]){
   total,full,previews,missingFull:total-full,missingPreviews:total-previews
  }));
 }
+const forceArtwork=process.env.PLAYLOG_FORCE_ARTWORK==='true';
 async function optionalArtwork(record:Parameters<typeof australianArtwork>[0]){
- try{return await australianArtwork(record,fetch,previous[0]);}
+ try{return await australianArtwork(record,fetch,previous[0],forceArtwork?{force:true,budgetMs:300_000}:{});}
  catch{console.warn('::warning::Store artwork unavailable; retaining official image sources.');}
 }
 async function optionalImageCache(record:Parameters<typeof cacheRecordImages>[0]){
- try{await cacheRecordImages(record,{budgetMs:60000,retainedRecords:previous.slice(0,29)});logMythicScreenshotCache(record.games);}
+ try{const result=await cacheRecordImages(record,{budgetMs:forceArtwork?300_000:60000,retainedRecords:previous.slice(0,29)});logMythicScreenshotCache(record.games);return result;}
  catch{console.warn('::warning::Artwork cache unavailable for this scan.');}
 }
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
@@ -60,13 +61,13 @@ const recentCandidate=saved?.record?.games?.some((g:any)=>g.cachedImage)&&Date.n
 const freshSource=recentCandidate||previous[0];
 const fresh=freshSource?refreshGroupingWarnings({...freshSource,games:freshSource.games.filter((g:any)=>g.total>0||g.minutes!==null)}):undefined;
 const syncStartedAt=new Date().toISOString();
-if(fresh&&fresh.id===previous[0]?.id&&shouldReuseRecentXboxSnapshot({
+if(!forceArtwork&&fresh&&fresh.id===previous[0]?.id&&shouldReuseRecentXboxSnapshot({
  mechanism:syncMechanism,priorMechanism:previous[0]?.syncMechanism,
  ledgerAvailable:!!ledger,source:fresh.source,snapshotAt:fresh.at,
  now:syncStartedAt,dayBoundary:boundaryPlaytimeSweep(syncStartedAt),
  forceSweep:process.env.PLAYTIME_FORCE_SWEEP==='true'
 })){
- const reused:typeof fresh={...fresh,id:randomUUID(),at:syncStartedAt,syncMechanism:'cloudflare',syncReusedFromAt:fresh.at};
+ const reused:typeof fresh={...fresh,id:randomUUID(),at:syncStartedAt,syncMechanism:'cloudflare',syncReusedFromAt:fresh.at,artworkRefresh:previous[0]?.artworkRefresh};
  const artwork=await optionalArtwork(reused);
  console.log('快速快照澳区横幅覆盖：'+JSON.stringify(artwork));
  logMythicArtworkCoverage(reused.games);
@@ -96,13 +97,19 @@ if(shouldAbortDegradedScan(result.audit)){
  throw Error('微软现有游戏数据大面积读取失败；已停止发布并保留最后一份有效档案。');
 }
 if(result.audit.failed)console.warn('微软同步部分降级：'+result.audit.failed+' 个游戏异常，旧游戏保留原数据、新游戏暂缓收录，其余继续发布。');
-const artwork=await optionalArtwork(result.record);
+// Force only published game artwork, not zero-result entitlement titles.
+const artwork=await optionalArtwork(forceArtwork?{...result.record,games:result.record.games.filter(g=>g.total>0||g.minutes!==null)}:result.record);
 // Retain zero-result metadata ONLY in the existing encrypted private candidate
 // so the next run can avoid re-reading 30+ unpublishable titles.
 const allScannedGames=result.record.games;
 result.record.games=result.record.games.filter(g=>g.total>0||g.minutes!==null);
 result.record=refreshGroupingWarnings(result.record);
-await optionalImageCache(result.record);
+if(forceArtwork){
+ const requestId=process.env.PLAYLOG_ARTWORK_REQUEST_ID||'';
+ result.record.artworkRefresh={at:new Date().toISOString(),requestId:/^[a-f0-9-]{36}$/.test(requestId)?requestId:randomUUID(),catalogResolved:artwork?.resolved??0,catalogTotal:result.record.games.length,pendingImages:null};
+}else if(previous[0]?.artworkRefresh)result.record.artworkRefresh=previous[0].artworkRefresh;
+const imageCache=await optionalImageCache(result.record);
+if(forceArtwork&&result.record.artworkRefresh)result.record.artworkRefresh.pendingImages=imageCache?.pendingArtwork??null;
 writeState(root+'/candidate.json',{...result,record:{...result.record,games:allScannedGames},
  lastFullCatalogAt:result.audit.fullRefresh?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);
 session.save();
