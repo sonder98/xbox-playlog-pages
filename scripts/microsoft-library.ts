@@ -196,7 +196,7 @@ export function detailCacheDecision(old:Game|undefined,summary:any,lastPlayed:st
 }
 export async function scanMicrosoft(config:DirectConfig,options:{request?:typeof fetch;previous?:RecordData;baseline?:RecordData;catalog?:CatalogBundle;expectedOwner?:string;onlyIds?:Set<string>;emptyTitles?:EmptyTitleCache[];lastFullCatalogAt?:string;pause?:(ms:number)=>Promise<void>;progress?:(processed:number,total:number,audit:ScanAudit)=>void;now?:string;forcePlaytimeSweep?:boolean;recentAchievementLookbackDays?:number}={}){
  const pause=options.pause||((ms:number)=>new Promise<void>(r=>setTimeout(r,ms)));
- // Sustained request pacing; the provider retries transient network/5xx/429 errors only.
+ // Sustained pacing, no retries against permissions/security errors. 429 stops this scan.
  const request:typeof fetch=async(input,init)=>{await pause(1050);return (options.request||fetch)(input,init);};
  const provider=await microsoftProvider(config,request);const rawProfile=await provider.call('/account');
  if(options.expectedOwner&&options.expectedOwner!==provider.xuid)throw Error('微软续期账号发生变化；停止同步。');

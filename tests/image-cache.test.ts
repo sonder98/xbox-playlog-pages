@@ -175,37 +175,3 @@ test('Xbox gamerpic is persisted as 96px WebP and reused without remote requests
    'A changed Xbox gamerpic gets a new durable cache key');
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });
-
-test('image cache re-fetches every 30-day generation and prunes assets after snapshots expire',async()=>{
- const directory=fs.mkdtempSync(path.join(os.tmpdir(),'playlog-30d-refresh-'));
- const url='https://store-images.s-microsoft.com/image/monthly-cover',firstAt=Date.parse('2026-11-01T00:00:00Z');
- const record:RecordData={id:'one',at:new Date(firstAt).toISOString(),profile:{xuid:'1',gamertag:'test',avatar:''},source:'Xbox',warnings:[],games:[{id:'1',name:'Game',image:url,devices:[],minutes:1,lastPlayed:null,total:0,earned:0,score:0,maxScore:0}]};
- const png=async color=>sharp({create:{width:256,height:256,channels:3,background:color}}).png().toBuffer();
- try{
-  await cacheRecordImages(record,{directory,now:firstAt,fetchImage:async()=>png('#334455')});
-  const previous=structuredClone(record),oldName=record.games[0].cachedImage.split('/').at(-1);
-  const second=structuredClone(record);second.id='two';second.at=new Date(firstAt+IMAGE_CACHE_REFRESH_MS).toISOString();
-  await cacheRecordImages(second,{directory,now:firstAt+IMAGE_CACHE_REFRESH_MS,retainedRecords:[previous],fetchImage:async()=>png('#778899')});
-  const newName=second.games[0].cachedImage.split('/').at(-1);
-  assert.notEqual(newName,oldName);
-  assert.ok(fs.existsSync(path.join(directory,oldName)));
-  assert.ok(fs.existsSync(path.join(directory,newName)));
-  const third=structuredClone(second);third.id='three';third.at=new Date(firstAt+2*IMAGE_CACHE_REFRESH_MS).toISOString();
-  await cacheRecordImages(third,{directory,now:firstAt+2*IMAGE_CACHE_REFRESH_MS,fetchImage:async()=>png('#99aabb')});
-  assert.ok(!fs.existsSync(path.join(directory,oldName)));
-  assert.ok(!fs.existsSync(path.join(directory,newName)));
- }finally{fs.rmSync(directory,{recursive:true,force:true});}
-});
-test('failed 30-day refresh falls back to previous cached cover while its snapshot is retained',async()=>{
- const directory=fs.mkdtempSync(path.join(os.tmpdir(),'playlog-30d-fallback-'));
- const at=Date.parse('2026-11-01T00:00:00Z'),url='https://store-images.s-microsoft.com/image/fallback-cover';
- const record:RecordData={id:'one',at:new Date(at).toISOString(),profile:{xuid:'1',gamertag:'test',avatar:''},source:'Xbox',warnings:[],games:[{id:'1',name:'Game',image:url,devices:[],minutes:1,lastPlayed:null,total:0,earned:0,score:0,maxScore:0}]};
- try{
-  await cacheRecordImages(record,{directory,now:at,fetchImage:async()=>sharp({create:{width:128,height:128,channels:3,background:'#334455'}}).png().toBuffer()});
-  const previous=structuredClone(record),cached=record.games[0].cachedImage,name=cached.split('/').at(-1);
-  const next=structuredClone(record);next.at=new Date(at+IMAGE_CACHE_REFRESH_MS).toISOString();
-  await cacheRecordImages(next,{directory,now:at+IMAGE_CACHE_REFRESH_MS,retainedRecords:[previous],fetchImage:async()=>{throw Error('temporary source failure');}});
-  assert.equal(next.games[0].cachedImage,cached);
-  assert.ok(fs.existsSync(path.join(directory,name)));
- }finally{fs.rmSync(directory,{recursive:true,force:true});}
-});

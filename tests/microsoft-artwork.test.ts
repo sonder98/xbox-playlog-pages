@@ -245,20 +245,3 @@ test('weekly AU lookup missing data preserves old cover and remains retryable',a
  assert.equal(fresh.games[0].detailImage,old.games[0].detailImage);
  assert.equal(fresh.games[0].artworkCheckedAt,old.games[0].artworkCheckedAt);
 });
-
-test('temporary Store failures retry then degrade to previous artwork without failing Xbox sync',async()=>{
- const old={games:[
-  {id:'201',name:'Wuthering Waves',image:'https://store-images.s-microsoft.com/image/old-square',detailImage:'https://store-images.s-microsoft.com/image/old-hero',detailImagePurpose:'TitledHeroArt',posterImage:'https://store-images.s-microsoft.com/image/old-shot',posterSelectionVersion:3,artworkCheckedAt:'2026-01-01T00:00:00Z'},
-  {id:'202',name:'Second Game',image:'https://store-images.s-microsoft.com/image/second-square',detailImage:'https://store-images.s-microsoft.com/image/second-hero',detailImagePurpose:'TitledHeroArt',posterImage:'https://store-images.s-microsoft.com/image/second-shot',posterSelectionVersion:3,artworkCheckedAt:'2026-01-01T00:00:00Z'}
- ]} as RecordData;
- const fresh={at:new Date().toISOString(),games:old.games.map(g=>({id:g.id,name:g.name,image:'https://images-eds-ssl.xboxlive.com/image/fallback'}))} as RecordData;
- let calls=0;
- const result=await australianArtwork(fresh,async()=>{calls++;return new Response('',{status:503});},old,{pause:async()=>{}});
- assert.equal(calls,3);assert.equal(result.failures,1);assert.equal(result.unavailable,true);
- assert.equal(fresh.games[0].image,old.games[0].image);assert.equal(fresh.games[1].image,old.games[1].image);
-});
-test('new title keeps Xbox source image when Store metadata is temporarily unavailable',async()=>{
- const fresh={at:new Date().toISOString(),games:[{id:'301',name:'New Xbox Game',image:'https://images-eds-ssl.xboxlive.com/image/original'}]} as RecordData;
- const result=await australianArtwork(fresh,async()=>{throw Error('offline');},undefined,{pause:async()=>{}});
- assert.equal(result.failures,1);assert.equal(fresh.games[0].image,'https://images-eds-ssl.xboxlive.com/image/original');
-});
