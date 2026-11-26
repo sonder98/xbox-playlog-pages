@@ -231,7 +231,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  {tab==='manage'&&<div className="manage-page" data-page="manage">
   <section className="manage-section" aria-labelledby="manage-visibility-title">
    <div className="manage-section-heading"><div><span className="eyebrow">GAME VISIBILITY</span><h2 id="manage-visibility-title">游戏展示</h2></div></div>
-   <section className="panel visibility-panel">
+   <section className="panel visibility-panel manage-action-panel">
     <div className="section-title"><h2>管理游戏展示</h2><SlidersHorizontal size={20}/></div>
     <p className="muted">当前展示 {displayGames.length} 款 · 已隐藏 {hiddenCount} 款</p>
     <button type="button" className="primary" aria-label="管理展示" disabled={!current||loading} onClick={openDisplayManager}><SlidersHorizontal size={17}/>管理展示{hiddenCount>0&&<span className="hidden-count">{hiddenCount}</span>}</button>
@@ -239,7 +239,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
   </section>
   <section className="manage-section" aria-labelledby="manage-artwork-title">
    <div className="manage-section-heading"><div><span className="eyebrow">GAME ARTWORK</span><h2 id="manage-artwork-title">游戏封面</h2></div></div>
-   <section className="panel visibility-panel artwork-panel">
+   <section className="panel artwork-panel manage-action-panel">
     <div className="section-title"><h2>刷新游戏封面</h2><RefreshCw size={20}/></div>
     <p className="muted">更新方形封面、详情横图及 Mythic 纪念卡背景。</p>
     {current?.artworkRefresh&&<p className="muted artwork-last-refresh">上次手动刷新：{new Date(current.artworkRefresh.at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}</p>}
