@@ -194,3 +194,5 @@ npm run build
 ### Vault v2
 - `src/record-payload-v2.ts` 独立成就静态/动态字典及反向增量；`src/crypto.ts` 使用原生 Gzip 流及带认证格式标记的 AES-GCM。保留旧格式读取与完整解密往返验证。`src/encrypted-history.ts` 统一格式校验，支持新版离线缓存。
 - 先上线读取器后启用 `PLAYLOG_VAULT_FORMAT=2`，勿将旧前端与仅支持 v2 的数据同时上线。容量历史 `status.capacity` 仅记录运行元数据，不包含账号或游戏名。
+
+- 正式 `sync.yml` 已启用 `PLAYLOG_VAULT_FORMAT=2`。同步运行会读取旧格式或新版档案并输出新格式；不降级旧读取器，不改账本口径。若必须回退写入格式，先保留可读 v2 的读取器，再关闭同步环境变量；原 v1/v2 备份均可解密。
