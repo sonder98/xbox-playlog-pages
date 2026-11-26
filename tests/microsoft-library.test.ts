@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {achievement,officialAchievementProgress,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue,countVisibleUnknownGroups,refreshGroupingWarnings,isXboxEntitlementOnlyTitle} from '../scripts/microsoft-library.ts';
+import {achievement,officialAchievementProgress,playtime,officialGroups,catalogGroups,scanMicrosoft,shouldAbortDegradedScan,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue,countVisibleUnknownGroups,refreshGroupingWarnings,isXboxEntitlementOnlyTitle} from '../scripts/microsoft-library.ts';
 import {officialGameVisible} from '../src/data.ts';
 import type {Achievement,Game,RecordData} from '../src/data.ts';
 const config={clientId:'11111111-1111-1111-1111-111111111111',refreshToken:'PRIVATE-REFRESH'};
@@ -87,7 +87,7 @@ test('permission failures preserve previous title records; 429 interrupts withou
   reads++;return Response.json({error:'do not print me'},{status:429});
  };
  const result=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old,game('missing')])});
- assert.equal(reads,1);assert.equal(result.audit.interrupted,true);assert.equal(result.audit.failed,1);assert.equal(result.record.games.length,2);assert.deepEqual(result.record.games[0],{...old,officialHidden:false});
+ assert.equal(reads,4,'429 uses bounded retries before interrupting the scan');assert.equal(result.audit.interrupted,true);assert.equal(result.audit.failed,1);assert.equal(result.record.games.length,2);assert.deepEqual(result.record.games[0],{...old,officialHidden:false});
  assert.equal(compareLibrary([game()],record([game(),game('2')])).ambiguous,1);
 });
 
@@ -575,4 +575,13 @@ test('an unrelated broken title and unavailable supplemental history do not hide
  assert.ok(result.retryTitles['2']);
  assert.equal(result.record.games.some(g=>g.id==='2'),false);
  assert.equal(result.record.games.find(g=>g.id==='9')?.minutes,42);
+});
+test('global degradation circuit breaker distinguishes isolated from widespread existing-game failures',()=>{
+ assert.equal(shouldAbortDegradedScan({existingAttempted:155,existingFailed:10}),false);
+ assert.equal(shouldAbortDegradedScan({existingAttempted:155,existingFailed:23}),false);
+ assert.equal(shouldAbortDegradedScan({existingAttempted:155,existingFailed:24}),true);
+ assert.equal(shouldAbortDegradedScan({existingAttempted:10,existingFailed:5}),true);
+ assert.equal(shouldAbortDegradedScan({existingAttempted:2,existingFailed:1}),false);
+ assert.equal(shouldAbortDegradedScan({existingAttempted:4,existingFailed:2}),true);
+ assert.equal(shouldAbortDegradedScan({existingAttempted:0,existingFailed:0}),false);
 });

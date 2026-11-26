@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import fs from 'node:fs';
 import {credentials} from './microsoft-credentials.ts';
-import {scanMicrosoft,refreshGroupingWarnings} from './microsoft-library.ts';
+import {scanMicrosoft,refreshGroupingWarnings,shouldAbortDegradedScan} from './microsoft-library.ts';
 import {australianArtwork} from './microsoft-artwork.ts';
 import {readState,writeState} from './microsoft-state.ts';
 import {getPasswords,readVault} from './password.ts';
@@ -40,7 +40,7 @@ async function optionalArtwork(record:Parameters<typeof australianArtwork>[0]){
  catch{console.warn('::warning::Store artwork unavailable; retaining official image sources.');}
 }
 async function optionalImageCache(record:Parameters<typeof cacheRecordImages>[0]){
- try{await cacheRecordImages(record,{budgetMs:60000});logMythicScreenshotCache(record.games);}
+ try{await cacheRecordImages(record,{budgetMs:60000,retainedRecords:previous.slice(0,29)});logMythicScreenshotCache(record.games);}
  catch{console.warn('::warning::Artwork cache unavailable for this scan.');}
 }
 const session=await credentials(process.env),{old,target}=getPasswords(process.env);
@@ -87,10 +87,14 @@ const scanSeconds=Math.round((Date.now()-began)/1000);
 // than being guessed from their timestamps.
 if(syncMechanism)result.record.syncMechanism=syncMechanism;
 // Only aggregate counts: no XUID, game names, credentials, private snapshots or timestamps.
-console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,emptySkipped:result.audit.emptySkipped,emptyCached:result.emptyTitles.length,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed,unpreservedFailures:result.audit.unpreservedFailures}));
+console.log('微软扫描统计：'+JSON.stringify({scanSeconds,fullRefresh:result.audit.fullRefresh,reusedDetails:result.audit.reusedDetails,detailedReads:result.audit.detailedReads,statsReads:result.audit.statsReads,statsSkipped:result.audit.statsSkipped,emptySkipped:result.audit.emptySkipped,emptyCached:result.emptyTitles.length,reuseReasons:result.audit.reuseReasons,failed:result.audit.failed,existingAttempted:result.audit.existingAttempted,existingFailed:result.audit.existingFailed,newFailed:result.audit.newFailed,unpreservedFailures:result.audit.unpreservedFailures}));
 // An isolated previously seen title can preserve its last data without blocking other games.
 // New titles with incomplete data are deferred; global history or fatal errors still stop publication.
 if(result.audit.interrupted||(result.audit.titles>0&&result.audit.unpreservedFailures===result.audit.titles))throw Error('微软同步未完整完成。');
+if(shouldAbortDegradedScan(result.audit)){
+ console.error('微软全局失败熔断：'+JSON.stringify({existingAttempted:result.audit.existingAttempted,existingFailed:result.audit.existingFailed,failed:result.audit.failed}));
+ throw Error('微软现有游戏数据大面积读取失败；已停止发布并保留最后一份有效档案。');
+}
 if(result.audit.failed)console.warn('微软同步部分降级：'+result.audit.failed+' 个游戏异常，旧游戏保留原数据、新游戏暂缓收录，其余继续发布。');
 const artwork=await optionalArtwork(result.record);
 // Retain zero-result metadata ONLY in the existing encrypted private candidate
@@ -103,6 +107,10 @@ writeState(root+'/candidate.json',{...result,record:{...result.record,games:allS
  lastFullCatalogAt:result.audit.fullRefresh?result.record.at:(saved?.lastFullCatalogAt??cacheBaseline?.at??result.record.at)},key);
 session.save();
 const daily=appendPlaytimeSamples(ledger,result.statsSamples);
-await publishSnapshot(result.record,previous.slice(0,29),target,daily,fixedPcMetascores(result.record.games.map(g=>g.id),key),result.statsSamples.length>0&&!result.audit.failed&&(process.env.PLAYTIME_FORCE_SWEEP==='true'||boundaryPlaytimeSweep(result.record.at)));
+await publishSnapshot(result.record,previous.slice(0,29),target,daily,fixedPcMetascores(result.record.games.map(g=>g.id),key),result.statsSamples.length>0&&!result.audit.failed&&(process.env.PLAYTIME_FORCE_SWEEP==='true'||boundaryPlaytimeSweep(result.record.at)),{
+  titles:result.audit.titles,existingAttempted:result.audit.existingAttempted,existingFailed:result.audit.existingFailed,
+  newFailed:result.audit.newFailed,failed:result.audit.failed,historySourcesFailed:result.audit.historySourcesFailed,
+  fullRefresh:result.audit.fullRefresh
+ });
 console.log('每日时长采样：'+JSON.stringify({freshSamples:result.statsSamples.length,observedGames:Object.keys(daily.latest).length,dates:Object.keys(daily.days).length,crossDayIntervals:Object.keys(daily.crossDay).length}));
 console.log('微软正式同步完成：'+JSON.stringify({games:result.record.games.length,achievementsWithRarity:result.audit.rarityAchievements,baseGroups:result.audit.officialBaseGroups,dlcGroups:result.audit.officialAddonGroups,degradedGames:result.audit.failed,artwork,seconds:Math.round((Date.now()-began)/1000)}));

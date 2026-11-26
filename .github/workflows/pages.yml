@@ -10,6 +10,11 @@ on:
       - 'scripts/**'
       # Xbox-only backend changes already run sync.yml, which dispatches Pages on success.
       - '!scripts/microsoft-*.ts'
+      - '!scripts/microsoft.ts'
+      - '!scripts/image-cache.ts'
+      - '!scripts/snapshot.ts'
+      - '!scripts/live-assets.mjs'
+      - '!scripts/sync-health.ts'
       - 'data/**'
       - 'public/**'
       - 'index.html'
@@ -58,8 +63,10 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: public/media
-          key: artwork-webp-v1-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: artwork-webp-v1-${{ runner.os }}-
+          key: artwork-webp-v2-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            artwork-webp-v2-${{ runner.os }}-
+            artwork-webp-v1-${{ runner.os }}-
       - name: Restore legacy encrypted checkpoint (one-time compatibility)
         id: legacy_checkpoint
         uses: actions/cache/restore@v4

@@ -4,11 +4,13 @@ import {createHash} from 'node:crypto';
 import sharp from 'sharp';
 import type {RecordData,Game} from '../src/data.ts';
 
-const version='webp-v1';
+const version='webp-v2';
+export const IMAGE_CACHE_REFRESH_MS=30*24*60*60*1000;
+export function imageCacheGeneration(at=Date.now()){return Math.floor(at/IMAGE_CACHE_REFRESH_MS);}
 export function imageSource(value:string):string|null{
   try{const u=new URL(value);return u.protocol==='https:'&&(['store-images.s-microsoft.com','images-eds-ssl.xboxlive.com','images-eds.xboxlive.com','image-ssl.xboxlive.com','image.xboxlive.com','tiles.xbox.com'].includes(u.hostname)||(u.hostname==='m.exophase.com'&&/^\/[^/]+\/(?:games|awards)\//.test(u.pathname)))&&!u.port&&!u.username&&!u.password?u.href:null;}catch{return null;}
 }
-export function imageCacheName(url:string,width:number){return `${createHash('sha256').update(`${version}:${url}:${width}`).digest('hex').slice(0,32)}-${width}.webp`;}
+export function imageCacheName(url:string,width:number,generation=imageCacheGeneration()){return `${createHash('sha256').update(`${version}:${generation}:${url}:${width}`).digest('hex').slice(0,32)}-${width}.webp`;}
 export async function convertImage(bytes:Uint8Array,width:number){
   return sharp(bytes,{limitInputPixels:32_000_000}).rotate().resize({width,withoutEnlargement:true}).webp({quality:80,effort:4}).toBuffer();
 }
@@ -37,11 +39,38 @@ export function dedupeCachedScreenshotFrames(game:Game,directory:string):number{
  return removed;
 }
 
-type Options={directory?:string;baseUrl?:string;budgetMs?:number;fetchImage?:(url:string)=>Promise<Uint8Array>};
-/** Only public CDN artwork is mirrored; records and credentials never enter this directory. */
+type Options={directory?:string;baseUrl?:string;budgetMs?:number;fetchImage?:(url:string)=>Promise<Uint8Array>;now?:number;retainedRecords?:RecordData[]};
+function referencedCacheFiles(record:RecordData){
+ const files=new Set<string>(),add=(value:unknown)=>{
+  if(typeof value!=='string'||!value)return;
+  try{const name=new URL(value).pathname.split('/').at(-1)||'';if(/^[a-f0-9]{32}-\d+\.webp$/.test(name))files.add(name);}catch{}
+ };
+ add(record.profile.cachedAvatar);
+ for(const game of record.games){
+  for(const value of [game.cachedImage,game.cachedImageLarge,game.cachedDetailImage,game.cachedPosterImage])add(value);
+  for(const value of game.cachedPosterScreenshots||[])add(value);
+  for(const value of game.cachedPosterScreenshotsSmall||[])add(value);
+  for(const award of game.achievements||[])add(award.cachedImage);
+ }
+ return files;
+}
+function cloneGame(game:Game):Game{return {...game,achievements:game.achievements?.map(a=>({...a})),cachedPosterScreenshots:game.cachedPosterScreenshots?.slice(),cachedPosterScreenshotsSmall:game.cachedPosterScreenshotsSmall?.slice()};}
+/** Only public CDN artwork is mirrored; records and credentials never enter this directory.
+ * URL-derived cache names rotate every 30 days. Assets referenced by the latest
+ * record and its 29 retained predecessors remain available. */
 export async function cacheRecordImages(record:RecordData,options:Options={}){
   const directory=options.directory||'public/media',base=options.baseUrl||'https://sonder98.github.io/xbox-playlog-pages/media/';
   fs.mkdirSync(directory,{recursive:true});
+  const generation=imageCacheGeneration(options.now??Date.now()),nameFor=(url:string,width:number)=>imageCacheName(url,width,generation);
+  const retained=options.retainedRecords||[],fallbackGames=new Map<string,Game[]>();
+  const addFallback=(game:Game)=>fallbackGames.set(game.id,[...(fallbackGames.get(game.id)||[]),cloneGame(game)]);
+  for(const game of record.games)addFallback(game);
+  for(const snapshot of retained)for(const game of snapshot.games)addFallback(game);
+  const fallbackProfiles=[{...record.profile},...retained.map(s=>({...s.profile}))];
+  const existsCached=(value:unknown)=>{
+    if(typeof value!=='string'||!value)return false;
+    try{const name=new URL(value).pathname.split('/').at(-1)||'';return /^[a-f0-9]{32}-\d+\.webp$/.test(name)&&fs.existsSync(path.join(directory,name));}catch{return false;}
+  };
   let downloaded=0,reused=0,derived=0,failures=0,originalBytes=0,webpBytes=0,blocked=false;
   const deadline=Date.now()+(options.budgetMs??300_000);
   const fetchImage=options.fetchImage||(async(url:string)=>{
@@ -89,15 +118,15 @@ export async function cacheRecordImages(record:RecordData,options:Options={}){
   async function worker(){
     while(cursor<tasks.length){
       const [url,job]=tasks[cursor++],urls=new Map<number,string>();
-      const missing=[...job.widths].filter(width=>{const name=imageCacheName(url,width),file=path.join(directory,name);if(fs.existsSync(file)&&fs.statSync(file).size>0){urls.set(width,base+name);reused++;return false;}return true;});
+      const missing=[...job.widths].filter(width=>{const name=nameFor(url,width),file=path.join(directory,name);if(fs.existsSync(file)&&fs.statSync(file).size>0){urls.set(width,base+name);reused++;return false;}return true;});
       // Screenshot thumbnails can be produced from the durable 1600px WebP.
       // Do not re-download an existing Store screenshot to create a 480px variant.
       const sourceWidth=missing.length?[...job.widths].filter(w=>w>Math.max(...missing)&&urls.has(w)).sort((a,b)=>a-b)[0]:undefined;
       if(missing.length&&Date.now()<deadline&&(!blocked||sourceWidth!==undefined)){
         try{
-          const bytes=sourceWidth===undefined?await fetchImage(url):fs.readFileSync(path.join(directory,imageCacheName(url,sourceWidth)));
+          const bytes=sourceWidth===undefined?await fetchImage(url):fs.readFileSync(path.join(directory,nameFor(url,sourceWidth)));
           if(sourceWidth===undefined)originalBytes+=bytes.length;
-          for(const width of missing){const output=await convertImage(bytes,width),name=imageCacheName(url,width),file=path.join(directory,name);fs.writeFileSync(file+'.tmp',output);fs.renameSync(file+'.tmp',file);urls.set(width,base+name);webpBytes+=output.length;}
+          for(const width of missing){const output=await convertImage(bytes,width),name=nameFor(url,width),file=path.join(directory,name);fs.writeFileSync(file+'.tmp',output);fs.renameSync(file+'.tmp',file);urls.set(width,base+name);webpBytes+=output.length;}
           if(sourceWidth===undefined)downloaded++;else derived+=missing.length;
         }catch{failures++;}
       }
@@ -105,9 +134,32 @@ export async function cacheRecordImages(record:RecordData,options:Options={}){
     }
   }
   await Promise.all(Array.from({length:8},worker));
+  // If the 30-day refresh fails, keep the prior cache for an unchanged source URL.
+  for(const game of record.games){
+    const candidates=fallbackGames.get(game.id)||[],first=(predicate:(old:Game)=>boolean)=>candidates.find(predicate);
+    const source=game.image3x||game.image2x||game.image;
+    const oldCover=first(g=>(g.image3x||g.image2x||g.image)===source&&((!game.cachedImage&&existsCached(g.cachedImage))||(!game.cachedImageLarge&&existsCached(g.cachedImageLarge))));
+    if(oldCover){if(!game.cachedImage&&existsCached(oldCover.cachedImage))game.cachedImage=oldCover.cachedImage;if(!game.cachedImageLarge&&existsCached(oldCover.cachedImageLarge))game.cachedImageLarge=oldCover.cachedImageLarge;}
+    const landscape=game.detailImage||game.imageWide;
+    if(!game.cachedDetailImage){const old=first(g=>(g.detailImage||g.imageWide)===landscape&&existsCached(g.cachedDetailImage));if(old)game.cachedDetailImage=old.cachedDetailImage;}
+    if(!game.cachedPosterImage){const old=first(g=>g.posterImage===game.posterImage&&existsCached(g.cachedPosterImage));if(old)game.cachedPosterImage=old.cachedPosterImage;}
+    for(let i=0;i<(game.posterScreenshots||[]).length;i++){
+      const shot=game.posterScreenshots![i];
+      if(!game.cachedPosterScreenshots?.[i]){const old=first(g=>g.posterScreenshots?.[i]===shot&&existsCached(g.cachedPosterScreenshots?.[i]));if(old)game.cachedPosterScreenshots![i]=old.cachedPosterScreenshots![i];}
+      if(!game.cachedPosterScreenshotsSmall?.[i]){const old=first(g=>g.posterScreenshots?.[i]===shot&&existsCached(g.cachedPosterScreenshotsSmall?.[i]));if(old)game.cachedPosterScreenshotsSmall![i]=old.cachedPosterScreenshotsSmall![i];}
+    }
+    const oldAwards=new Map<string,NonNullable<Game['achievements']>[number]>();
+    for(const old of candidates)for(const award of old.achievements||[])if(!oldAwards.has(award.id))oldAwards.set(award.id,award);
+    for(const award of game.achievements||[]){const old=oldAwards.get(award.id);if(!award.cachedImage&&old?.image===award.image&&existsCached(old.cachedImage))award.cachedImage=old.cachedImage;}
+  }
+  if(!record.profile.cachedAvatar){const old=fallbackProfiles.find(p=>p.avatar===record.profile.avatar&&existsCached(p.cachedAvatar));if(old)record.profile.cachedAvatar=old.cachedAvatar;}
   const duplicatedFrames=record.games.reduce((sum,game)=>sum+dedupeCachedScreenshotFrames(game,directory),0);
   if(duplicatedFrames)console.log(`Mythic Screenshot 内容去重：移除 ${duplicatedFrames} 张实际重复的图片，保留官方顺序。`);
+  // Keep only assets referenced by the current snapshot window; old generations
+  // disappear after the corresponding records leave the encrypted 30-record history.
+  const keep=referencedCacheFiles(record);for(const snapshot of retained)for(const name of referencedCacheFiles(snapshot))keep.add(name);
+  for(const name of fs.readdirSync(directory))if(/^[a-f0-9]{32}-\d+\.webp$/.test(name)&&!keep.has(name))fs.unlinkSync(path.join(directory,name));
   const covers=record.games.filter(g=>g.cachedImage).length,achievements=record.games.flatMap(g=>g.achievements||[]).filter(a=>a.cachedImage).length;
-  console.log(`图片缓存：封面 ${covers}/${record.games.length}，成就 ${achievements}，头像 ${record.profile.cachedAvatar?'已缓存':'仅原图'}；下载 ${downloaded}，复用 ${reused}，本地生成 ${derived}，失败 ${failures}；原图 ${originalBytes} 字节，WebP ${webpBytes} 字节${blocked?'；源站拒绝，已停止下载':''}`);
-  return {covers,achievements,downloaded,reused,derived,failures,originalBytes,webpBytes};
+  console.log(`图片缓存：封面 ${covers}/${record.games.length}，成就 ${achievements}，头像 ${record.profile.cachedAvatar?'已缓存':'仅原图'}；下载 ${downloaded}，复用 ${reused}，本地生成 ${derived}，失败 ${failures}；原图 ${originalBytes} 字节，WebP ${webpBytes} 字节；30天缓存代次 ${generation}${blocked?'；源站拒绝，已停止下载':''}`);
+  return {covers,achievements,downloaded,reused,derived,failures,originalBytes,webpBytes,generation};
 }

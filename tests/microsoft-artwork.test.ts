@@ -246,12 +246,20 @@ test('weekly AU lookup missing data preserves old cover and remains retryable',a
  assert.equal(fresh.games[0].artworkCheckedAt,old.games[0].artworkCheckedAt);
 });
 
-test('Store outage retains artwork on every old game and bounds requests',async()=>{
- const games=['1','2'].map(id=>({id,name:id,image:'https://example.org/'+id}));
- const previous={games} as RecordData;
- const current={games:games.map(g=>({...g,image:''}))} as RecordData;
+test('temporary Store failures retry, then preserve previous artwork without aborting Xbox sync',async()=>{
+ const old={games:[
+  {id:'201',name:'Wuthering Waves',image:'https://store-images.s-microsoft.com/image/old-square',detailImage:'https://store-images.s-microsoft.com/image/old-hero',detailImagePurpose:'TitledHeroArt',posterImage:'https://store-images.s-microsoft.com/image/old-shot',posterSelectionVersion:3,artworkCheckedAt:'2026-01-01T00:00:00Z'},
+  {id:'202',name:'Second Game',image:'https://store-images.s-microsoft.com/image/second-square',detailImage:'https://store-images.s-microsoft.com/image/second-hero',detailImagePurpose:'TitledHeroArt',posterImage:'https://store-images.s-microsoft.com/image/second-shot',posterSelectionVersion:3,artworkCheckedAt:'2026-01-01T00:00:00Z'}
+ ]} as RecordData;
+ const fresh={at:new Date().toISOString(),games:old.games.map(g=>({id:g.id,name:g.name,image:'https://images-eds-ssl.xboxlive.com/image/fallback'}))} as RecordData;
  let calls=0;
- await australianArtwork(current,async()=>{calls++;return new Response(null,{status:503});},previous);
- assert.equal(calls,1);
- assert.deepEqual(current.games.map(g=>g.image),games.map(g=>g.image));
+ const result=await australianArtwork(fresh,async()=>{calls++;return new Response('',{status:503});},old,{pause:async()=>{}});
+ assert.equal(calls,3);assert.equal(result.failures,1);assert.equal(result.unavailable,true);
+ assert.equal(fresh.games[0].image,old.games[0].image);assert.equal(fresh.games[1].image,old.games[1].image);
+});
+test('a new title retains its Xbox image when Store metadata is temporarily unavailable',async()=>{
+ const fresh={at:new Date().toISOString(),games:[{id:'301',name:'New Xbox Game',image:'https://images-eds-ssl.xboxlive.com/image/original'}]} as RecordData;
+ const result=await australianArtwork(fresh,async()=>{throw Error('offline');},undefined,{pause:async()=>{}});
+ assert.equal(result.failures,1);
+ assert.equal(fresh.games[0].image,'https://images-eds-ssl.xboxlive.com/image/original');
 });
