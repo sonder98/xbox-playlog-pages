@@ -10,7 +10,7 @@ import type {RecordData} from '../src/data.ts';
 import type {DailyPlaytimeLedger} from '../src/playtime-ledger.ts';
 import type {PcMetascores} from '../src/metascores.ts';
 /** Verify decryption and round-trip before replacing the encrypted snapshot. */
-export async function publishSnapshot(record:RecordData,previous:RecordData[],password:string,playtimeLedger?:DailyPlaytimeLedger,metacriticScores?:PcMetascores,boundaryObserved=false,syncQuality?:{titles:number;existingAttempted:number;existingFailed:number;newFailed:number;failed:number;historySourcesFailed:number;fullRefresh:boolean}){
+export async function publishSnapshot(record:RecordData,previous:RecordData[],password:string,playtimeLedger?:DailyPlaytimeLedger,metacriticScores?:PcMetascores,boundaryObserved=false){
  const payload={records:[record,...previous],...(playtimeLedger?{playtimeLedger}:{}),...(metacriticScores?{metacriticScores}:{})};
  // Reader-first rollout: production writes v1 until the compatible UI is deployed.
  const version=process.env.PLAYLOG_VAULT_FORMAT==='2'?2:1;
@@ -25,5 +25,5 @@ export async function publishSnapshot(record:RecordData,previous:RecordData[],pa
  console.log('Vault capacity: '+JSON.stringify({bytes:capacity.bytes,version,legacyEquivalentBytes,limitBytes:capacity.limitBytes}));
  const boundaryCoverage=updateBoundaryCoverage(previousStatus.boundaryCoverage,record.at,boundaryObserved);
  fs.writeFileSync('public/vault.json',serialized);
- fs.writeFileSync('public/status.json',JSON.stringify({initialized:true,latestAt:record.at,boundaryCoverage,capacity,...(syncQuality?{syncQuality}:previousStatus.syncQuality?{syncQuality:previousStatus.syncQuality}:{}),vaultSha256:createHash('sha256').update(serialized).digest('hex')}));
+ fs.writeFileSync('public/status.json',JSON.stringify({initialized:true,latestAt:record.at,boundaryCoverage,capacity,vaultSha256:createHash('sha256').update(serialized).digest('hex')}));
 }

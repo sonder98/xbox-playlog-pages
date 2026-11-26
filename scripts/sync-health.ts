@@ -19,7 +19,7 @@ export function updateBoundaryCoverage(previous:unknown,at:string,observed:boole
  return {trackingSince,observed:[...new Set(slots)].sort()};
 }
 export function syncHealth(status:unknown,now=Date.now()){
- const s=status as {initialized?:boolean;latestAt?:string;boundaryCoverage?:BoundaryCoverage;syncQuality?:{failed?:number;existingFailed?:number;newFailed?:number;historySourcesFailed?:number}}|null;
+ const s=status as {initialized?:boolean;latestAt?:string;boundaryCoverage?:BoundaryCoverage}|null;
  const at=Date.parse(s?.latestAt||'');
  if(!s?.initialized||!Number.isFinite(at)||at>now+5*minuteMs)return {level:'critical',message:'Published sync marker unavailable or invalid.',missing:[] as string[],capacityWarning:false};
  const age=Math.max(0,Math.floor((now-at)/minuteMs));
@@ -38,9 +38,6 @@ export function syncHealth(status:unknown,now=Date.now()){
   for(const slot of expected.sort().slice(-2))if(!coverage.observed.includes(slot))missing.push(slot);
  }
  const large=capacityWarning(status);
- const q=s.syncQuality;
- const partialSyncWarning=!!q&&[q.failed,q.existingFailed,q.newFailed,q.historySourcesFailed].some(v=>typeof v==='number'&&v>0);
- const level=age>=360?'critical':age>=180?'error':age>=90||missing.length||large||partialSyncWarning?'warning':'healthy';
- const qualityMessage=partialSyncWarning?' Partial Xbox scan: '+(q?.failed||0)+' game failures, '+(q?.historySourcesFailed||0)+' history-source failures.':'';
- return {level,capacityWarning:large,partialSyncWarning,message:'Latest published Xbox snapshot: '+age+' minutes old.'+(missing.length?' Boundary scan not observed for '+missing.join(', ')+'.':'')+(large?' Encrypted archive exceeds 75% of the configured capacity.':'')+qualityMessage,missing};
+ const level=age>=360?'critical':age>=180?'error':age>=90||missing.length||large?'warning':'healthy';
+ return {level,capacityWarning:large,message:'Latest published Xbox snapshot: '+age+' minutes old.'+(missing.length?' Boundary scan not observed for '+missing.join(', ')+'.':'')+(large?' Encrypted archive exceeds 75% of the configured capacity.':''),missing};
 }

@@ -3,45 +3,22 @@ export const microsoftTokenUrl='https://login.microsoftonline.com/consumers/oaut
 export const xboxScopes='XboxLive.signin XboxLive.offline_access';
 export class XboxReadError extends Error { status:number; constructor(label:string,status:number){super(`${label} HTTP ${status}。`);this.status=status;} }
 export type DirectConfig={clientId:string;refreshToken:string;clientSecret?:string;onRefreshToken?:(token:string)=>void|Promise<void>};
-const retryableStatus=new Set([408,425,429,500,502,503,504]);
-const defaultPause=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
-function retryAfterMs(response:Response,fallback:number){
- const value=response.headers.get('retry-after');
- if(value){const seconds=Number(value);if(Number.isFinite(seconds)&&seconds>=0)return Math.min(30_000,Math.max(250,seconds*1000));const date=Date.parse(value);if(Number.isFinite(date))return Math.min(30_000,Math.max(250,date-Date.now()));}
- return fallback;
-}
-export async function microsoftProvider(config:DirectConfig,request:typeof fetch=fetch,options:{pause?:(ms:number)=>Promise<void>;maxAttempts?:number}={}){
+export async function microsoftProvider(config:DirectConfig,request:typeof fetch=fetch){
  if(!/^[a-f0-9]{8}-[a-f0-9-]{27}$/i.test(config.clientId)||!config.refreshToken)throw Error('请先设置自己的 XBOX_CLIENT_ID 和 XBOX_REFRESH_TOKEN。');
- const pause=options.pause||defaultPause,maxAttempts=Math.max(1,Math.min(5,options.maxAttempts??4));
- async function json(url:string,init:RequestInit,label:string,retryTransient=false){
-  for(let attempt=1;attempt<=(retryTransient?maxAttempts:1);attempt++){
-   let response:Response;
-   try{response=await request(url,{...init,redirect:'error',signal:AbortSignal.timeout(30000)});}
-   catch{
-    if(retryTransient&&attempt<maxAttempts){await pause([1000,2500,6000,10000][Math.min(attempt-1,3)]);continue;}
-    throw Error(label+'连接失败。');
-   }
-   if(!response.ok){
-    if(retryTransient&&retryableStatus.has(response.status)&&attempt<maxAttempts){
-     await pause(retryAfterMs(response,[1000,2500,6000,10000][Math.min(attempt-1,3)]));continue;
-    }
-    throw new XboxReadError(label,response.status);
-   }
-   try{const value=await response.json();if(!value||typeof value!=='object')throw Error();return value as any;}
-   catch{throw Error(label+'返回无效 JSON。');}
-  }
-  throw Error(label+'连接失败。');
+ async function json(url:string,init:RequestInit,label:string){
+  let r:Response;
+  try{r=await request(url,{...init,redirect:'error',signal:AbortSignal.timeout(30000)});}catch{throw Error(label+'连接失败。');}
+  if(!r.ok)throw new XboxReadError(label,r.status);
+  try{const value=await r.json();if(!value||typeof value!=='object')throw Error();return value as any;}catch{throw Error(label+'返回无效 JSON。');}
  }
- // Refresh-token rotation is not retried: the server may have rotated the token
- // even if the response was lost. The next run uses the last atomically saved token.
  const form=new URLSearchParams({client_id:config.clientId,refresh_token:config.refreshToken,grant_type:'refresh_token',scope:xboxScopes});if(config.clientSecret)form.set('client_secret',config.clientSecret);
  const oauth=await json(microsoftTokenUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:form},'微软令牌刷新');
  if(typeof oauth.access_token!=='string')throw Error('微软没有返回访问令牌。');
  if(typeof oauth.refresh_token==='string'&&config.onRefreshToken)await config.onRefreshToken(oauth.refresh_token);
  const authHeaders={'Content-Type':'application/json','x-xbl-contract-version':'1'};
- const user=await json('https://user.auth.xboxlive.com/user/authenticate',{method:'POST',headers:authHeaders,body:JSON.stringify({RelyingParty:'http://auth.xboxlive.com',TokenType:'JWT',Properties:{AuthMethod:'RPS',SiteName:'user.auth.xboxlive.com',RpsTicket:'d='+oauth.access_token}})},'Xbox 用户认证',true);
+ const user=await json('https://user.auth.xboxlive.com/user/authenticate',{method:'POST',headers:authHeaders,body:JSON.stringify({RelyingParty:'http://auth.xboxlive.com',TokenType:'JWT',Properties:{AuthMethod:'RPS',SiteName:'user.auth.xboxlive.com',RpsTicket:'d='+oauth.access_token}})},'Xbox 用户认证');
  if(typeof user.Token!=='string')throw Error('Xbox 用户令牌缺失。');
- const xsts=await json('https://xsts.auth.xboxlive.com/xsts/authorize',{method:'POST',headers:authHeaders,body:JSON.stringify({RelyingParty:'http://xboxlive.com',TokenType:'JWT',Properties:{SandboxId:'RETAIL',UserTokens:[user.Token]}})},'Xbox XSTS 认证',true);
+ const xsts=await json('https://xsts.auth.xboxlive.com/xsts/authorize',{method:'POST',headers:authHeaders,body:JSON.stringify({RelyingParty:'http://xboxlive.com',TokenType:'JWT',Properties:{SandboxId:'RETAIL',UserTokens:[user.Token]}})},'Xbox XSTS 认证');
  const hash=xsts.DisplayClaims?.xui?.[0]?.uhs;if(typeof hash!=='string'||typeof xsts.Token!=='string')throw Error('Xbox 授权响应格式不受支持。');
  const authorization=`XBL3.0 x=${hash};${xsts.Token}`;let xuid='';
  return {source:'Xbox',get xuid(){return xuid;},async call(path:string,body?:unknown){
@@ -71,7 +48,7 @@ export async function microsoftProvider(config:DirectConfig,request:typeof fetch
     url='https://userstats.xboxlive.com/batch';method='POST';
    }else throw Error('不支持的 Xbox 只读接口。');
   }
-  const result=await json(url,{method,headers:{Authorization:authorization,'x-xbl-contract-version':contract,'Accept-Language':local.searchParams.get('locale')==='en-AU'?'en-AU':local.searchParams.get('locale')==='en-US'?'en-US':'zh-CN','Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})},'Xbox 数据读取',true);
+  const result=await json(url,{method,headers:{Authorization:authorization,'x-xbl-contract-version':contract,'Accept-Language':local.searchParams.get('locale')==='en-AU'?'en-AU':local.searchParams.get('locale')==='en-US'?'en-US':'zh-CN','Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})},'Xbox 数据读取');
   if(local.pathname==='/account'){const id=result.profileUsers?.[0]?.id;if(typeof id!=='string'||!/^\d{5,25}$/.test(id))throw Error('无法确认 Xbox 玩家身份。');xuid=id;}
   return result;
  }};
