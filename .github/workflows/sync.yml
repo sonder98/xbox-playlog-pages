@@ -98,6 +98,7 @@ jobs:
       - name: Sync and encrypt Microsoft records
         id: microsoft_sync
         env:
+          PLAYLOG_VAULT_FORMAT: '2'
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
           NEW_APP_PASSWORD: ${{ secrets.NEW_APP_PASSWORD }}
           MICROSOFT_STATE_KEY: ${{ secrets.MICROSOFT_STATE_KEY }}
