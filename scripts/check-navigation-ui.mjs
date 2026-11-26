@@ -2423,6 +2423,7 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     await switchMainTab('游戏库');
     await page.getByRole('heading',{name:'我的游戏库',exact:true}).waitFor();
     assert.equal(await page.evaluate(()=>history.state.depth),0,'Returning to another tab still stays at the app root');
+    await restoredSearch.click();
     await page.getByRole('searchbox',{name:'搜索游戏名称'}).fill('Test Game 1');
     await page.locator('.game-library-sort .achievement-sort-toggle').click();
     assert.equal(await restoredSearch.getAttribute('aria-expanded'),'false',
