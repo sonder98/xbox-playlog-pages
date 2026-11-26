@@ -67,3 +67,8 @@ test('sync workflow watches the Microsoft adapter and health monitor receives co
  assert.ok(sync.includes("'scripts/microsoft.ts'"));
  assert.ok(health.includes('workflow_run:'));
 });
+
+test('health workflow uses a valid jq fallback for older status markers',()=>{
+ const health=readFileSync('.github/workflows/sync-health.yml','utf8');
+ assert.ok(health.includes("jq -r '.partialSyncWarning // false' /tmp/playlog-health.json"));
+});
