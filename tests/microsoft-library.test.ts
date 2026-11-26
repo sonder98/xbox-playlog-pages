@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {achievement,officialAchievementProgress,playtime,officialGroups,catalogGroups,scanMicrosoft,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue,countVisibleUnknownGroups,refreshGroupingWarnings,isXboxEntitlementOnlyTitle} from '../scripts/microsoft-library.ts';
+import {achievement,officialAchievementProgress,playtime,officialGroups,catalogGroups,scanMicrosoft,shouldAbortDegradedScan,compareLibrary,mergeTitleHistories,refreshCatalogToday,shouldReadPlaytime,detailCacheDecision,reusableEmptyTitle,EMPTY_TITLE_RECHECK_MS,shouldProbeMissingSummary,catalogRefreshDue,countVisibleUnknownGroups,refreshGroupingWarnings,isXboxEntitlementOnlyTitle} from '../scripts/microsoft-library.ts';
 import {officialGameVisible} from '../src/data.ts';
 import type {Achievement,Game,RecordData} from '../src/data.ts';
 const config={clientId:'11111111-1111-1111-1111-111111111111',refreshToken:'PRIVATE-REFRESH'};
@@ -546,4 +546,13 @@ test('League of Legends linked Game Pass entitlement never enters a played Xbox 
  assert.equal(result.audit.failed,0);
  assert.equal(result.record.warnings.some(w=>w.includes('League of Legends')),false);
  assert.equal(queried.length,0,'Entitlement game must not trigger Xbox achievement or playtime calls');
+});
+
+test('global degradation circuit breaker stops widespread existing-game failures, not isolated failures',()=>{
+ assert.equal(shouldAbortDegradedScan({existingAttempted:155,existingFailed:10}),false);
+ assert.equal(shouldAbortDegradedScan({existingAttempted:155,existingFailed:23}),false);
+ assert.equal(shouldAbortDegradedScan({existingAttempted:155,existingFailed:24}),true);
+ assert.equal(shouldAbortDegradedScan({existingAttempted:10,existingFailed:5}),true);
+ assert.equal(shouldAbortDegradedScan({existingAttempted:4,existingFailed:4}),true);
+ assert.equal(shouldAbortDegradedScan({existingAttempted:0,existingFailed:0}),false);
 });

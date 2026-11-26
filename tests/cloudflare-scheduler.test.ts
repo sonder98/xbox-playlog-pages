@@ -48,3 +48,15 @@ test('GitHub sync workflow attributes legacy Worker dispatches without a sync_me
  assert.ok(workflow.includes("github.event_name == 'push' && 'code-update'"),
   'Code updates retain their distinct source label');
 });
+
+test('scheduled dispatch retries network, 429 and 5xx errors but honors Retry-After',async()=>{
+ const delays=[],statuses=[429,503,204];let calls=0;
+ const request=async()=>{const status=statuses[calls++];return new Response(null,{status,headers:status===429?{'retry-after':'3'}:{}});};
+ const result=await mod.sendScheduledDispatch(mod.CRON_RULES[0],'fixture-secret',request,{pause:async ms=>{delays.push(ms);}});
+ assert.equal(result.status,204);assert.equal(calls,3);assert.deepEqual(delays,[3000,2500]);
+});
+test('scheduled dispatch retries transient network failure once',async()=>{
+ let calls=0;
+ const result=await mod.sendScheduledDispatch(mod.CRON_RULES[0],'fixture-secret',async()=>{if(++calls===1)throw Error('offline');return new Response(null,{status:204});},{pause:async()=>{}});
+ assert.equal(result.status,204);assert.equal(calls,2);
+});
