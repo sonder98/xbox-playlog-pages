@@ -52,7 +52,7 @@ test('GitHub sync workflow attributes legacy Worker dispatches without a sync_me
 test('scheduled Worker dispatch retries transient network, 429 and 5xx failures',async()=>{
  const delays:number[]=[],statuses=[429,503,204];let calls=0;
  const request:typeof fetch=async()=>{const status=statuses[calls++];return new Response(null,{status,headers:status===429?{'retry-after':'3'}:{}});};
- const result=await mod.sendScheduledDispatch(mod.CRON_RULES[0],'fixture-secret',request,{pause:async ms=>{delays.push(ms);}});
+ const result=await mod.sendScheduledDispatch(mod.CRON_RULES[0],'fixture-secret',request,{pause:async(ms:number)=>{delays.push(ms);}});
  assert.equal(result.status,204);assert.equal(calls,3);assert.deepEqual(delays,[3000,2500]);
 });
 test('scheduled Worker dispatch retries a transient network failure',async()=>{
