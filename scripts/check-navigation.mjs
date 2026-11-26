@@ -23,7 +23,7 @@ games[0].achievements[0].unlockedAt='2026-11-01T12:24:00.000Z';
 games[0].achievements[1].unlockedAt='2026-11-02T12:24:00.000Z';
 for(const game of games){game.total=4;game.earned=2;game.groupStatus='verified';game.groups=[{id:'base',name:'本体',kind:'base',earned:2,total:2,achievementIds:['1','2']},{id:'dlc',name:'追加故事',kind:'dlc',earned:0,total:2,achievementIds:['3','4']}];}
 const playtimeLedger={version:1,timeZone:'Asia/Shanghai',since:'2026-11-01',latest:{'100':{at:'2026-11-02T12:00:00.000Z',minutes:30}},days:{'2026-11-01':{'100':30}},crossDay:{},corrections:{}};
-const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:'https://covers.example.test/avatar.svg',cachedAvatar:'https://covers.example.test/avatar-cached.svg'},games,source:'Exophase',warnings:[],syncMechanism:'cloudflare'}],playtimeLedger},password);
+const envelope=await encryptVault({records:[{id:'test-snapshot',at:'2026-10-30T00:00:00Z',profile:{xuid:'4285437',gamertag:'Test Player',avatar:'https://covers.example.test/avatar.svg',cachedAvatar:'https://covers.example.test/avatar-cached.svg'},games,source:'Exophase',warnings:[],syncMechanism:'cloudflare'}],playtimeLedger},password,2);
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4173'],{stdio:'ignore'});
 let browser;
 try{

@@ -1,3 +1,4 @@
+import {capacityWarning} from './vault-capacity.ts';
 /** Public operational metadata only, never game/account information. */
 export type BoundaryCoverage={trackingSince:string;observed:string[]};
 const dayMs=86_400_000, minuteMs=60_000;
@@ -20,7 +21,7 @@ export function updateBoundaryCoverage(previous:unknown,at:string,observed:boole
 export function syncHealth(status:unknown,now=Date.now()){
  const s=status as {initialized?:boolean;latestAt?:string;boundaryCoverage?:BoundaryCoverage}|null;
  const at=Date.parse(s?.latestAt||'');
- if(!s?.initialized||!Number.isFinite(at)||at>now+5*minuteMs)return {level:'critical',message:'Published sync marker unavailable or invalid.',missing:[] as string[]};
+ if(!s?.initialized||!Number.isFinite(at)||at>now+5*minuteMs)return {level:'critical',message:'Published sync marker unavailable or invalid.',missing:[] as string[],capacityWarning:false};
  const age=Math.max(0,Math.floor((now-at)/minuteMs));
  const missing:string[]=[];
  const coverage=s.boundaryCoverage;
@@ -36,6 +37,7 @@ export function syncHealth(status:unknown,now=Date.now()){
   }
   for(const slot of expected.sort().slice(-2))if(!coverage.observed.includes(slot))missing.push(slot);
  }
- const level=age>=360?'critical':age>=180?'error':age>=90||missing.length?'warning':'healthy';
- return {level,message:'Latest published Xbox snapshot: '+age+' minutes old.'+(missing.length?' Boundary scan not observed for '+missing.join(', ')+'.':''),missing};
+ const large=capacityWarning(status);
+ const level=age>=360?'critical':age>=180?'error':age>=90||missing.length||large?'warning':'healthy';
+ return {level,capacityWarning:large,message:'Latest published Xbox snapshot: '+age+' minutes old.'+(missing.length?' Boundary scan not observed for '+missing.join(', ')+'.':'')+(large?' Encrypted archive exceeds 75% of the configured capacity.':''),missing};
 }

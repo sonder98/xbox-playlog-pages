@@ -1,4 +1,4 @@
-import type {Envelope} from './crypto';
+import {isVaultEnvelope,type Envelope} from './crypto';
 
 /** Keep one already-unlocked encrypted snapshot for intermittent mobile networks.
  * IndexedDB avoids localStorage's small per-origin size limits. Plaintext is never saved. */
@@ -16,13 +16,6 @@ function openDatabase():Promise<IDBDatabase>{
  });
 }
 
-function isEnvelope(value:unknown):value is Envelope{
- if(!value||typeof value!=='object')return false;
- const v=value as Partial<Envelope>;
- return v.version===1&&v.algorithm==='AES-GCM'&&v.kdf==='PBKDF2-SHA256'&&
-  v.iterations===600000&&typeof v.salt==='string'&&typeof v.iv==='string'&&
-  typeof v.ciphertext==='string'&&v.ciphertext.length>0&&v.ciphertext.length<=40_000_000;
-}
 
 export async function readEncryptedHistory():Promise<Envelope|null>{
  if(typeof indexedDB==='undefined')return null;
@@ -34,14 +27,14 @@ export async function readEncryptedHistory():Promise<Envelope|null>{
    request.onsuccess=()=>resolve(request.result);
    request.onerror=()=>reject(request.error);
   });
-  return isEnvelope(cached)?cached:null;
+  return isVaultEnvelope(cached)?cached:null;
  }catch{return null;}
  finally{db.close();}
 }
 
 /** Called only after successfully decrypting and validating a cloud envelope. */
 export async function saveEncryptedHistory(envelope:unknown):Promise<void>{
- if(typeof indexedDB==='undefined'||!isEnvelope(envelope))return;
+ if(typeof indexedDB==='undefined'||!isVaultEnvelope(envelope))return;
  let db:IDBDatabase;
  try{db=await openDatabase();}catch{return;}
  try{

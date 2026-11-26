@@ -190,3 +190,7 @@ npm run build
 - 正式同步只恢复最新有效 Release 检查点/独立加密缓存/必要时已发布 Pages；`snapshot-a.json`、`snapshot-b.json` 交替上传，校验后兼容更新旧 `vault.json` / `status.json`。拒绝初始化快照回退和缺少既有时长账本的覆盖。旧缓存路径保留迁移读取。旧 Exophase 发布和独立 AU 回填写入器已退役，AU 手动入口转派正式同步。
 - PR 必须三组浏览器回归均成功；Pages 日常仅运行单测与构建，避免日期敏感 E2E 阻塞数据发布。健康监测查看已发布状态和日界覆盖，告警 Issue 仅包含运行元数据。
 - 时长计数回退使用实际采样与已入账高水位分别记录；不删除历史天数。永久向下修正可能暂时少计，避免重复入账。
+
+### Vault v2
+- `src/record-payload-v2.ts` 独立成就静态/动态字典及反向增量；`src/crypto.ts` 使用原生 Gzip 流及带认证格式标记的 AES-GCM。保留旧格式读取与完整解密往返验证。`src/encrypted-history.ts` 统一格式校验，支持新版离线缓存。
+- 先上线读取器后启用 `PLAYLOG_VAULT_FORMAT=2`，勿将旧前端与仅支持 v2 的数据同时上线。容量历史 `status.capacity` 仅记录运行元数据，不包含账号或游戏名。
