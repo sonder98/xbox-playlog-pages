@@ -25,12 +25,13 @@ export async function australianArtwork(record:RecordData,request:typeof fetch=f
   if(old.posterRotationStartDay)game.posterRotationStartDay=old.posterRotationStartDay;
   if(old.artworkCheckedAt)game.artworkCheckedAt=old.artworkCheckedAt;
  };
+ const deadline=Date.now()+60_000;
  for(const game of record.games){
   const old=oldById.get(game.id);
   const reusable=old?.detailImagePurpose==='TitledHeroArt'&&old.detailImage&&old.posterImage&&old.image.includes('store-images.s-microsoft.com/image/')&&
    (old.posterSelectionVersion===3&&(!completion(game).mythic||Array.isArray(old.posterScreenshots))||!completion(game).mythic&&old.posterSelectionVersion===2);
   if(reusable&&!artworkCheckDue(old.artworkCheckedAt,checkedAt)){reuseOld(game,old);reused++;resolved++;landscapes++;continue;}
-  if(unavailable){if(old)reuseOld(game,old);continue;}
+  if(unavailable||Date.now()>=deadline){if(old)reuseOld(game,old);continue;}
   queried++;
   const url=new URL('https://displaycatalog.mp.microsoft.com/v7.0/products/lookup');
   url.search=new URLSearchParams({alternateId:'XboxTitleId',Value:game.id,market:'AU',languages:'en-AU,en,neutral',fieldsTemplate:'Details'}).toString();

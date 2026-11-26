@@ -50,7 +50,7 @@ const die=()=>{console.error('HTTP 500: fixture failure');process.exit(1);};
 if(a[0]!=='release')die();
 if(a[1]==='view'){
  if(fail==='view'||intermittent('view'))die();
- if(a.includes('--json'))console.log(JSON.stringify({assets:fs.readdirSync(root).map(name=>({name}))}));
+ if(a.includes('--json'))console.log(JSON.stringify({assets:fs.readdirSync(root).map(name=>({name,state:'uploaded',createdAt:'2026-11-25T00:00:00Z'}))}));
 }else if(a[1]==='download'){
  const name=a[a.indexOf('--pattern')+1],dir=a[a.indexOf('--dir')+1];
  if(intermittent('download:'+name))die();
@@ -66,7 +66,7 @@ if(a[1]==='view'){
 `,{mode:0o755});
  const preload=join(root,'offline.mjs');
  fs.writeFileSync(preload,"globalThis.fetch=async()=>{throw Error('offline fixture')};const timer=globalThis.setTimeout;globalThis.setTimeout=(fn,ms,...args)=>timer(fn,Math.min(ms,1),...args);");
- const run=(mode,fail='',transient='')=>spawnSync(process.execPath,['--import',preload,fileURLToPath(new URL('../scripts/live-assets.mjs',import.meta.url)),mode],{cwd:root,env:{...process.env,PATH:bin+delimiter+process.env.PATH,GH_TOKEN:'fixture-only',MOCK_RELEASE:release,MOCK_FAIL:fail,MOCK_TRANSIENT:transient},encoding:'utf8',timeout:15000});
+ const run=(mode,fail='',transient='',script='live-assets')=>spawnSync(process.execPath,['--import',preload,fileURLToPath(new URL('../scripts/'+script+'.mjs',import.meta.url)),mode],{cwd:root,env:{...process.env,PATH:bin+delimiter+process.env.PATH,GH_TOKEN:'fixture-only',MOCK_RELEASE:release,MOCK_FAIL:fail,MOCK_TRANSIENT:transient},encoding:'utf8',timeout:15000});
  const writePair=(dir,p)=>{fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(join(dir,'vault.json'),p.vault);fs.writeFileSync(join(dir,'status.json'),p.status);};
  const slot=(name,p)=>fs.writeFileSync(join(release,name),JSON.stringify({vault:p.vault,status:p.status}));
  return {root,release,publicDir,run,writePair,slot,close:()=>fs.rmSync(root,{recursive:true,force:true})};
@@ -154,5 +154,37 @@ test('artwork archive upload failure does not fail a verified encrypted snapshot
   const slot=['snapshot-a.json','snapshot-b.json'].find(name=>fs.existsSync(join(m.release,name)));
   assert.ok(slot,'encrypted checkpoint is published even if artwork archive upload fails');
   assert.equal(decodePair(fs.readFileSync(join(m.release,slot),'utf8')).vault,newer.vault);
+ }finally{m.close();}
+});
+test('an incomplete artwork cache cannot overwrite archived media or block a verified snapshot',()=>{
+ const m=mockRelease();
+ try{
+  const name='a'.repeat(32)+'-480.webp';
+  fs.writeFileSync(join(m.release,'media-index.txt'),name+' 100\n');
+  fs.writeFileSync(join(m.release,'playlog-media.tar.gz'),'previous archive');
+  m.writePair(m.publicDir,newer);
+  assert.equal(m.run('publish').status,0);
+  assert.notEqual(m.run('publish-media').status,0);
+  assert.equal(fs.readFileSync(join(m.release,'playlog-media.tar.gz'),'utf8'),'previous archive');
+  assert.equal(decodePair(fs.readFileSync(join(m.release,'snapshot-a.json'),'utf8')).at,newer.at);
+ }finally{m.close();}
+});
+
+test('hourly Pages assembly reuses frontend bytes without running tests or bundling stale records',()=>{
+ const m=mockRelease();
+ try{
+  const dist=join(m.root,'dist');
+  fs.mkdirSync(join(dist,'media'),{recursive:true});
+  fs.writeFileSync(join(dist,'version.json'),'{"version":"aaaaaaaaaaaa"}');
+  fs.writeFileSync(join(dist,'index.html'),'verified frontend');
+  fs.writeFileSync(join(dist,'media','old.webp'),'old');
+  m.writePair(dist,older);
+  const save=m.run('save','','','pages-shell');
+  assert.equal(save.status,0,save.stderr);
+  fs.rmSync(dist,{recursive:true});
+  const restore=m.run('restore','','','pages-shell');
+  assert.equal(restore.status,0,restore.stderr);
+  assert.equal(fs.readFileSync(join(dist,'index.html'),'utf8'),'verified frontend');
+  for(const name of ['media','vault.json','status.json'])assert.equal(fs.existsSync(join(dist,name)),false);
  }finally{m.close();}
 });

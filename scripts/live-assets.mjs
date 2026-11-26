@@ -79,7 +79,7 @@ function allPresent(index){
 const mode=process.argv[2];
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
  if(!process.env.GH_TOKEN)throw Error('GH_TOKEN is required for live asset operations.');
- if(!['restore-snapshot','restore-media','publish'].includes(mode))throw Error('Unknown live-assets mode');
+ if(!['restore-snapshot','restore-media','publish','publish-media','release-status'].includes(mode))throw Error('Unknown live-assets mode');
  if(mode==='restore-snapshot'){
   const dir=temp();
   try{
@@ -110,6 +110,17 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1]
    console.log('Restored newest validated encrypted checkpoint.');
   }finally{cleanup(dir);}
  }
+ if(mode==='release-status'){
+  const names=await releaseAssets(),dir=temp(),candidates=[];
+  try{
+   for(const name of ['snapshot-a.json','snapshot-b.json']){
+    if(!names?.has(name))continue;
+    if(!await download(name,dir))throw Error('Cannot verify Release freshness.');
+    try{candidates.push(decodePair(fs.readFileSync(path.join(dir,name),'utf8')));}catch{}
+   }
+   console.log(newestPair(candidates).status);
+  }finally{cleanup(dir);}
+ }
  if(mode==='restore-media'){
   const dir=temp();
   try{
@@ -131,6 +142,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1]
        catch{console.warn('::warning::Artwork archive could not be restored; continuing with original-image fallback.');}
       }
      }
+     if(allPresent(index))fs.writeFileSync('.restored-artwork-index',index);
     }
    }
   }finally{cleanup(dir);}
@@ -159,11 +171,20 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1]
    try{if(!await download(path.basename(checkpoint),verify))throw Error('Checkpoint verification download failed.');const recovered=decodePair(fs.readFileSync(path.join(verify,path.basename(checkpoint)),'utf8'));if(recovered.vault!==pair.vault||recovered.status!==pair.status)throw Error('Checkpoint verification failed.');}
    finally{cleanup(verify);}
    try{await releaseUpload(['public/vault.json','public/status.json']);}catch{console.warn('::warning::Legacy Release mirror update failed; verified checkpoint remains available.');}
+   console.log('Published verified encrypted snapshot.');
+  }finally{cleanup(dir);}
+ }
+ if(mode==='publish-media'){
+  const names=await releaseAssets(),dir=temp();
+  if(!names)throw Error('Artwork Release unavailable.');
+  try{
    const current=manifest(),indexFile=path.join(dir,'media-index.txt');let previous='',indexReadable=true;
    if(names.has('media-index.txt')){try{if(await download('media-index.txt',dir))previous=fs.readFileSync(indexFile,'utf8');else indexReadable=false;}catch{indexReadable=false;}}
+   if(names.has('playlog-media.tar.gz')&&!names.has('media-index.txt'))throw Error('Incomplete remote artwork metadata.');
+   if(previous&&!allPresent(previous)&&!(fs.existsSync('.restored-artwork-index')&&fs.readFileSync('.restored-artwork-index','utf8')===previous))throw Error('Incomplete artwork baseline; preserving archive.');
    if(!indexReadable)console.warn('::warning::Could not inspect old artwork index; core encrypted snapshot is already published.');
    else if(current.trim()&&(current!==previous||!names.has('playlog-media.tar.gz'))){
-    try{fs.writeFileSync(indexFile,current);const archive=path.join(dir,'playlog-media.tar.gz');run('tar',['-czf',archive,'-C','public','media']);await releaseUpload([archive,indexFile]);console.log('Published durable artwork archive and integrity index.');}
+    try{fs.writeFileSync(indexFile,current);const archive=path.join(dir,'playlog-media.tar.gz');run('tar',['-czf',archive,'-C','public','media']);await releaseUpload([archive]);await releaseUpload([indexFile]);console.log('Published durable artwork archive and integrity index.');}
     catch{console.warn('::warning::Artwork archive publication failed; encrypted game data remains published and Pages deployment will continue.');}
    }else console.log('Durable artwork archive unchanged, skipping image reupload.');
    console.log('Published encrypted snapshot without rewriting Git history.');

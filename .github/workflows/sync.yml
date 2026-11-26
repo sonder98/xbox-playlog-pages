@@ -51,11 +51,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - name: Validate before contacting Xbox
-        run: |
-          npm test
-          npx tsc --noEmit
       - name: Restore public artwork cache
+        continue-on-error: true
         uses: actions/cache/restore@v4
         with:
           path: public/media
@@ -94,7 +91,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           node scripts/live-assets.mjs restore-snapshot
-          node scripts/live-assets.mjs restore-media
+      - name: Recover artwork when available
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/live-assets.mjs restore-media
       # Older deployed Cloudflare Workers omit sync_mechanism. Unlabelled
       # dispatches without a manual request_id are Cloudflare's hourly ticks.
       # GitHub UI manual runs must explicitly select sync_mechanism=manual.
@@ -115,6 +116,7 @@ jobs:
           path: .private/microsoft
           key: microsoft-private-v1-main-${{ github.run_id }}-${{ github.run_attempt }}-sync-end
       - name: Save public artwork cache before deploying
+        continue-on-error: true
         uses: actions/cache/save@v4
         with:
           path: public/media
@@ -130,10 +132,22 @@ jobs:
         with:
           path: .snapshot-backup
           key: playlog-checkpoint-v2-${{ github.run_id }}-${{ github.run_attempt }}
-      - name: Publish encrypted snapshot and durable artwork without Git commits
+      - name: Publish and verify encrypted snapshot
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/live-assets.mjs publish
+
+      - name: Trigger Pages explicitly (bot pushes do not start push workflows)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SYNC_REQUEST_ID: ${{ inputs.request_id }}
+        run: gh workflow run pages.yml --ref main -f data_only=true -f request_id="$SYNC_REQUEST_ID"
+
+      - name: Archive artwork separately
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/live-assets.mjs publish-media
 
       # Optional mirror: GitHub Release and Pages remain the production fallback.
       - name: Publish encrypted snapshot to EdgeOne Blob
@@ -145,9 +159,3 @@ jobs:
         run: |
           npm install --no-save --ignore-scripts @edgeone/pages-blob@0.0.18
           node scripts/edgeone-blob.mjs publish
-
-      - name: Trigger Pages explicitly (bot pushes do not start push workflows)
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SYNC_REQUEST_ID: ${{ inputs.request_id }}
-        run: gh workflow run pages.yml --ref main -f request_id="$SYNC_REQUEST_ID"
