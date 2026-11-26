@@ -18,3 +18,11 @@ test('monitor thresholds are deterministic and legacy markers remain supported',
   assert.equal(syncHealth(status,Date.parse(status.latestAt)+minutes*60_000).level,level);
  assert.equal(syncHealth(null).level,'critical');
 });
+
+test('partial Xbox scan failures are visible in the published health marker',()=>{
+ const status={initialized:true,latestAt:'2026-11-25T17:50:00Z',syncQuality:{titles:155,existingAttempted:155,existingFailed:2,newFailed:0,failed:2,historySourcesFailed:0,fullRefresh:false}};
+ const health=syncHealth(status,Date.parse(status.latestAt)+5*60_000);
+ assert.equal(health.level,'warning');
+ assert.equal(health.partialSyncWarning,true);
+ assert.match(health.message,/2 game failures/);
+});

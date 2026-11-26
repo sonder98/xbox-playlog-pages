@@ -48,3 +48,27 @@ test('GitHub sync workflow attributes legacy Worker dispatches without a sync_me
  assert.ok(workflow.includes("github.event_name == 'push' && 'code-update'"),
   'Code updates retain their distinct source label');
 });
+
+test('scheduled Worker dispatch retries transient network, 429 and 5xx failures',async()=>{
+ const delays:number[]=[],statuses=[429,503,204];let calls=0;
+ const request:typeof fetch=async()=>{const status=statuses[calls++];return new Response(null,{status,headers:status===429?{'retry-after':'3'}:{}});};
+ const result=await mod.sendScheduledDispatch(mod.CRON_RULES[0],'fixture-secret',request,{pause:async(ms:number)=>{delays.push(ms);}});
+ assert.equal(result.status,204);assert.equal(calls,3);assert.deepEqual(delays,[3000,2500]);
+});
+test('scheduled Worker dispatch retries a transient network failure',async()=>{
+ let calls=0;
+ const request:typeof fetch=async()=>{if(++calls===1)throw Error('offline');return new Response(null,{status:204});};
+ const result=await mod.sendScheduledDispatch(mod.CRON_RULES[0],'fixture-secret',request,{pause:async()=>{}});
+ assert.equal(result.status,204);assert.equal(calls,2);
+});
+test('sync workflow watches the Microsoft adapter and health monitor receives completed sync events',()=>{
+ const sync=readFileSync('.github/workflows/sync.yml','utf8');
+ const health=readFileSync('.github/workflows/sync-health.yml','utf8');
+ assert.ok(sync.includes("'scripts/microsoft.ts'"));
+ assert.ok(health.includes('workflow_run:'));
+});
+
+test('health workflow uses a valid jq fallback for older status markers',()=>{
+ const health=readFileSync('.github/workflows/sync-health.yml','utf8');
+ assert.ok(health.includes("jq -r '.partialSyncWarning // false' /tmp/playlog-health.json"));
+});
