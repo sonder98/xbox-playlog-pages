@@ -87,7 +87,7 @@ test('permission failures preserve previous title records; 429 interrupts withou
   reads++;return Response.json({error:'do not print me'},{status:429});
  };
  const result=await scanMicrosoft(config,{request,pause:async()=>{},previous:record([old,game('missing')])});
- assert.equal(reads,1);assert.equal(result.audit.interrupted,true);assert.equal(result.audit.failed,1);assert.equal(result.record.games.length,2);assert.deepEqual(result.record.games[0],{...old,officialHidden:false});
+ assert.equal(reads,4,'429 uses bounded retries before interrupting the scan');assert.equal(result.audit.interrupted,true);assert.equal(result.audit.failed,1);assert.equal(result.record.games.length,2);assert.deepEqual(result.record.games[0],{...old,officialHidden:false});
  assert.equal(compareLibrary([game()],record([game(),game('2')])).ambiguous,1);
 });
 
