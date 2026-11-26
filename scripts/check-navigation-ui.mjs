@@ -2415,7 +2415,7 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     await page.getByRole('dialog').waitFor();
     const nestedDepth=await page.evaluate(()=>history.state.depth);
     assert.ok(nestedDepth>0,'Game detail is a nested history entry');
-    await page.locator(mobile?'.mobile-nav':'.sidebar').getByRole('button',{name:'管理',exact:true}).evaluate(el=>(el as HTMLButtonElement).click());
+    await page.locator(mobile?'.mobile-nav':'.sidebar').getByRole('button',{name:'管理',exact:true}).evaluate(el=>el.click());
     await page.locator('[data-page="manage"]').waitFor();
     assert.equal(page.url().split('#')[1],'manage','Selecting another tab closes the detail and switches directly to the target tab');
     assert.equal(await page.evaluate(()=>history.state.depth),0,'A tab switch resets the nested route depth');

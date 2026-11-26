@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  isNestedRoute,isStaleNavigationEntry,navigationDepth,navigationScrollY,planTabNavigation,withNavigationState,
- type PageTab
+ type PageRoute, type PageTab
 } from '../src/navigation-state.ts';
 
-const route=(tab:PageTab,extra:Record<string,unknown>={})=>({tab,...extra});
+const route=(tab:PageTab,extra:Partial<Omit<PageRoute,'tab'>>={})=>({tab,...extra});
 
 test('switching between root tabs replaces the current entry and the active tab is a no-op',()=>{
  const root={playlog:true,epoch:'one',depth:0,scrollY:240};
