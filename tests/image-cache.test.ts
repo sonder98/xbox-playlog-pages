@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import sharp from 'sharp';
-import {cacheRecordImages,convertImage,imageCacheName,imageSource} from '../scripts/image-cache.ts';
+import {cacheRecordImages,convertImage,imageCacheName,imageSource,IMAGE_CACHE_REFRESH_MS} from '../scripts/image-cache.ts';
 import {validateRecord,type RecordData} from '../src/data.ts';
 import {beijingDay,mythicBackdrop,mythicBackdropPreview} from '../src/mythic-assets.ts';
 test('only known public artwork hosts and paths can be fetched; variants have stable distinct cache keys',()=>{
@@ -173,5 +173,39 @@ test('Xbox gamerpic is persisted as 96px WebP and reused without remote requests
   await cacheRecordImages(record,{directory,fetchImage:async()=>bytes});
   assert.ok(record.profile.cachedAvatar?.endsWith(imageCacheName(record.profile.avatar,96)),
    'A changed Xbox gamerpic gets a new durable cache key');
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
+
+test('image cache refreshes on a 30-day generation boundary and retains prior snapshot assets',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'playlog-30d-refresh-'));
+ const at=Date.parse('2026-11-01T00:00:00Z');
+ const record:RecordData={id:'one',at:new Date(at).toISOString(),profile:{xuid:'1',gamertag:'test',avatar:''},source:'Xbox',warnings:[],games:[{id:'1',name:'Game',image:'https://m.exophase.com/xbox/games/o/monthly-cover.png',devices:[],minutes:1,lastPlayed:null,total:1,earned:0,score:0,maxScore:0}]};
+ const png=async(color:string)=>sharp({create:{width:256,height:256,channels:3,background:color}}).png().toBuffer();
+ try{
+  await cacheRecordImages(record,{directory,now:at,fetchImage:async()=>png('#334455')});
+  const previous=structuredClone(record),oldName=record.games[0].cachedImage!.split('/').at(-1)!;
+  const second=structuredClone(record);second.id='two';second.at=new Date(at+IMAGE_CACHE_REFRESH_MS).toISOString();
+  await cacheRecordImages(second,{directory,now:at+IMAGE_CACHE_REFRESH_MS,retainedRecords:[previous],fetchImage:async()=>png('#778899')});
+  const newName=second.games[0].cachedImage!.split('/').at(-1)!;
+  assert.notEqual(newName,oldName);
+  assert.ok(fs.existsSync(path.join(directory,oldName)),'the previous snapshot still references its old image');
+  assert.ok(fs.existsSync(path.join(directory,newName)),'the new snapshot receives refreshed artwork');
+  const third=structuredClone(second);third.id='three';third.at=new Date(at+2*IMAGE_CACHE_REFRESH_MS).toISOString();
+  await cacheRecordImages(third,{directory,now:at+2*IMAGE_CACHE_REFRESH_MS,retainedRecords:[second],fetchImage:async()=>png('#99aabb')});
+  assert.ok(!fs.existsSync(path.join(directory,oldName)),'expired snapshot artwork is pruned');
+  assert.ok(fs.existsSync(path.join(directory,newName)),'artwork still referenced by a retained snapshot remains');
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
+test('failed 30-day refresh falls back to a retained cached cover',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'playlog-30d-fallback-'));
+ const at=Date.parse('2026-11-01T00:00:00Z');
+ const record:RecordData={id:'one',at:new Date(at).toISOString(),profile:{xuid:'1',gamertag:'test',avatar:''},source:'Xbox',warnings:[],games:[{id:'1',name:'Game',image:'https://m.exophase.com/xbox/games/o/fallback-cover.png',devices:[],minutes:1,lastPlayed:null,total:1,earned:0,score:0,maxScore:0}]};
+ try{
+  await cacheRecordImages(record,{directory,now:at,fetchImage:async()=>sharp({create:{width:128,height:128,channels:3,background:'#334455'}}).png().toBuffer()});
+  const previous=structuredClone(record),cached=record.games[0].cachedImage!,name=cached.split('/').at(-1)!;
+  const next=structuredClone(record);next.at=new Date(at+IMAGE_CACHE_REFRESH_MS).toISOString();
+  await cacheRecordImages(next,{directory,now:at+IMAGE_CACHE_REFRESH_MS,retainedRecords:[previous],fetchImage:async()=>{throw Error('temporary source failure');}});
+  assert.equal(next.games[0].cachedImage,cached);
+  assert.ok(fs.existsSync(path.join(directory,name)));
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });

@@ -21,7 +21,7 @@ export function updateBoundaryCoverage(previous:unknown,at:string,observed:boole
 export function syncHealth(status:unknown,now=Date.now()){
  const s=status as {initialized?:boolean;latestAt?:string;boundaryCoverage?:BoundaryCoverage;syncQuality?:{failed?:number;existingFailed?:number;newFailed?:number;historySourcesFailed?:number}}|null;
  const at=Date.parse(s?.latestAt||'');
- if(!s?.initialized||!Number.isFinite(at)||at>now+5*minuteMs)return {level:'critical',message:'Published sync marker unavailable or invalid.',missing:[] as string[],capacityWarning:false};
+ if(!s?.initialized||!Number.isFinite(at)||at>now+5*minuteMs)return {level:'critical',message:'Published sync marker unavailable or invalid.',missing:[] as string[],capacityWarning:false,partialSyncWarning:false};
  const age=Math.max(0,Math.floor((now-at)/minuteMs));
  const missing:string[]=[];
  const coverage=s.boundaryCoverage;
