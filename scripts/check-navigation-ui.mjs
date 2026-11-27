@@ -89,6 +89,8 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     assert.equal(config[roster[0].id].density,60);
     await lab.getByRole('button',{name:'暂停动画'}).click();
     assert.equal(await lab.locator('.particle-layer[data-paused="true"]').count(),3);
+    await lab.getByRole('button',{name:'恢复推荐方案'}).click();
+    assert.equal(await lab.getByLabel('粒子模板').inputValue(),'dust','Unknown fixture title resets to trial dust');
     await lab.getByRole('button',{name:'静态对照'}).click();
     assert.equal(await lab.locator('.particle-layer i').count(),0);
     await lab.getByRole('button',{name:'关闭详情'}).click();
