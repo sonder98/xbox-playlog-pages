@@ -42,3 +42,22 @@
 .particle-range input{flex:1;min-width:0;accent-color:var(--accent)}
 .particle-range output{width:38px;text-align:right}
 @media(max-width:700px){.particle-lab-grid{gap:12px}.particle-lab .dialog-body{padding:14px}.particle-controls{padding:12px}.particle-poster-sample>span{font-size:11px}}
+
+.particle-recommendation{margin:12px 0;padding:12px 14px;background:var(--surface-raised);border:1px solid var(--border);border-radius:12px}
+.particle-recommendation>div{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.particle-recommendation strong{font-size:15px;color:var(--text-primary)}
+.particle-recommendation span{font-size:11px;color:var(--accent-text)}
+.particle-recommendation p{margin:6px 0 0;line-height:1.6;color:var(--text-secondary)}
+.particle-recommendation button{font-size:12px;padding:6px 0}
+.particle-ink i{width:calc(var(--p-size)*2.6);height:calc(var(--p-size)*2);border-radius:65% 35% 50% 40%;filter:blur(1px);box-shadow:0 0 3px var(--particle-color)}
+.particle-pixels i{border-radius:0;box-shadow:1px 1px 0 var(--particle-color)}
+.particle-sparkles i,.particle-stars i{clip-path:polygon(50% 0,62% 37%,100% 50%,62% 63%,50% 100%,38% 63%,0 50%,38% 37%);width:calc(var(--p-size)*2.1);height:calc(var(--p-size)*2.1)}
+.particle-stars i:nth-child(3n){clip-path:none;border-radius:50%;width:var(--p-size);height:var(--p-size)}
+.particle-cards i{width:calc(var(--p-size)*1.65);height:calc(var(--p-size)*2.3);border-radius:1px;box-shadow:inset 0 0 0 1px #ffffff60}
+.particle-cards i::after{content:'';position:absolute;inset:35% 30%;background:#17171c88;transform:rotate(45deg)}
+.particle-coins i{width:calc(var(--p-size)*1.8);height:calc(var(--p-size)*1.8);box-shadow:inset 0 0 0 1px #fff4bf,inset 0 0 0 2px #926b2855}
+.particle-confetti i{width:calc(var(--p-size)*1.7);height:calc(var(--p-size)*.75);border-radius:1px}
+.particle-orbs i{width:calc(var(--p-size)*2.3);height:calc(var(--p-size)*2.3);background:transparent;border:1px solid var(--particle-color);box-shadow:0 0 5px var(--particle-color)}
+.particle-notes i{width:calc(var(--p-size)*2.2);height:calc(var(--p-size)*2.2);background:none}
+.particle-notes i::after{content:'♪';color:var(--particle-color);font:700 calc(var(--p-size)*2.2)/1 sans-serif}
+.particle-mist i{width:calc(var(--p-size)*15);height:calc(var(--p-size)*4);filter:blur(6px);border-radius:50%}
