@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {RefreshCw,ArrowUpRight,ShieldCheck} from 'lucide-react';
+import {RefreshCw,ArrowUpRight,ShieldCheck,Image as ImageIcon} from 'lucide-react';
 import {Modal} from './game';
 import {manualSyncToken,saveManualSyncToken,clearManualSyncToken,refreshCloudRecords,workflow} from '../vault';
 import {dispatchXboxSync,findWorkflowRun,newSyncRequestId,githubRunUrl,tokenSetupUrl,type ManualSyncMode} from '../manual-sync';
@@ -19,6 +19,7 @@ export function ManualSyncDialog({onClose,onUpdated,onPhase,lastAt,mode='sync',l
 }){
  const [known,setKnown]=useState(false),[loading,setLoading]=useState(true),[submitting,setSubmitting]=useState(false);
  const [tokenInput,setTokenInput]=useState(''),[error,setError]=useState(''),[job,setJob]=useState<Job|null>(null);
+ const [artworkConfirmed,setArtworkConfirmed]=useState(false);
  const token=useRef<string|null>(null),submittingRef=useRef(false);
  async function launch(secret:string){
   if(submittingRef.current||isActive(job))return;
@@ -48,7 +49,7 @@ export function ManualSyncDialog({onClose,onUpdated,onPhase,lastAt,mode='sync',l
       }
      }catch{sessionStorage.removeItem(pendingKey);}
     }
-    if(secret)void launch(secret);
+    if(secret&&mode!=='artwork')void launch(secret);
    }catch(e){if(!cancelled)setError((e as Error).message);}
    finally{if(!cancelled)setLoading(false);}
   })();
@@ -111,20 +112,34 @@ export function ManualSyncDialog({onClose,onUpdated,onPhase,lastAt,mode='sync',l
   return ()=>{cancelled=true;window.clearInterval(timer);};
  },[job?.id,job?.phase==='ready'||job?.phase==='error',lastAt,lastArtworkRefresh,onUpdated]);
  async function connect(){
-  setSubmitting(true);setError('');
+  if(submittingRef.current||isActive(job))return;
+  submittingRef.current=true;setSubmitting(true);setError('');
   try{
    const value=tokenInput.trim();
    await saveManualSyncToken(value);
    token.current=value;setKnown(true);
-   setSubmitting(false);
+   submittingRef.current=false;setSubmitting(false);
    await launch(value);
-  }catch(e){setError((e as Error).message);setSubmitting(false);}
+  }catch(e){setError((e as Error).message);submittingRef.current=false;setSubmitting(false);}
  }
  function disconnect(){
   clearManualSyncToken();token.current=null;setKnown(false);setTokenInput('');
   setError('此设备的授权已清除。如需使令牌失效，请再到 GitHub 删除它。');
  }
  const artworkMode=job?job.mode==='artwork':mode==='artwork',requestArtwork=mode==='artwork';
+ const close=()=>{if(!submittingRef.current)onClose();};
+ // A saved active job is resumed before any confirmation is offered. A new
+ // artwork request is never dispatched on mount, even on an authorized device.
+ if(requestArtwork&&!job&&!artworkConfirmed)return <Modal title="手动刷新游戏封面" onClose={close} className="artwork-confirm-dialog">
+  <span className="artwork-confirm-icon"><ImageIcon size={26} aria-hidden="true"/></span>
+  <h2>刷新游戏封面？</h2>
+  <p>将重新获取游戏封面、详情横图及 Mythic 纪念卡背景。刷新可能需要数分钟，期间不影响网站使用。</p>
+  {error&&<p className="inline-error" role="alert">{error}</p>}
+  <div className="artwork-confirm-actions">
+   <button type="button" className="secondary" disabled={submitting} onClick={close}>取消</button>
+   <button type="button" className="primary" disabled={loading||submitting} onClick={()=>{if(token.current)void launch(token.current);else setArtworkConfirmed(true);}}>{loading?'检查中…':submitting?'提交中…':'确认刷新'}</button>
+  </div>
+ </Modal>;
  return <Modal title={artworkMode?'手动刷新游戏封面':'手动同步 Xbox 游戏记录'} onClose={()=>{if(!submittingRef.current)onClose();}} className="manual-sync-dialog">
   <span className="eyebrow">{artworkMode?'GAME ARTWORK':'XBOX LIVE SYNC'}</span>
   <h2>{artworkMode?'刷新游戏封面':'立即同步 Xbox 数据'}</h2>
@@ -136,7 +151,7 @@ export function ManualSyncDialog({onClose,onUpdated,onPhase,lastAt,mode='sync',l
    {job.runUrl&&<a href={job.runUrl} target="_blank" rel="noreferrer">查看同步任务 ↗</a>}{job.deployUrl&&<a href={job.deployUrl} target="_blank" rel="noreferrer">查看发布任务 ↗</a>}
   </div></div>}
   {!isActive(job)&&!loading&&(known?
-   <button className="primary full" disabled={submitting} onClick={()=>token.current&&void launch(token.current)}><RefreshCw size={17} className={submitting?'spin':''}/>{submitting?'提交中…':requestArtwork?(job?.phase==='ready'&&artworkMode?'再次刷新封面':'刷新游戏封面'):job?.phase==='ready'?'再次同步':'立即同步'}</button>:
+   <button className="primary full" disabled={submitting} onClick={()=>{if(requestArtwork){setJob(null);setArtworkConfirmed(false);setError('');}else if(token.current)void launch(token.current);}}><RefreshCw size={17} className={submitting?'spin':''}/>{submitting?'提交中…':requestArtwork?(job?.phase==='ready'&&artworkMode?'再次刷新封面':'刷新游戏封面'):job?.phase==='ready'?'再次同步':'立即同步'}</button>:
    <div className="manual-sync-connect">
     <h3>首次授权此设备</h3>
     <p>创建一个仅允许触发此仓库 GitHub Actions 的令牌。它会使用应用密码加密，存放在本机浏览器，不传给 Playlog 或其他服务。</p>
