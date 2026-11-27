@@ -1,5 +1,5 @@
 'use client';
-import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {lazy,Suspense,useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Search,Clock3,Trophy,X,ArrowRight,ChevronRight,SlidersHorizontal,EyeOff,Medal,Sun,Moon,Image as ImageIcon} from 'lucide-react';
 import {compareRecords,officialGameVisible,syncMechanismLabel,type Game,type RecordData} from './data';
 import {GameCard,GameCover,GameDetail,Modal} from './components/game';
@@ -26,6 +26,7 @@ import {PullToRefresh} from './pull-to-refresh';
 import {applyTheme,readThemePreference,saveThemePreference,type PlaylogTheme} from './theme';
 const fmt=(m:number|null)=>m===null?'暂无数据':(m/60).toLocaleString('zh-CN',{maximumFractionDigits:1})+' 小时';
 const dt=(s:string|null)=>s?new Date(s).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'尚未同步';
+const ParticleLab=lazy(()=>import('./components/mythic-particle-lab'));
 const MOBILE_NAV_IDLE_MS=2000;
 const MOBILE_NAV_TAP_MS=2500;
 export default function Dashboard({onLock,locking=false,refreshFromCache=false}:{onLock:()=>void;locking?:boolean;refreshFromCache?:boolean}){
@@ -40,6 +41,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  // Private preview URL: uses only the current unlocked Xbox data, never mock cards.
  const [fontDemoOpen,setFontDemoOpen]=useState(()=>new URLSearchParams(window.location.search).get('mythic-font-demo')==='1');
  const [goldDemoOpen,setGoldDemoOpen]=useState(()=>new URLSearchParams(window.location.search).get('mythic-gold-demo')==='1');
+ const [particleLabOpen,setParticleLabOpen]=useState(()=>new URLSearchParams(window.location.search).get('mythic-particle-lab')==='1');
  const [momentDemoOpen,setMomentDemoOpen]=useState(()=>new URLSearchParams(window.location.search).get('mythic-moment-demo')==='1');
   const [hiddenIds,setHiddenIds]=useState<string[]>([]),[manageDisplay,setManageDisplay]=useState(false),[draftHidden,setDraftHidden]=useState<string[]>([]),[displayQuery,setDisplayQuery]=useState(''),[onlyHidden,setOnlyHidden]=useState(false),[savingDisplay,setSavingDisplay]=useState(false),[displayError,setDisplayError]=useState('');
  const {tab,navigate:setTab,back,gameId,dayId,showcase,gapShowcase,openGame,openAchievementDay,openAchievementShowcase,openAchievementGapShowcase,openAchievementGame,changeAchievementDay}=usePageNavigation();
@@ -260,7 +262,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  </Modal>}
  {showcaseOpen&&tab==='library'&&current&&<MythicShowcase posters={mythicPosters} profile={current.profile}
    onClose={()=>setShowcaseOpen(false)} onOpen={id=>setMythicWallStart({gameId:id})}/>}
- {selected&&!mythicWallStart&&!showcaseOpen&&!fontDemoOpen&&!goldDemoOpen&&!momentDemoOpen&&<GameDetail game={selected} onClose={back}
+ {selected&&!mythicWallStart&&!showcaseOpen&&!fontDemoOpen&&!goldDemoOpen&&!momentDemoOpen&&!particleLabOpen&&<GameDetail game={selected} onClose={back}
    titleFoil={mythicTitleFoil(mythicRotationDay)}
    onOpenMythic={mythicPosters.some(p=>p.game.id===selected.id)?
     ()=>setMythicWallStart({gameId:selected.id}):undefined}/>}
@@ -282,6 +284,12 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
    window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
    setGoldDemoOpen(false);
   }}/>} 
+ {particleLabOpen&&!loading&&current&&<Suspense fallback={null}><ParticleLab posters={mythicPosters} profile={current.profile} onClose={()=>{
+   const url=new URL(window.location.href);
+   url.searchParams.delete('mythic-particle-lab');
+   window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
+   setParticleLabOpen(false);
+  }}/></Suspense>}
  {momentDemoOpen&&current&&mythicPosters.length>0&&
   <MythicMomentDemo posters={mythicPosters} profile={current.profile} onClose={()=>{
    const url=new URL(window.location.href);

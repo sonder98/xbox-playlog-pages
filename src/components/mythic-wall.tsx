@@ -56,9 +56,9 @@ function OrnateBorder(){
   </g>
  </svg>;
 }
-function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,rotationDay,momentLayout='original'}:{
+export function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,rotationDay,momentLayout='original',backgroundEffect}:{
  entry:MythicPoster;profile:Profile;index:number;total:number;active:boolean;opening:boolean;fontReady:boolean;rotationDay:number;
- momentLayout?:'original'|'one'|'two';
+ momentLayout?:'original'|'one'|'two';backgroundEffect?:ReactNode;
 }){
  const {game,firstAt,mythicAt,firstAchievement,lastBaseAchievement,daysToMythic,baseTotal}=entry;
  const first=posterLocalDate(firstAt),finish=posterLocalDate(mythicAt);
@@ -84,6 +84,7 @@ function MythicPosterCard({entry,profile,index,total,active,opening,fontReady,ro
    data-art-tier="full"
    style={background?{backgroundImage:`url("${background.replaceAll('"','%22')}")`}:undefined}/>
   <div className="mythic-poster-backdrop-shade"/>
+  {backgroundEffect}
   <OrnateBorder/>
   <div className="mythic-poster-stars" aria-hidden="true">
    {Array.from({length:15},(_,i)=><span key={i} style={{'--i':i,left:`${12+(i*37)%74}%`,top:`${7+(i*31)%78}%`} as CSSProperties}>✦</span>)}

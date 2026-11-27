@@ -1,0 +1,44 @@
+.dialog.particle-lab{width:min(100%,930px);max-height:94dvh}
+.particle-lab .dialog-toolbar{justify-content:space-between}
+.particle-toolbar{display:flex;align-items:center;gap:8px;color:var(--accent-text);font-size:13px;letter-spacing:.12em}
+.particle-lab-heading{position:static;display:block;background:none;padding:0;border:0}
+.particle-lab-heading h2{margin:8px 0}
+.particle-export{display:grid;gap:10px;margin:16px 0}
+.particle-export details{font-size:13px;color:var(--text-secondary)}
+.particle-export summary{cursor:pointer;padding:6px 0}
+.particle-export textarea{display:block;width:100%;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-raised);color:var(--text-primary);font:12px/1.5 monospace;resize:vertical}
+.particle-field{display:grid;gap:6px;font-size:13px;color:var(--text-secondary)}
+.particle-field select{width:100%;min-width:0;min-height:44px;border:1px solid var(--border);border-radius:12px;background:var(--surface-raised);color:var(--text-primary);padding:8px}
+.particle-switches{display:flex;gap:8px;margin:12px 0}
+.particle-switches button{flex:1;padding:8px}
+.particle-lab-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.particle-samples,.particle-poster-sample{display:grid;gap:8px;min-width:0;color:var(--text-secondary);font-size:12px}
+.particle-art{position:relative;isolation:isolate;overflow:hidden;background:var(--surface-raised);border-radius:12px;display:grid;place-items:center}
+.particle-art.square{aspect-ratio:1;max-width:100%}
+.particle-art.wide{aspect-ratio:16/9}
+.particle-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.particle-art-empty{padding:8px;text-align:center}
+.particle-poster-wrap{display:grid;place-items:center;min-width:0}
+.particle-lab .mythic-poster{width:min(100%,408px);max-height:none;height:auto;aspect-ratio:420/748;margin:0}
+.particle-lab .mythic-poster-stars,.particle-lab .mythic-poster-shimmer{display:none}
+.particle-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.particle-lab .mythic-poster>.particle-layer{z-index:-2;mask-image:linear-gradient(#000 0%,#000 27%,transparent 65%);}
+.particle-layer i{position:absolute;display:block;width:var(--p-size);height:var(--p-size);background:var(--particle-color);border-radius:50%;opacity:0;animation:particle-lab-drift var(--p-duration) linear var(--p-delay) infinite;animation-play-state:paused}
+.particle-layer[data-running="true"] i{animation-play-state:running}
+.particle-petals i{width:calc(var(--p-size)*2);height:calc(var(--p-size)*1.3);border-radius:80% 15% 70% 35%}
+.particle-leaves i{width:calc(var(--p-size)*2.4);height:calc(var(--p-size)*1.25);border-radius:80% 0 80% 0}
+.particle-feathers i{width:calc(var(--p-size)*3);height:var(--p-size);border-radius:90% 8% 90% 10%;box-shadow:inset 0 -1px 0 #ffffff40}
+.particle-embers i,.particle-fireflies i,.particle-spirits i{box-shadow:0 0 6px var(--particle-color),0 0 12px var(--particle-color)}
+.particle-spirits i{width:calc(var(--p-size)*1.7);height:calc(var(--p-size)*2.2);border-radius:60% 20% 60% 60%}
+.particle-neon i{border-radius:1px;width:calc(var(--p-size)*1.8);height:calc(var(--p-size)*.6);box-shadow:0 0 5px var(--particle-color)}
+.particle-rain i{border-radius:2px;width:1px;height:calc(var(--p-size)*5)}
+.particle-mist i{width:calc(var(--p-size)*11);height:calc(var(--p-size)*4);filter:blur(9px)}
+@keyframes particle-lab-drift{0%{transform:translate(0,0) rotate(0);opacity:0}18%{opacity:var(--p-alpha)}78%{opacity:var(--p-alpha)}100%{transform:translate(var(--p-x),var(--p-y)) rotate(var(--p-turn));opacity:0}}
+@media(prefers-reduced-motion:reduce){.particle-layer i{display:none;animation:none}}
+.particle-controls{margin:18px 0;display:grid;gap:12px;padding:16px;background:var(--surface-raised);border-radius:16px}
+.particle-color,.particle-range{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary)}
+.particle-color input{width:42px;height:32px;border:0;padding:0;background:none}
+.particle-range span{width:75px;flex-shrink:0}
+.particle-range input{flex:1;min-width:0;accent-color:var(--accent)}
+.particle-range output{width:38px;text-align:right}
+@media(max-width:700px){.particle-lab-grid{gap:12px}.particle-lab .dialog-body{padding:14px}.particle-controls{padding:12px}.particle-poster-sample>span{font-size:11px}}
