@@ -26,6 +26,8 @@ import {PullToRefresh} from './pull-to-refresh';
 import {applyTheme,readThemePreference,saveThemePreference,type PlaylogTheme} from './theme';
 const fmt=(m:number|null)=>m===null?'暂无数据':(m/60).toLocaleString('zh-CN',{maximumFractionDigits:1})+' 小时';
 const dt=(s:string|null)=>s?new Date(s).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'尚未同步';
+const MOBILE_NAV_IDLE_MS=2000;
+const MOBILE_NAV_TAP_MS=2500;
 export default function Dashboard({onLock,locking=false,refreshFromCache=false}:{onLock:()=>void;locking?:boolean;refreshFromCache?:boolean}){
  const [records,setRecords]=useState<RecordData[]>([]),[modal,setModal]=useState<'sync'|'artwork'|null>(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[query,setQuery]=useState(''),[sort,setSort]=useState<GameLibrarySort>('recent'),[filter,setFilter]=useState<GameLibraryFilter>('all');
  const [manualPhase,setManualPhase]=useState<'idle'|'queued'|'running'|'deploying'|'ready'|'error'>('idle');
@@ -52,10 +54,9 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
    if(!window.matchMedia('(max-width:700px)').matches)return;
    setMobileNavVisible(true);
    window.clearTimeout(mobileNavHideTimer.current);
-   // Scrolling still auto-hides after 1 second, unless a recent tab tap
-   // has guaranteed a longer 1.5-second visibility window.
+   // Allow time to choose a tab after movement; a recent tab tap can extend the window.
    const remaining=mobileNavKeepUntil.current-performance.now();
-   mobileNavHideTimer.current=window.setTimeout(()=>setMobileNavVisible(false),Math.max(1000,remaining));
+   mobileNavHideTimer.current=window.setTimeout(()=>setMobileNavVisible(false),Math.max(MOBILE_NAV_IDLE_MS,remaining));
   };
   const onScroll=()=>{
    const y=window.scrollY;
@@ -233,17 +234,14 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
    <div className="manage-section-heading"><div><span className="eyebrow">GAME VISIBILITY</span><h2 id="manage-visibility-title">游戏展示</h2></div></div>
    <section className="panel visibility-panel manage-action-panel">
     <div className="section-title"><h2>管理游戏展示</h2><SlidersHorizontal size={20}/></div>
-    <p className="muted">当前展示 {displayGames.length} 款 · 已隐藏 {hiddenCount} 款</p>
-    <button type="button" className="primary" aria-label="管理展示" disabled={!current||loading} onClick={openDisplayManager}><SlidersHorizontal size={17}/>管理展示{hiddenCount>0&&<span className="hidden-count">{hiddenCount}</span>}</button>
+    <button type="button" className="primary" aria-label="管理展示" disabled={!current||loading} onClick={openDisplayManager}>管理展示</button>
    </section>
   </section>
   <section className="manage-section" aria-labelledby="manage-artwork-title">
    <div className="manage-section-heading"><div><span className="eyebrow">GAME ARTWORK</span><h2 id="manage-artwork-title">游戏封面</h2></div></div>
    <section className="panel artwork-panel manage-action-panel">
     <div className="section-title"><h2>刷新游戏封面</h2><RefreshCw size={20}/></div>
-    <p className="muted">更新方形封面、详情横图及 Mythic 纪念卡背景。</p>
-    {current?.artworkRefresh&&<p className="muted artwork-last-refresh">上次手动刷新：{new Date(current.artworkRefresh.at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}</p>}
-    <button type="button" className="primary" disabled={!current||loading} onClick={()=>setModal('artwork')}><RefreshCw size={17}/>刷新游戏封面</button>
+    <button type="button" className="primary" disabled={!current||loading} onClick={()=>setModal('artwork')}>刷新游戏封面</button>
    </section>
   </section>
   <section className="manage-section" id="sync-history" aria-labelledby="manage-history-title">
@@ -296,7 +294,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  <nav className={'mobile-nav'+(mobileNavVisible?' is-visible':'')} aria-label="主导航">{nav.map(([id,label,Icon])=><button key={id} onClick={event=>{
    event.currentTarget.blur();
    ignoreMobileScrollUntil.current=performance.now()+350;
-   mobileNavKeepUntil.current=performance.now()+1500;
+   mobileNavKeepUntil.current=performance.now()+MOBILE_NAV_TAP_MS;
    setMobileNavVisible(true);
    window.clearTimeout(mobileNavHideTimer.current);
    // Each tap restarts the visibility window, even when selecting the
@@ -304,7 +302,7 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
    mobileNavHideTimer.current=window.setTimeout(()=>{
     mobileNavKeepUntil.current=0;
     setMobileNavVisible(false);
-   },1500);
+   },MOBILE_NAV_TAP_MS);
    setTab(id);
   }} aria-current={tab===id?'page':undefined}><Icon size={21}/><span>{label}</span></button>)}</nav>
 
