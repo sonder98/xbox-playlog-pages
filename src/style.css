@@ -4536,15 +4536,29 @@ footer .dot {
     .library-games-panel[data-title-foil="satin"] .game-card[data-mythic="true"] .game-title,
     .game-detail .detail-heading[data-title-foil="satin"] h2){
  background-image:linear-gradient(105deg,
-  #6e471e 0%,#764d23 35%,#b27a2f 44%,#f3cf75 49%,
-  #a46b22 54%,#67421b 64%,#704921 100%);
+  #67421b 0%,#754c21 35%,#805624 46%,#895e27 49%,
+  #805624 52%,#69451d 64%,#704921 100%);
 }
 :root[data-theme="light"] :is(.mythic-wall-overlay[data-title-foil="ember"] .mythic-poster-title,
     .library-games-panel[data-title-foil="ember"] .game-card[data-mythic="true"] .game-title,
     .game-detail .detail-heading[data-title-foil="ember"] h2){
  background-image:linear-gradient(115deg,
-  #70471d 0%,#bf872e 29%,#593816 39%,#d7a554 47%,
-  #ffe5a2 51%,#a77431 60%,#65401b 73%,#b78437 100%);
+  #70471d 0%,#805524 29%,#593816 39%,#805524 48%,
+  #895e27 51%,#805524 54%,#65401b 73%,#7d5223 100%);
+}
+/* Light surfaces need a contrast-safe copper foil even at the animation peak.
+   Preserve the original dark-theme ember glow and both A/D timings. */
+@media(prefers-reduced-motion:no-preference){
+ :root[data-theme="light"] :is(.mythic-wall-overlay[data-title-foil="ember"] .mythic-poster-title,
+     .library-games-panel[data-title-foil="ember"] .game-card[data-mythic="true"] .game-title,
+     .game-detail .detail-heading[data-title-foil="ember"] h2){
+  animation-name:mythic-title-continuous-ember-light;
+  filter:none;
+ }
+}
+@keyframes mythic-title-continuous-ember-light{
+ from{background-position:100% 50%}
+ to{background-position:0% 50%}
 }
 @media(prefers-reduced-motion:reduce){
  :is(.mythic-wall-overlay[data-title-foil] .mythic-poster-title,
