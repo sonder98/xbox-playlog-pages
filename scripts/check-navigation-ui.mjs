@@ -253,15 +253,27 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     assert.equal(manualDispatches,1,'Reopening an unfinished sync never dispatches a duplicate run');
     await syncDialog.getByRole('button',{name:'关闭详情'}).click();
     await switchMainTab('管理');
-    const artworkButton=page.locator('.artwork-panel').getByRole('button',{name:'刷新游戏封面',exact:true});
+    const artworkButton=page.getByRole('button',{name:'刷新游戏封面',exact:true});
     await artworkButton.click();
-    await syncDialog.waitFor();
+    await syncDialog.getByText('已提交，等待 GitHub 排队').waitFor();
     assert.equal(manualDispatches,1,'An active data sync is resumed, not duplicated by the artwork entry');
     await syncDialog.getByRole('button',{name:'关闭详情'}).click();
     // Simulate the previous job having finished; the token remains authorized.
     await page.evaluate(()=>sessionStorage.removeItem('playlog-manual-sync-session-v1'));
     await artworkButton.click();
     const artworkDialog=page.getByRole('dialog',{name:'手动刷新游戏封面'});
+    const confirm=artworkDialog.getByRole('button',{name:'确认刷新',exact:true});
+    await confirm.waitFor();
+    await page.waitForFunction(()=>!document.querySelector('.artwork-confirm-actions .primary')?.disabled);
+    assert.equal(manualDispatches,1,'Opening artwork confirmation never dispatches');
+    await artworkDialog.getByRole('button',{name:'取消',exact:true}).click();
+    assert.equal(manualDispatches,1,'Cancelling artwork confirmation never dispatches');
+    await artworkButton.click();
+    await confirm.waitFor();
+    await artworkDialog.getByRole('button',{name:'关闭详情'}).click();
+    assert.equal(manualDispatches,1,'Closing artwork confirmation never dispatches');
+    await artworkButton.click();
+    await confirm.click();
     await artworkDialog.getByText('已提交，等待 GitHub 排队').waitFor();
     assert.equal(manualDispatches,2);assert.equal(forceArtwork,true,'Artwork button dispatches the forced refresh input');
     assert.equal(await artworkDialog.locator('input[aria-label="GitHub fine-grained token"]').count(),0,'Artwork refresh uses existing authorization');
@@ -280,6 +292,11 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     assert.equal(manualDispatches,2);
     await artworkDialog.getByRole('button',{name:'移除此设备授权'}).click();
     assert.equal(await page.evaluate(()=>localStorage.getItem('xbox-playlog-manual-sync-token-v1')),null,'Disconnect removes the local token');
+    await artworkDialog.getByRole('button',{name:'关闭详情'}).click();
+    await artworkButton.click();
+    await confirm.click();
+    await artworkDialog.locator('input[aria-label="GitHub fine-grained token"]').waitFor();
+    assert.equal(manualDispatches,2,'Unauthorised artwork confirmation opens authorization without dispatching');
     await artworkDialog.getByRole('button',{name:'关闭详情'}).click();
     activeEnvelope=envelope;
     await unlock();
@@ -404,8 +421,8 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
       'Sync methodology is not displayed as a permanent paragraph');
     assert.equal(await page.locator('.title-row p').count(),0,
       'Manage heading no longer has a repetitive subtitle');
-    assert.deepEqual(await page.locator('.manage-section-heading h2').allTextContents(),['游戏展示','游戏封面','同步历史'],
-      'Management contains game visibility, artwork refresh and sync history');
+    assert.deepEqual(await page.locator('.manage-section-heading h2').allTextContents(),['同步历史'],
+      'Only sync history retains a separate section heading');
     assert.equal(await page.locator('.visibility-panel').count(),1,'One visibility card replaces the old three management cards');
     assert.equal(await page.locator('.manage-page').getByRole('button',{name:'管理展示',exact:true}).count(),1,
       'Display management is now entered from the Management tab');
@@ -417,7 +434,9 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
       'Snapshot provenance is visible without changing the history layout');
     assert.equal(await page.locator('#sync-history .history-row').count(),1,
       'Existing snapshot history remains below game visibility');
-    assert.equal(await page.locator('.manage-action-panel p').count(),0,'Management action cards omit explanatory text');
+    assert.equal(await page.locator('.manage-action-panel p,.manage-action-panel h2,.manage-action-panel button').count(),0,'Shortcuts contain no repeated titles, descriptions or nested buttons');
+    assert.equal(await page.locator('button.manage-action-panel').count(),2,'Both complete cards are native buttons');
+    assert.deepEqual(await page.locator('.manage-action-label>span').allTextContents(),['管理展示','刷新封面']);
     const groups=await page.locator('.manage-section').evaluateAll(sections=>sections.map(section=>{const r=section.getBoundingClientRect();return {top:r.top,left:r.left,right:r.right,bottom:r.bottom,width:r.width};}));
     assert.ok(Math.abs(groups[0].top-groups[1].top)<2&&groups[0].right<=groups[1].left,'Visibility and artwork sit side by side');
     assert.ok(Math.abs(groups[0].width-groups[1].width)<2,'Management action cards use equal-width columns');

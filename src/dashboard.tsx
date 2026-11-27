@@ -1,6 +1,6 @@
 'use client';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Search,Clock3,Trophy,X,ArrowRight,ChevronRight,SlidersHorizontal,EyeOff,Medal,Sun,Moon} from 'lucide-react';
+import {Gamepad2,LayoutDashboard,Library,History,Settings,CalendarDays,ArrowUpRight,ArrowLeft,RefreshCw,Search,Clock3,Trophy,X,ArrowRight,ChevronRight,SlidersHorizontal,EyeOff,Medal,Sun,Moon,Image as ImageIcon} from 'lucide-react';
 import {compareRecords,officialGameVisible,syncMechanismLabel,type Game,type RecordData} from './data';
 import {GameCard,GameCover,GameDetail,Modal} from './components/game';
 import {MythicPosterWall} from './components/mythic-wall';
@@ -230,21 +230,19 @@ export default function Dashboard({onLock,locking=false,refreshFromCache=false}:
  {tab==='achievements'&&<AchievementJourney games={games} records={records} playtimeLedger={playtimeLedger} dayId={dayId} showcase={showcase} gapShowcase={gapShowcase} onBack={dayId?back:()=>setTab('overview')} onOpenDay={openAchievementDay} onChangeDay={changeAchievementDay} onOpenGame={openAchievementGame}/>} 
  {tab==='library'&&<section className="panel games-panel library-games-panel" data-title-foil={mythicTitleFoil(mythicRotationDay)}><div className="toolbar"><div className="filters"><div className="filter-pills" role="group" aria-label="筛选游戏">{([['all','全部'],['playing','未完成'],['mythic','Mythic'],['full','Full']] as const).map(([id,label])=><button key={id} aria-pressed={filter===id} className={filter===id?'active':''} onClick={()=>changeLibraryFilter(id)}>{label}</button>)}</div><div className="library-toolbar-actions"><GameLibrarySortControl sort={sort} filter={filter} onChange={setSort}/><GameLibrarySearchControl query={query} onChange={setQuery}/><span className="library-game-count" role="status" aria-live="polite">游戏数：{visible.length}</span></div></div></div>{renderGames(visible)}</section>}
  {tab==='manage'&&<div className="manage-page" data-page="manage">
-  <section className="manage-section" aria-labelledby="manage-visibility-title">
-   <div className="manage-section-heading"><div><span className="eyebrow">GAME VISIBILITY</span><h2 id="manage-visibility-title">游戏展示</h2></div></div>
-   <section className="panel visibility-panel manage-action-panel">
-    <div className="section-title"><h2>管理游戏展示</h2><SlidersHorizontal size={20}/></div>
-    <button type="button" className="primary" aria-label="管理展示" disabled={!current||loading} onClick={openDisplayManager}>管理展示</button>
+  <section className="manage-section">
+    <button type="button" className="panel visibility-panel manage-action-panel" aria-label="管理展示" disabled={!current||loading} onClick={openDisplayManager}>
+     <SlidersHorizontal className="manage-action-icon" size={28} aria-hidden="true"/>
+     <span className="manage-action-label"><span>管理展示</span><ChevronRight size={18} aria-hidden="true"/></span>
+    </button>
    </section>
-  </section>
-  <section className="manage-section" aria-labelledby="manage-artwork-title">
-   <div className="manage-section-heading"><div><span className="eyebrow">GAME ARTWORK</span><h2 id="manage-artwork-title">游戏封面</h2></div></div>
-   <section className="panel artwork-panel manage-action-panel">
-    <div className="section-title"><h2>刷新游戏封面</h2><RefreshCw size={20}/></div>
-    <button type="button" className="primary" disabled={!current||loading} onClick={()=>setModal('artwork')}>刷新游戏封面</button>
+   <section className="manage-section">
+    <button type="button" className="panel artwork-panel manage-action-panel" aria-label="刷新游戏封面" disabled={!current||loading} onClick={()=>setModal('artwork')}>
+     <ImageIcon className="manage-action-icon" size={28} aria-hidden="true"/>
+     <span className="manage-action-label"><span>刷新封面</span><RefreshCw size={18} aria-hidden="true"/></span>
+    </button>
    </section>
-  </section>
-  <section className="manage-section" id="sync-history" aria-labelledby="manage-history-title">
+   <section className="manage-section" id="sync-history" aria-labelledby="manage-history-title">
    <div className="manage-section-heading"><div><span className="eyebrow">SYNC HISTORY</span><h2 id="manage-history-title">同步历史</h2></div></div>
    <section className="panel"><div className="section-title"><h2>同步快照</h2><span>共 {records.length} 次</span><button type="button" className="text-button" disabled={cloudChecking} onClick={()=>void refreshLatest(true,0,true)}>{cloudChecking?'检查中…':'检查云端更新'}</button></div>{records.length?records.map((r,i)=>{const d=compareRecords(r,records[i+1]);return <div className="history-row" key={r.id}><span className="history-icon"><History size={18}/></span><div><b>{new Date(r.at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}</b><span className="history-sync-mechanism">{syncMechanismLabel(r.syncMechanism)}{r.syncReusedFromAt?' · 复用先前手动同步数据（未重新扫描）':''}</span><small>{r.source} · {r.games.length} 个游戏{r.warnings.length?` · ${r.warnings.join('；')}`:''}</small></div><div className="history-delta"><b>{d.minutes===null?'基线记录':'+'+fmt(d.minutes)}</b><small>{d.achievements===null?'从此刻开始':'+'+d.achievements+' 个成就'}{d.corrections>0?' · 存在时长修正':''}</small></div></div>}):<Empty title="第一份记录，等你开始" text="微软 首次同步会建立统计基线。"/>}</section>
   </section>
