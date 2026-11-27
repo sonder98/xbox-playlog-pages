@@ -49,11 +49,44 @@ export function GameCover({game,wide=false,priority=false}:{game:Game;wide?:bool
     {completed&&<CompletionOrnament/>}
   </span>;
 }
+// One observer for the entire library: only on-screen Mythic cards run the
+// continuous green foil. No frame callbacks, extra assets or per-card observers.
+let progressObserver:IntersectionObserver|undefined;
+const progressCards=new Set<HTMLElement>();
+const visibleProgressCards=new Set<HTMLElement>();
+function updateProgressVisibility(card:HTMLElement){
+ if(visibleProgressCards.has(card)&&!document.hidden)card.dataset.progressVisible='true';
+ else delete card.dataset.progressVisible;
+}
+function refreshProgressVisibility(){for(const card of progressCards)updateProgressVisibility(card);}
+function observeMythicProgress(card:HTMLElement){
+ if(typeof IntersectionObserver==='undefined')return ()=>{};
+ if(!progressObserver){
+  progressObserver=new IntersectionObserver(entries=>{
+   for(const entry of entries){
+    const target=entry.target as HTMLElement;
+    if(!progressCards.has(target))continue;
+    if(entry.isIntersecting)visibleProgressCards.add(target);
+    else visibleProgressCards.delete(target);
+    updateProgressVisibility(target);
+   }
+  });
+  document.addEventListener('visibilitychange',refreshProgressVisibility);
+ }
+ progressCards.add(card);progressObserver.observe(card);
+ return ()=>{
+  progressObserver?.unobserve(card);progressCards.delete(card);visibleProgressCards.delete(card);
+  delete card.dataset.progressVisible;
+  if(!progressCards.size){progressObserver?.disconnect();progressObserver=undefined;document.removeEventListener('visibilitychange',refreshProgressVisibility);}
+ };
+}
 export function GameCard({game,onOpen,priority=false,playtimeLedger}:{game:Game;onOpen:()=>void;priority?:boolean;playtimeLedger?:DailyPlaytimeLedger|null}){
   const state=completion(game);
+  const cardRef=useRef<HTMLButtonElement>(null);
+  useEffect(()=>{if(state.mythic&&cardRef.current)return observeMythicProgress(cardRef.current);},[state.mythic]);
   const span=achievementTimeSpan(game,playtimeLedger);
   const extra=state.base?{earned:game.earned-state.base.earned,total:game.total-state.base.total}:null;
-  return <button className="game-card" data-game-id={game.id} data-mythic={state.mythic?"true":undefined} onClick={onOpen} aria-label={`查看 ${game.name} 的游戏详情${state.mythic?'，本体全成就':''}`}>
+  return <button ref={cardRef} className="game-card" data-game-id={game.id} data-mythic={state.mythic?"true":undefined} onClick={onOpen} aria-label={`查看 ${game.name} 的游戏详情${state.mythic?'，本体全成就':''}`}>
     <span className="game-art"><GameCover game={game} priority={priority}/></span>
     <span className="game-copy"><span className="game-title">{game.name}</span><span className="game-last"><span className="game-last-played">最近游玩 {date(game.lastPlayed)}</span><span className="game-time-span" title={span?(span.basis==='first-play'?'首次记录游玩：'+span.firstPlayedDate+'；按上海自然日计算':'首次解锁成就：'+new Date(span.firstUnlockedAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})+'；按成就解锁时间间隔计算')+'；最后解锁成就：'+new Date(span.lastUnlockedAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}):'没有可用的已解锁成就时间'}>时间跨度：{formatAchievementTimeSpan(span)}</span></span></span>
     <span className="game-progress"><span className="game-achievement"><span className="achievement-metric" aria-label={`${state.base?'本体':'已同步'}成就 ${state.earned}/${state.total}`} title={state.base?'本体成就':'成就总数 · 本体分组待确认'}><Trophy size={14}/><span>{state.earned}/{state.total}</span></span>{extra&&extra.total>0&&<span className="achievement-metric" aria-label={`追加内容成就 ${extra.earned}/${extra.total}`} title="DLC 与更新成就"><span className="dlc-mark">DLC</span><span>{extra.earned}/{extra.total}</span></span>}<span className="achievement-metric game-playtime" aria-label={'游玩时长 '+hours(game.minutes)}><Clock3 size={13}/>{hours(game.minutes)}</span></span><Progress earned={state.earned} total={state.total} complete={state.mythic} label={game.name+' 成就完成度'}/></span>
