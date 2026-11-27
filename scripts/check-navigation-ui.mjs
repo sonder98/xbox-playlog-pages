@@ -72,6 +72,28 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     await page.getByRole('heading',{name:'欢迎回到 XBOX Playlog'}).waitFor();
     await unlock();
     await page.locator('.recent-game-card').first().waitFor();
+    assert.equal(await page.locator('.particle-lab').count(),0,'Particle lab is not mounted on ordinary pages');
+    await unlock('?mythic-particle-lab=1');
+    const lab=page.getByRole('dialog',{name:'Mythic 粒子实验室'});
+    await lab.waitFor();
+    const roster=JSON.parse(await lab.getByLabel('游戏名单 JSON').inputValue());
+    assert.ok(roster.length>0);
+    assert.ok(roster.every(g=>Object.keys(g).sort().join(',')==='id,name'),'Export contains only title IDs and names');
+    assert.equal(await lab.getByLabel('选择 Mythic 游戏').locator('option').count(),roster.length);
+    await lab.getByLabel('粒子模板').selectOption('petals');
+    await lab.getByLabel('粒子密度').fill('60');
+    assert.equal(await lab.locator('.particle-layer').count(),3,'All three surfaces preview particles');
+    await lab.getByRole('button',{name:'保存当前配置'}).click();
+    const config=JSON.parse(await lab.getByLabel('动效配置 JSON').inputValue());
+    assert.equal(config[roster[0].id].kind,'petals');
+    assert.equal(config[roster[0].id].density,60);
+    await lab.getByRole('button',{name:'暂停动画'}).click();
+    assert.equal(await lab.locator('.particle-layer[data-paused="true"]').count(),3);
+    await lab.getByRole('button',{name:'静态对照'}).click();
+    assert.equal(await lab.locator('.particle-layer i').count(),0);
+    await lab.getByRole('button',{name:'关闭详情'}).click();
+    assert.ok(!page.url().includes('mythic-particle-lab'));
+    await page.locator('.recent-game-card').first().waitFor();
     // A successful decrypt persists ONLY the existing AES-GCM envelope in IndexedDB.
     const savedEncrypted=async()=>page.evaluate(()=>new Promise((resolve,reject)=>{
       const request=indexedDB.open('playlog-encrypted-history-v1',1);
