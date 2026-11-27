@@ -1918,6 +1918,46 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
       dayFoil==='satin'?'mythic-title-continuous-satin':'mythic-title-continuous-ember');
     assert.equal(progressPalette.original.titleDuration,dayFoil==='satin'?'2.6s':'4.5s',
       'Mythic library titles use the large poster’s standard A/D speed');
+    // Exercise both daily variants under both themes, regardless of today's date.
+    const foilStyles=await libraryCard.evaluate(card=>{
+      const root=document.documentElement,panel=card.closest('.library-games-panel'),title=card.querySelector('.game-title');
+      const oldTheme=root.getAttribute('data-theme'),oldFoil=panel.getAttribute('data-title-foil');
+      const samples=[];
+      try{
+        for(const theme of ['light','dark']){
+          root.setAttribute('data-theme',theme);
+          for(const foil of ['satin','ember']){
+            panel.setAttribute('data-title-foil',foil);
+            const style=getComputedStyle(title);
+            samples.push({theme,foil,gradient:style.backgroundImage,name:style.animationName,duration:style.animationDuration,filter:style.filter,fill:style.webkitTextFillColor});
+          }
+        }
+      }finally{
+        if(oldTheme===null)root.removeAttribute('data-theme');else root.setAttribute('data-theme',oldTheme);
+        panel.setAttribute('data-title-foil',oldFoil);
+      }
+      return samples;
+    });
+    const luminance=rgb=>{
+      const [r,g,b]=rgb.map(n=>{const s=n/255;return s<=.04045?s/12.92:((s+.055)/1.055)**2.4;});
+      return .2126*r+.7152*g+.0722*b;
+    };
+    for(const sample of foilStyles){
+      assert.equal(sample.duration,sample.foil==='satin'?'2.6s':'4.5s');
+      assert.equal(sample.fill,'rgba(0, 0, 0, 0)');
+      if(sample.theme==='light'){
+        const stops=[...sample.gradient.matchAll(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/g)].map(m=>m.slice(1).map(Number));
+        assert.ok(stops.length>=7,'Inspect every gradient stop');
+        for(const bg of [[255,255,255],[237,241,236],[244,235,217],[226,233,225]]){
+          for(const rgb of stops)assert.ok((luminance(bg)+.05)/(luminance(rgb)+.05)>=4.5,'Light gold stop maintains 4.5:1 contrast against normal, hovered and poster surfaces');
+        }
+        assert.equal(sample.filter,'none','No light-theme brightness or glow');
+        assert.equal(sample.name,sample.foil==='satin'?'mythic-title-continuous-satin':'mythic-title-continuous-ember-light');
+      }else{
+        assert.equal(sample.name,sample.foil==='satin'?'mythic-title-continuous-satin':'mythic-title-continuous-ember');
+        assert.ok(sample.gradient.includes(sample.foil==='satin'?'rgb(255, 252, 238)':'rgb(255, 248, 215)'),'Original dark highlight remains');
+      }
+    }
     const plainName=await libraryCard.evaluate(card=>{
       const title=card.querySelector('.game-title');
       card.removeAttribute('data-mythic');
