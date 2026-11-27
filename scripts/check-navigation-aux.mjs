@@ -365,6 +365,8 @@ export async function runAuxiliaryChecks({browser,games,envelope,password,FIXTUR
       'Exactly at Beijing midnight the title switches to uninterrupted D glow: '+JSON.stringify(d));
     await page.evaluate(()=>document.documentElement.dataset.theme='light');
     const light=await foil();
+    assert.equal(light.name,'mythic-title-continuous-ember-light');
+    assert.equal(light.duration,d.duration);
     assert.notEqual(light.image,d.image,
       'Production foil has readable bronze variation on light-theme collectible.');
     const libraryLight=await libraryTitle.evaluate(el=>getComputedStyle(el).backgroundImage);
@@ -383,7 +385,7 @@ export async function runAuxiliaryChecks({browser,games,envelope,password,FIXTUR
     assert.equal(await detailHeading.getAttribute('data-title-foil'),'ember',
       'The game detail title switches to D at the same Beijing midnight.');
     const detailD=await detailFoil();
-    assert.equal(detailD.name,'mythic-title-continuous-ember');
+    assert.equal(detailD.name,'mythic-title-continuous-ember-light');
     assert.equal(detailD.duration,'4.5s');
     assert.equal(detailD.gradient,light.image,
       'Detail, library and Mythic poster titles use the identical light-theme D gradient.');
