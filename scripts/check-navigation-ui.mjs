@@ -323,8 +323,9 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
       assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).pointerEvents),'auto',
         'Vertical page movement reveals the navigation for tapping');
       assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).transitionDuration.split(',')[0]),'0.25s','Showing the bar stays responsive');
-      await page.waitForFunction(()=>!document.querySelector('.mobile-nav')?.classList.contains('is-visible'),
-        {timeout:4000});
+      await page.waitForTimeout(1400);
+      assert.ok(await mobileBar.evaluate(el=>el.classList.contains('is-visible')),'Navigation remains visible beyond the former 1-second idle delay');
+      await page.waitForFunction(()=>!document.querySelector('.mobile-nav')?.classList.contains('is-visible'),null,{timeout:4000});
       assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).pointerEvents),'none',
         'Navigation automatically hides again when scrolling stops');
       assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).transitionDuration.split(',')[0]),'0.8s','Only the idle exit animation is slower');
@@ -333,15 +334,14 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
       await page.locator('.toolbar').waitFor();
       assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
         'Tapping a tab keeps mobile navigation visible after the route changes');
-      await page.waitForTimeout(750);
+      await page.waitForTimeout(1700);
       assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
-        'Bottom nav must remain visible during the 1.5-second post-tap grace period');
+        'Bottom nav must remain visible during the 2.5-second post-tap grace period');
       await mobileBar.getByRole('button',{name:'游戏库',exact:true}).click();
-      await page.waitForTimeout(850);
+      await page.waitForTimeout(1700);
       assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
-        'Tapping the current tab restarts the full 1.5-second visibility timer');
-      await page.waitForFunction(()=>!document.querySelector('.mobile-nav')?.classList.contains('is-visible'),
-        {timeout:3000});
+        'Tapping the current tab restarts the full 2.5-second visibility timer');
+      await page.waitForFunction(()=>!document.querySelector('.mobile-nav')?.classList.contains('is-visible'),null,{timeout:4000});
       assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).pointerEvents),'none',
         'Bottom nav hides again and stops intercepting touches once the grace period expires');
       await switchMainTab('概览');
@@ -379,8 +379,8 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     console.log((mobile?'Mobile':'Desktop')+': PASS official Xbox App green theme and heatmap');
 
       assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
-        'Tab switching back to overview also preserves navigation for 1.5 seconds');
-      console.log('Mobile: PASS four tabs, scroll auto-hide and resettable 1.5-second post-tap navigation visibility');
+        'Tab switching back to overview also preserves navigation for 2.5 seconds');
+      console.log('Mobile: PASS four tabs, scroll auto-hide and resettable 2.5-second post-tap navigation visibility');
     }
     // Bottom/sidebar navigation: heatmap is a first-class third tab; the fourth
     // combines previously separate connection/data and snapshot history screens.
@@ -417,8 +417,12 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
       'Snapshot provenance is visible without changing the history layout');
     assert.equal(await page.locator('#sync-history .history-row').count(),1,
       'Existing snapshot history remains below game visibility');
-    const groupOrder=await page.locator('.manage-section').evaluateAll(sections=>sections.map(section=>section.getBoundingClientRect().top));
-    assert.ok(groupOrder[0]<groupOrder[1]&&groupOrder[1]<groupOrder[2],'Artwork refresh appears between game visibility and sync history');
+    assert.equal(await page.locator('.manage-action-panel p').count(),0,'Management action cards omit explanatory text');
+    const groups=await page.locator('.manage-section').evaluateAll(sections=>sections.map(section=>{const r=section.getBoundingClientRect();return {top:r.top,left:r.left,right:r.right,bottom:r.bottom,width:r.width};}));
+    assert.ok(Math.abs(groups[0].top-groups[1].top)<2&&groups[0].right<=groups[1].left,'Visibility and artwork sit side by side');
+    assert.ok(Math.abs(groups[0].width-groups[1].width)<2,'Management action cards use equal-width columns');
+    assert.ok(groups[2].top>=Math.max(groups[0].bottom,groups[1].bottom)&&Math.abs(groups[2].left-groups[0].left)<2&&Math.abs(groups[2].right-groups[1].right)<2,'Sync history spans both columns below');
+    assert.ok(await page.locator('.manage-action-panel').evaluateAll(cards=>cards.every(card=>card.scrollWidth<=card.clientWidth+1)),'Compact management cards do not overflow');
     for(const legacy of ['#settings','#history']){
       await page.evaluate(hash=>{location.hash=hash;},legacy);
       await page.locator('[data-page="manage"]').waitFor();
