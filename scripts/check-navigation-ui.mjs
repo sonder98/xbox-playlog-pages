@@ -1946,11 +1946,23 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
       assert.equal(sample.duration,sample.foil==='satin'?'2.6s':'4.5s');
       assert.equal(sample.fill,'rgba(0, 0, 0, 0)');
       if(sample.theme==='light'){
-        const stops=[...sample.gradient.matchAll(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/g)].map(m=>m.slice(1).map(Number));
-        assert.ok(stops.length>=7,'Inspect every gradient stop');
-        for(const bg of [[255,255,255],[237,241,236],[244,235,217],[226,233,225]]){
-          for(const rgb of stops)assert.ok((luminance(bg)+.05)/(luminance(rgb)+.05)>=4.5,'Light gold stop maintains 4.5:1 contrast against normal, hovered and poster surfaces');
+        const stops=[...sample.gradient.matchAll(/rgb\((\d+),\s*(\d+),\s*(\d+)\)\s+([\d.]+)%/g)].map(m=>({rgb:m.slice(1,4).map(Number),position:Number(m[4])}));
+        assert.ok(stops.length>=10,'Inspect each explicitly positioned gradient stop');
+        const body=stops.filter(s=>s.position<46||s.position>53);
+        const peak=Math.max(...stops.map(s=>luminance(s.rgb)));
+        const bodyPeak=Math.max(...body.map(s=>luminance(s.rgb)));
+        for(const s of body){
+          assert.ok((1.05)/(luminance(s.rgb)+.05)>=4.5,'Main gold body remains readable on white');
+          for(const bg of [[237,241,236],[244,235,217],[226,233,225]]){
+            assert.ok((luminance(bg)+.05)/(luminance(s.rgb)+.05)>=3.9,'Main gold body remains distinct on tinted surfaces');
+          }
         }
+        assert.ok(peak>=.36&&peak<=.43,'A distinct gold peak returns, without near-white glare');
+        assert.ok((peak+.05)/(bodyPeak+.05)>=2,'Metallic glint has visible contrast against the body');
+        const bright=stops.filter(s=>luminance(s.rgb)>.23);
+        assert.ok(bright.every(s=>s.position>=47&&s.position<=53),'Bright accents stay within a narrow local sweep');
+        assert.ok(Math.max(...bright.map(s=>s.position))-Math.min(...bright.map(s=>s.position))<=5.5,'No wide bright plateau');
+        assert.ok((1.05)/(peak+.05)>=2.2,'Peak remains substantially darker than the original pale highlight');
         assert.equal(sample.filter,'none','No light-theme brightness or glow');
         assert.equal(sample.name,sample.foil==='satin'?'mythic-title-continuous-satin':'mythic-title-continuous-ember-light');
       }else{

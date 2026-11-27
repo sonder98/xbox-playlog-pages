@@ -4536,18 +4536,21 @@ footer .dot {
     .library-games-panel[data-title-foil="satin"] .game-card[data-mythic="true"] .game-title,
     .game-detail .detail-heading[data-title-foil="satin"] h2){
  background-image:linear-gradient(105deg,
-  #67421b 0%,#754c21 35%,#805624 46%,#895e27 49%,
-  #805624 52%,#69451d 64%,#704921 100%);
+  #805224 0%,#895b28 35%,#93612a 44%,#b37b31 47.8%,
+  #d3a352 49%,#d3a352 50.2%,#b17c32 51.5%,#91612a 54%,
+  #805224 64%,#895b28 100%);
 }
 :root[data-theme="light"] :is(.mythic-wall-overlay[data-title-foil="ember"] .mythic-poster-title,
     .library-games-panel[data-title-foil="ember"] .game-card[data-mythic="true"] .game-title,
     .game-detail .detail-heading[data-title-foil="ember"] h2){
  background-image:linear-gradient(115deg,
-  #70471d 0%,#805524 29%,#593816 39%,#805524 48%,
-  #895e27 51%,#805524 54%,#65401b 73%,#7d5223 100%);
+  #805224 0%,#98652b 29%,#74491f 39%,#93612a 45%,
+  #c18c3e 49%,#d1a04a 50%,#d1a04a 51.2%,#b37b31 52.5%,
+  #91612a 55%,#7c4e21 73%,#8d5b25 100%);
 }
-/* Light surfaces need a contrast-safe copper foil even at the animation peak.
-   Preserve the original dark-theme ember glow and both A/D timings. */
+/* Balanced light foil: legible amber body, localized brighter gold glint.
+   No pale-white stop or extra brightness filter. Keep the original dark theme
+   and both daily A/D timings. */
 @media(prefers-reduced-motion:no-preference){
  :root[data-theme="light"] :is(.mythic-wall-overlay[data-title-foil="ember"] .mythic-poster-title,
      .library-games-panel[data-title-foil="ember"] .game-card[data-mythic="true"] .game-title,
