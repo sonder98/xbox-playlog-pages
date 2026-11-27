@@ -1840,8 +1840,47 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
       await page.setViewportSize({width:1440,height:1000});
     }
     console.log((mobile?'Mobile':'Tablet')+': PASS game library progress geometry and protected phone layout');
-    // Mythic library titles share the real poster's A/D moving foil, while
-    // their achievement progress retains the official Xbox green.
+    // Mythic library titles retain the poster's A/D foil. Progress now has
+    // a separate continuous green overlay, clipped to the original fill.
+    await libraryCard.scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>document.querySelector('.library-games-panel .game-card')?.getAttribute('data-progress-visible')==='true');
+    const flowStyle=()=>libraryCard.evaluate(card=>{
+      const fill=card.querySelector('.game-progress .progress>span');
+      const flow=getComputedStyle(fill,'::after');
+      return {name:flow.animationName,duration:flow.animationDuration,timing:flow.animationTimingFunction,iterations:flow.animationIterationCount,delay:flow.animationDelay,gradient:flow.backgroundImage,content:flow.content,overflow:getComputedStyle(fill).overflow,base:getComputedStyle(fill).backgroundColor};
+    });
+    const flow=await flowStyle();
+    assert.equal(flow.name,'mythic-progress-green-flow');
+    assert.equal(flow.duration,'4s');
+    assert.equal(flow.timing,'linear');
+    assert.equal(flow.iterations,'infinite');
+    assert.equal(flow.delay,'0s');
+    assert.ok(flow.gradient.includes('repeating-linear-gradient'));
+    assert.equal(flow.overflow,'hidden');
+    assert.equal(flow.base,'rgb(16, 124, 16)');
+    const ordinaryFlow=await libraryCard.evaluate(card=>{
+      const fill=card.querySelector('.progress>span');
+      card.removeAttribute('data-mythic');
+      const name=getComputedStyle(fill,'::after').animationName;
+      card.dataset.mythic='true';
+      return name;
+    });
+    assert.equal(ordinaryFlow,'none','Non-Mythic progress does not animate');
+    const incompleteFlow=await libraryCard.evaluate(card=>{
+      const track=card.querySelector('.progress');
+      track.classList.remove('complete');
+      const name=getComputedStyle(track.firstElementChild,'::after').animationName;
+      track.classList.add('complete');
+      return name;
+    });
+    assert.equal(incompleteFlow,'none','Only complete progress can receive green foil');
+    await page.emulateMedia({reducedMotion:'reduce'});
+    assert.equal((await flowStyle()).name,'none','Reduced motion restores static Xbox green');
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    assert.equal((await flowStyle()).name,'mythic-progress-green-flow');
+    await libraryCard.evaluate(card=>{card.dataset.progressVisible='false';});
+    assert.equal((await flowStyle()).name,'none','Offscreen/hidden cards do not animate');
+    await libraryCard.evaluate(card=>{card.dataset.progressVisible='true';});
     const progressPalette=await libraryCard.evaluate(card=>{
       const title=card.querySelector('.game-title');
       const cover=card.querySelector('.game-cover.completion-frame');
@@ -1899,7 +1938,7 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
     assert.ok(progressPalette.original.fontSize&&progressPalette.original.fontWeight&&
       progressPalette.original.titleWidth>0&&progressPalette.original.titleHeight>0,
       'Game name typography and geometry stay intact');
-    console.log((mobile?'Mobile':'Desktop')+': PASS Mythic A/D library titles, unified green frames and unchanged progress');
+    console.log((mobile?'Mobile':'Desktop')+': PASS Mythic A/D library titles, unified green frames and continuous green progress');
     
     // Every Mythic game receives the former Full-only golden border shimmer.
     // The highlight stays clipped to the 2px rounded frame, not a floating SVG

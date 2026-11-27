@@ -499,6 +499,22 @@ header {
 .progress.complete>span {
   background:var(--progress-mint)
 }
+/* Mythic library only: a seamless repeated green gradient travels exactly
+   one period every four seconds. The base fill and geometry stay unchanged. */
+@media(prefers-reduced-motion:no-preference){
+ .library-games-panel .game-card[data-mythic="true"] .progress.complete>span{
+  position:relative;overflow:hidden;
+ }
+ .library-games-panel .game-card[data-mythic="true"][data-progress-visible="true"] .progress.complete>span::after{
+  content:"";position:absolute;inset:0 auto 0 0;width:200%;pointer-events:none;
+  background:repeating-linear-gradient(90deg,#107c10 0%,#18982a 10%,#42c460 20%,#99e9a7 25%,#3db750 32%,#168b20 42%,#107c10 50%);
+  animation:mythic-progress-green-flow 4s linear infinite;
+ }
+}
+@keyframes mythic-progress-green-flow{
+ from{transform:translateX(-50%)}
+ to{transform:translateX(0)}
+}
 .game-extra {
   display:block;
   font-size:12px;
