@@ -327,7 +327,8 @@ export async function runNavigationChecks({browser,games,envelope,password,FIXTU
         {timeout:4000});
       assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).pointerEvents),'none',
         'Navigation automatically hides again when scrolling stops');
-      assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).transitionDuration.split(',')[0]),'0.45s','Only the idle exit animation is slower');
+      assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).transitionDuration.split(',')[0]),'0.8s','Only the idle exit animation is slower');
+      assert.equal(await mobileBar.evaluate(el=>getComputedStyle(el).transitionDuration.split(',')[1].trim()),'0.75s','Exit opacity fades gradually instead of vanishing early');
       await switchMainTab('游戏库');
       await page.locator('.toolbar').waitFor();
       assert.equal(await page.locator('.mobile-nav.is-visible').count(),1,
